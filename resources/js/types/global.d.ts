@@ -1,3 +1,4 @@
+import type { AppId, SidebarNavigationData } from '@/types';
 import type { Auth } from '@/types/auth';
 
 // Extend ImportMeta interface for Vite...
@@ -19,6 +20,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            currentApp: AppId;
+            sidebarNavigation: SidebarNavigationData;
             [key: string]: unknown;
         };
     }

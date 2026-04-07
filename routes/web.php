@@ -16,7 +16,15 @@ use Inertia\Inertia;
 Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    Route::redirect('dashboard', '/tyanc/dashboard');
+
+    Route::prefix('tyanc')->group(function (): void {
+        Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    });
+
+    Route::prefix('demo')->name('demo.')->group(function (): void {
+        Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    });
 });
 
 Route::middleware('auth')->group(function (): void {

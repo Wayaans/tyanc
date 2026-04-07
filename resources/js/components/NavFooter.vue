@@ -29,6 +29,7 @@ defineProps<Props>();
                         as-child
                     >
                         <a
+                            v-if="item.href"
                             :href="toUrl(item.href)"
                             target="_blank"
                             rel="noopener noreferrer"
