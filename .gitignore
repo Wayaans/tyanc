@@ -26,3 +26,6 @@ Homestead.yaml
 /.vscode
 /.zed
 /tmp/
+.pi
+.docs
+.agents
