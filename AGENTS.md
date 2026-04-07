@@ -13,6 +13,10 @@
 - Some actions won't require dependencies via `__construct` and they can use just the `handle()` method.
 - After every implementation, run `composer lint`
 - SOLID Principles
+- Use reviewer for any request to review, audit, critique, assess, check, validate, or do a final pass on work — including UI/UX, frontend, accessibility, and design-system work.
+- Use designer for creating, changing, polishing, or implementing UI/UX/frontend code.
+- Do not use designer as the default review agent.
+- When a task needs both implementation and review, use designer first and reviewer second
 
 <!-- Example action class -->
 ```php
