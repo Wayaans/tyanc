@@ -30,7 +30,7 @@ const { isMobile, state } = useSidebar();
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
                         <div
-                            class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                            class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground"
                         >
                             <component
                                 :is="activeApp.icon"
@@ -78,7 +78,7 @@ const { isMobile, state } = useSidebar();
                             class="gap-3 p-2"
                         >
                             <div
-                                class="flex size-7 items-center justify-center rounded-md border"
+                                class="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground"
                             >
                                 <component
                                     :is="app.icon"

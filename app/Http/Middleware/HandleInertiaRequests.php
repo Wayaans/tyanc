@@ -32,15 +32,17 @@ final class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $defaultApp = (string) config('tyanc.default_app', 'tyanc');
+        $availableApps = array_keys(config('sidebar-menu.apps', []));
         $routeName = $request->route()?->getName() ?? '';
         $currentApp = $request->cookie('current_app');
 
         if ($routeName === 'dashboard') {
-            $currentApp = 'tyanc';
+            $currentApp = $defaultApp;
         } elseif (str_starts_with($routeName, 'demo.')) {
             $currentApp = 'demo';
-        } elseif (! in_array($currentApp, ['tyanc', 'demo'], true)) {
-            $currentApp = 'tyanc';
+        } elseif (! in_array($currentApp, $availableApps, true)) {
+            $currentApp = $defaultApp;
         }
 
         return [

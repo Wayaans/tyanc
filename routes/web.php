@@ -13,16 +13,19 @@ use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+$adminPath = mb_trim((string) config('tyanc.admin_path', 'tyanc'), '/');
+$demoPath = mb_trim((string) config('tyanc.demo_path', 'demo'), '/');
+
 Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::redirect('dashboard', '/tyanc/dashboard');
+Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $demoPath): void {
+    Route::redirect('dashboard', sprintf('/%s/dashboard', $adminPath));
 
-    Route::prefix('tyanc')->group(function (): void {
+    Route::prefix($adminPath)->group(function (): void {
         Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     });
 
-    Route::prefix('demo')->name('demo.')->group(function (): void {
+    Route::prefix($demoPath)->name('demo.')->group(function (): void {
         Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     });
 });
