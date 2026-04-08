@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Actions\ResolveSidebarNavigation;
+use App\Data\Auth\UserData;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -49,7 +50,7 @@ final class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? UserData::fromModel($request->user()->loadMissing('profile')) : null,
             ],
             'currentApp' => $currentApp,
             'sidebarNavigation' => resolve(ResolveSidebarNavigation::class)->handle($currentApp),

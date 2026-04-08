@@ -6,24 +6,29 @@ use App\Actions\UpdateUser;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
+use Laravel\Fortify\Features;
 
-it('may update a user', function (): void {
+it('may update a user and profile', function (): void {
     $user = User::factory()->create([
-        'name' => 'Old Name',
+        'username' => 'old-name',
         'email' => 'old@email.com',
     ]);
 
     $action = resolve(UpdateUser::class);
 
-    $action->handle($user, [
+    $updatedUser = $action->handle($user, [
         'name' => 'New Name',
+        'username' => 'new-name',
+        'city' => 'Denpasar',
     ]);
 
-    expect($user->refresh()->name)->toBe('New Name')
-        ->and($user->email)->toBe('old@email.com');
+    expect($updatedUser->refresh()->username)->toBe('new-name')
+        ->and($updatedUser->name)->toBe('New Name')
+        ->and($updatedUser->profile)->not->toBeNull()
+        ->and($updatedUser->profile->city)->toBe('Denpasar');
 });
 
-it('resets email verification and sends notification when email changes', function (): void {
+it('keeps email verified and does not send a notification when email changes while verification is disabled', function (): void {
     Notification::fake();
 
     $user = User::factory()->create([
@@ -31,39 +36,40 @@ it('resets email verification and sends notification when email changes', functi
         'email_verified_at' => now(),
     ]);
 
-    expect($user->email_verified_at)->not->toBeNull();
-
     $action = resolve(UpdateUser::class);
 
-    $action->handle($user, [
+    $updatedUser = $action->handle($user, [
         'email' => 'new@email.com',
     ]);
 
-    expect($user->refresh()->email)->toBe('new@email.com')
-        ->and($user->email_verified_at)->toBeNull();
+    expect($updatedUser->refresh()->email)->toBe('new@email.com')
+        ->and($updatedUser->email_verified_at)->not->toBeNull();
 
-    Notification::assertSentTo($user, VerifyEmail::class);
+    Notification::assertNothingSent();
 });
 
-it('keeps email verification and does not send notification when email stays the same', function (): void {
+it('resets email verification and sends notification when the feature is enabled', function (): void {
     Notification::fake();
 
-    $verifiedAt = now();
+    config([
+        'fortify.features' => [
+            Features::registration(),
+            Features::emailVerification(),
+        ],
+    ]);
 
     $user = User::factory()->create([
-        'email' => 'same@email.com',
-        'email_verified_at' => $verifiedAt,
+        'email' => 'old@email.com',
+        'email_verified_at' => now(),
     ]);
 
     $action = resolve(UpdateUser::class);
 
-    $action->handle($user, [
-        'email' => 'same@email.com',
-        'name' => 'Updated Name',
+    $updatedUser = $action->handle($user, [
+        'email' => 'new@email.com',
     ]);
 
-    expect($user->refresh()->email_verified_at)->not->toBeNull()
-        ->and($user->name)->toBe('Updated Name');
+    expect($updatedUser->refresh()->email_verified_at)->toBeNull();
 
-    Notification::assertNotSentTo($user, VerifyEmail::class);
+    Notification::assertSentTo($updatedUser, VerifyEmail::class);
 });

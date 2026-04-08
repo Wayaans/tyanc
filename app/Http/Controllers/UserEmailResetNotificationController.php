@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Fortify\Features;
 
 final readonly class UserEmailResetNotificationController
 {
@@ -17,6 +18,7 @@ final readonly class UserEmailResetNotificationController
     {
         return Inertia::render('user-email-reset-notification/Create', [
             'status' => $request->session()->get('status'),
+            'enabled' => Features::enabled(Features::resetPasswords()),
         ]);
     }
 

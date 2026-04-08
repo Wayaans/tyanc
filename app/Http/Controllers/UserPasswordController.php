@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Fortify\Features;
 
 final readonly class UserPasswordController
 {
@@ -24,6 +25,7 @@ final readonly class UserPasswordController
         return Inertia::render('user-password/Create', [
             'email' => $request->email,
             'token' => $request->route('token'),
+            'enabled' => Features::enabled(Features::resetPasswords()),
         ]);
     }
 

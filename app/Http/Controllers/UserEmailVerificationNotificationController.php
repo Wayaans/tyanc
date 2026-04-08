@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Fortify\Features;
 
 final readonly class UserEmailVerificationNotificationController
 {
@@ -18,7 +19,10 @@ final readonly class UserEmailVerificationNotificationController
     {
         return $user->hasVerifiedEmail()
             ? redirect()->intended(route('dashboard', absolute: false))
-            : Inertia::render('user-email-verification-notification/Create', ['status' => $request->session()->get('status')]);
+            : Inertia::render('user-email-verification-notification/Create', [
+                'status' => $request->session()->get('status'),
+                'enabled' => Features::enabled(Features::emailVerification()),
+            ]);
     }
 
     public function store(#[CurrentUser] User $user, CreateUserEmailVerificationNotification $action): RedirectResponse

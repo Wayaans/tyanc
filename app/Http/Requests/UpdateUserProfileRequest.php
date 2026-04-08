@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\UserStatus;
+use App\Models\Permission;
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
-final class CreateUserRequest extends FormRequest
+final class UpdateUserProfileRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user() !== null;
+    }
+
     /**
-     * @return array<string, array<mixed>|string>
+     * @return array<string, array<int, mixed>|string>
      */
     public function rules(): array
     {
+        $user = $this->user();
+        assert($user instanceof User);
+
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'username' => [
@@ -26,24 +34,23 @@ final class CreateUserRequest extends FormRequest
                 'lowercase',
                 'max:255',
                 'alpha_dash:ascii',
-                Rule::unique(User::class, 'username'),
+                Rule::unique(User::class, 'username')->ignore($user->id),
             ],
             'email' => [
                 'required',
                 'string',
                 'lowercase',
-                'max:255',
                 'email',
+                'max:255',
                 new ValidEmail,
-                Rule::unique(User::class, 'email'),
-            ],
-            'password' => [
-                'required',
-                'confirmed',
-                Password::defaults(),
+                Rule::unique(User::class, 'email')->ignore($user->id),
             ],
             'avatar' => ['nullable', 'image', 'max:2048'],
-            'status' => ['nullable', Rule::in([UserStatus::Active->value])],
+            'status' => [
+                Rule::prohibitedIf(! $this->canManageStatus()),
+                'nullable',
+                Rule::in(UserStatus::values()),
+            ],
             'locale' => ['nullable', 'string', 'max:12'],
             'timezone' => ['nullable', 'timezone'],
             'first_name' => ['nullable', 'string', 'max:255'],
@@ -65,5 +72,21 @@ final class CreateUserRequest extends FormRequest
             'social_links.twitter' => ['nullable', 'url:http,https', 'max:2048'],
             'social_links.github' => ['nullable', 'url:http,https', 'max:2048'],
         ];
+    }
+
+    private function canManageStatus(): bool
+    {
+        $user = $this->user();
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        if ($user->hasRole(config('tyanc.reserved_roles.super_admin'))) {
+            return true;
+        }
+
+        return Permission::query()->where('name', 'manage-users')->where('guard_name', 'web')->exists()
+            && $user->hasPermissionTo('manage-users');
     }
 }

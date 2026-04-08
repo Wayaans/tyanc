@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -19,27 +20,38 @@ final class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'username' => Str::of((string) fake()->unique()->userName())
+                ->lower()
+                ->replaceMatches('/[^a-z0-9_-]+/', '-')
+                ->trim('-_')
+                ->value(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
             'password' => 'password',
+            'avatar' => null,
+            'status' => UserStatus::Active,
+            'timezone' => 'UTC',
+            'locale' => 'en',
+            'email_verified_at' => now(),
             'remember_token' => Str::random(10),
-            'two_factor_secret' => Str::random(10),
-            'two_factor_recovery_codes' => Str::random(10),
-            'two_factor_confirmed_at' => now(),
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'last_login_at' => null,
+            'last_login_ip' => null,
+            'deleted_at' => null,
         ];
     }
 
     public function unverified(): self
     {
-        return $this->state(fn (array $attributes): array => [
+        return $this->state(fn (): array => [
             'email_verified_at' => null,
         ]);
     }
 
     public function withoutTwoFactor(): self
     {
-        return $this->state(fn (array $attributes): array => [
+        return $this->state(fn (): array => [
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,

@@ -12,7 +12,10 @@ it('renders registration page', function (): void {
         ->get(route('register'));
 
     $response->assertOk()
-        ->assertInertia(fn ($page) => $page->component('user/Create'));
+        ->assertInertia(fn ($page) => $page
+            ->component('user/Create')
+            ->has('locales')
+            ->has('timezones'));
 });
 
 it('may register a new user', function (): void {
@@ -20,8 +23,11 @@ it('may register a new user', function (): void {
 
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
+            'locale' => 'en',
+            'timezone' => 'UTC',
             'password' => 'password1234',
             'password_confirmation' => 'password1234',
         ]);
@@ -32,30 +38,24 @@ it('may register a new user', function (): void {
 
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('Test User')
+        ->and($user->username)->toBe('test')
         ->and($user->email)->toBe('test@example.com')
-        ->and(Hash::check('password1234', $user->password))->toBeTrue();
+        ->and($user->status->value)->toBe('active')
+        ->and($user->locale)->toBe('en')
+        ->and($user->timezone)->toBe('UTC')
+        ->and(Hash::check('password1234', $user->password))->toBeTrue()
+        ->and($user->profile)->not->toBeNull()
+        ->and($user->profile->first_name)->toBe('Test')
+        ->and($user->profile->last_name)->toBe('User');
 
     $this->assertAuthenticatedAs($user);
 
     Event::assertDispatched(Registered::class);
 });
 
-it('requires name', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('name');
-});
-
 it('requires email', function (): void {
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [
-            'name' => 'Test User',
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
@@ -90,6 +90,36 @@ it('requires unique email', function (): void {
 
     $response->assertRedirectToRoute('register')
         ->assertSessionHasErrors('email');
+});
+
+it('validates username uniqueness when provided', function (): void {
+    User::factory()->create(['username' => 'existing-user']);
+
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'username' => 'existing-user',
+            'email' => 'another@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors('username');
+});
+
+it('returns dto json when registering with a json request', function (): void {
+    $response = $this->postJson(route('register.store'), [
+        'first_name' => 'Json',
+        'last_name' => 'User',
+        'email' => 'json@example.com',
+        'password' => 'password1234',
+        'password_confirmation' => 'password1234',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('email', 'json@example.com')
+        ->assertJsonPath('profile.first_name', 'Json')
+        ->assertJsonPath('profile.last_name', 'User');
 });
 
 it('requires password', function (): void {
@@ -141,8 +171,7 @@ it('may delete user account', function (): void {
 
     $response->assertRedirectToRoute('home');
 
-    expect($user->fresh())->toBeNull();
-
+    $this->assertSoftDeleted($user);
     $this->assertGuest();
 });
 
@@ -156,7 +185,7 @@ it('requires password to delete account', function (): void {
     $response->assertRedirectToRoute('user-profile.edit')
         ->assertSessionHasErrors('password');
 
-    expect($user->fresh())->not->toBeNull();
+    $this->assertNotSoftDeleted($user);
 });
 
 it('requires correct password to delete account', function (): void {
@@ -173,7 +202,21 @@ it('requires correct password to delete account', function (): void {
     $response->assertRedirectToRoute('user-profile.edit')
         ->assertSessionHasErrors('password');
 
-    expect($user->fresh())->not->toBeNull();
+    $this->assertNotSoftDeleted($user);
+});
+
+it('returns no content when deleting the authenticated user with json', function (): void {
+    $user = User::factory()->create([
+        'password' => Hash::make('password'),
+    ]);
+
+    $this->actingAs($user)
+        ->deleteJson(route('user.destroy'), [
+            'password' => 'password',
+        ])
+        ->assertNoContent();
+
+    $this->assertSoftDeleted($user);
 });
 
 it('redirects authenticated users away from registration', function (): void {

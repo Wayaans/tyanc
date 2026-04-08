@@ -30,9 +30,9 @@ it('shares null user when guest', function (): void {
         ->and($shared['auth']['user'])->toBeNull();
 });
 
-it('shares authenticated user data', function (): void {
+it('shares authenticated user data as a dto', function (): void {
     $user = User::factory()->create([
-        'name' => 'Test User',
+        'username' => 'test-user',
         'email' => 'test@example.com',
     ]);
 
@@ -45,7 +45,8 @@ it('shares authenticated user data', function (): void {
 
     expect($shared['auth']['user'])->not->toBeNull()
         ->and($shared['auth']['user']->id)->toBe($user->id)
-        ->and($shared['auth']['user']->name)->toBe('Test User')
+        ->and($shared['auth']['user']->name)->toBe('test-user')
+        ->and($shared['auth']['user']->username)->toBe('test-user')
         ->and($shared['auth']['user']->email)->toBe('test@example.com');
 });
 
@@ -159,6 +160,5 @@ it('includes parent shared data', function (): void {
 
     $shared = $middleware->share($request);
 
-    // Parent Inertia middleware shares 'errors' by default
     expect($shared)->toHaveKey('errors');
 });

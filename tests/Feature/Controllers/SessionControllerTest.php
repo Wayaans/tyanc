@@ -14,11 +14,12 @@ it('renders login page', function (): void {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('session/Create')
-            ->has('canResetPassword')
+            ->where('canResetPassword', false)
+            ->where('canRegister', true)
             ->has('status'));
 });
 
-it('may create a session', function (): void {
+it('may create a session and record telemetry', function (): void {
     $user = User::factory()->withoutTwoFactor()->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
@@ -33,6 +34,11 @@ it('may create a session', function (): void {
     $response->assertRedirectToRoute('dashboard');
 
     $this->assertAuthenticatedAs($user);
+
+    $user->refresh();
+
+    expect($user->last_login_at)->not->toBeNull()
+        ->and($user->last_login_ip)->toBe('127.0.0.1');
 });
 
 it('may create a session with remember me', function (): void {
@@ -53,7 +59,7 @@ it('may create a session with remember me', function (): void {
     $this->assertAuthenticatedAs($user);
 });
 
-it('redirects to two-factor challenge when enabled', function (): void {
+it('skips the two factor challenge while the feature is disabled', function (): void {
     $user = User::factory()->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
@@ -68,9 +74,9 @@ it('redirects to two-factor challenge when enabled', function (): void {
             'password' => 'password',
         ]);
 
-    $response->assertRedirectToRoute('two-factor.login');
+    $response->assertRedirectToRoute('dashboard');
 
-    $this->assertGuest();
+    $this->assertAuthenticatedAs($user);
 });
 
 it('fails with invalid credentials', function (): void {
@@ -134,12 +140,11 @@ it('redirects authenticated users away from login', function (): void {
 });
 
 it('throttles login attempts after too many failures', function (): void {
-    $user = User::factory()->create([
+    User::factory()->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);
 
-    // Make 5 failed login attempts to trigger rate limiting
     for ($i = 0; $i < 5; $i++) {
         $this->fromRoute('login')
             ->post(route('login.store'), [
@@ -148,7 +153,6 @@ it('throttles login attempts after too many failures', function (): void {
             ]);
     }
 
-    // The 6th attempt should be throttled
     $response = $this->fromRoute('login')
         ->post(route('login.store'), [
             'email' => 'test@example.com',
@@ -168,7 +172,6 @@ it('clears rate limit after successful login', function (): void {
         'password' => Hash::make('password'),
     ]);
 
-    // Make a few failed attempts
     for ($i = 0; $i < 3; $i++) {
         $this->fromRoute('login')
             ->post(route('login.store'), [
@@ -177,7 +180,6 @@ it('clears rate limit after successful login', function (): void {
             ]);
     }
 
-    // Successful login should clear the rate limit
     $response = $this->fromRoute('login')
         ->post(route('login.store'), [
             'email' => 'test@example.com',
@@ -191,13 +193,11 @@ it('clears rate limit after successful login', function (): void {
 it('dispatches lockout event when rate limit is reached', function (): void {
     Event::fake([Lockout::class]);
 
-    $user = User::factory()->create([
+    User::factory()->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);
 
-    // Make 6 failed login attempts to trigger rate limiting and Lockout event
-    // The Lockout event fires on the 6th attempt when tooManyAttempts returns true
     for ($i = 0; $i < 6; $i++) {
         $this->fromRoute('login')
             ->post(route('login.store'), [
