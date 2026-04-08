@@ -1,14 +1,17 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
-import type { Appearance, ResolvedAppearance } from '@/types';
+import type { Appearance, ResolvedAppearance, ThemeProps } from '@/types';
 
-export type { Appearance, ResolvedAppearance };
+export type { Appearance, ResolvedAppearance, ThemeProps };
 
 export type UseAppearanceReturn = {
     appearance: Ref<Appearance>;
     resolvedAppearance: ComputedRef<ResolvedAppearance>;
     updateAppearance: (value: Appearance) => void;
 };
+
+// Module-level appearance ref — shared across all useAppearance() consumers...
+const appearance = ref<Appearance>('system');
 
 export function updateTheme(value: Appearance): void {
     if (typeof window === 'undefined') {
@@ -27,6 +30,32 @@ export function updateTheme(value: Appearance): void {
         );
     } else {
         document.documentElement.classList.toggle('dark', value === 'dark');
+    }
+}
+
+export function applyCssVariables(vars: Record<string, string>): void {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    for (const [property, value] of Object.entries(vars)) {
+        document.documentElement.style.setProperty(property, value);
+    }
+}
+
+export function syncThemeFromPageProps(theme: ThemeProps): void {
+    // Apply CSS custom properties from the server-resolved theme...
+    applyCssVariables(theme.css_variables);
+
+    // Sync appearance ref so reactive consumers stay correct...
+    appearance.value = theme.appearance;
+
+    // Apply dark/light class to <html>...
+    updateTheme(theme.appearance);
+
+    // Keep localStorage in sync so initializeTheme (FOUC prevention) stays consistent...
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('appearance', theme.appearance);
     }
 }
 
@@ -82,8 +111,6 @@ export function initializeTheme(): void {
     // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
-
-const appearance = ref<Appearance>('system');
 
 export function useAppearance(): UseAppearanceReturn {
     onMounted(() => {

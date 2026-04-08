@@ -66,6 +66,11 @@ final class User extends Authenticatable
         return $this->hasOne(UserProfile::class);
     }
 
+    public function preference(): HasOne
+    {
+        return $this->hasOne(UserPreference::class);
+    }
+
     protected function getNameAttribute(): string
     {
         $profile = $this->relationLoaded('profile') ? $this->getRelation('profile') : $this->profile()->first();

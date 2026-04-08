@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { useBranding } from '@/composables/useBranding';
 import { home } from '@/routes';
+
+const { appName, appLogo } = useBranding();
 
 defineProps<{
     title?: string;
@@ -23,7 +26,14 @@ defineProps<{
                         <div
                             class="mb-1 flex h-9 w-9 items-center justify-center rounded-md"
                         >
+                            <img
+                                v-if="appLogo"
+                                :src="appLogo"
+                                :alt="appName"
+                                class="size-9 rounded-sm object-contain"
+                            />
                             <AppLogoIcon
+                                v-else
                                 class="size-9 fill-current text-[var(--foreground)] dark:text-white"
                             />
                         </div>

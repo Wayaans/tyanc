@@ -46,7 +46,7 @@ return [
         'database' => [
             'type' => DatabaseSettingsRepository::class,
             'model' => null,
-            'table' => null,
+            'table' => 'settings',
             'connection' => null,
         ],
         'redis' => [

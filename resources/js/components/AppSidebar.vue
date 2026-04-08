@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { BookOpen, FolderGit2 } from 'lucide-vue-next';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AppSwitcher from '@/components/AppSwitcher.vue';
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -11,26 +11,23 @@ import {
     SidebarHeader,
 } from '@/components/ui/sidebar';
 import { useAppNavigation } from '@/composables/useAppNavigation';
-import type { NavItem } from '@/types';
 
+const page = usePage();
 const { activeApp, mainNavItems } = useAppNavigation();
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const sidebarVariant = computed(() => {
+    const variant = page.props.theme?.sidebar_variant;
+
+    return variant === 'floating' ||
+        variant === 'sidebar' ||
+        variant === 'inset'
+        ? variant
+        : 'inset';
+});
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" :variant="sidebarVariant">
         <SidebarHeader>
             <AppSwitcher />
         </SidebarHeader>
@@ -40,7 +37,6 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

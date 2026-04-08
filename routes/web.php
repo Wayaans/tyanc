@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\Tyanc\Settings\AppearanceSettingsController;
+use App\Http\Controllers\Tyanc\Settings\AppSettingsController;
+use App\Http\Controllers\Tyanc\Settings\SecuritySettingsController;
+use App\Http\Controllers\Tyanc\Settings\UserDefaultsSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
 use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
+use App\Http\Controllers\UserPreferencesController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +28,20 @@ Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $dem
 
     Route::prefix($adminPath)->group(function (): void {
         Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+
+        Route::prefix('settings')->name('tyanc.settings.')->group(function (): void {
+            Route::get('application', [AppSettingsController::class, 'edit'])->name('application.edit');
+            Route::patch('application', [AppSettingsController::class, 'update'])->name('application.update');
+
+            Route::get('appearance', [AppearanceSettingsController::class, 'edit'])->name('appearance.edit');
+            Route::patch('appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');
+
+            Route::get('security', [SecuritySettingsController::class, 'edit'])->name('security.edit');
+            Route::patch('security', [SecuritySettingsController::class, 'update'])->name('security.update');
+
+            Route::get('user-defaults', [UserDefaultsSettingsController::class, 'edit'])->name('user-defaults.edit');
+            Route::patch('user-defaults', [UserDefaultsSettingsController::class, 'update'])->name('user-defaults.update');
+        });
     });
 
     Route::prefix($demoPath)->name('demo.')->group(function (): void {
@@ -46,7 +65,11 @@ Route::middleware('auth')->group(function (): void {
         ->name('password.update');
 
     // Appearance...
-    Route::get('settings/appearance', fn () => Inertia::render('appearance/Update'))->name('appearance.edit');
+    Route::redirect('settings/appearance', '/settings/preferences')->name('appearance.edit');
+
+    // Preferences...
+    Route::get('settings/preferences', [UserPreferencesController::class, 'edit'])->name('settings.preferences.edit');
+    Route::patch('settings/preferences', [UserPreferencesController::class, 'update'])->name('settings.preferences.update');
 
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])

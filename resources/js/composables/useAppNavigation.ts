@@ -4,6 +4,7 @@ import { mapSidebarApps, mapSidebarItems } from '@/lib/sidebar-navigation';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
+import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
 import { edit as editProfile } from '@/routes/user-profile';
 import type {
     AppId,
@@ -36,6 +37,51 @@ const fallbackSidebarNavigation: SidebarNavigationData = {
             icon: 'layout-grid',
             permission: null,
         },
+        {
+            title: 'User',
+            icon: 'user',
+            permission: null,
+        },
+        {
+            title: 'Role & Permission',
+            icon: 'key-round',
+            permission: null,
+            children: [
+                {
+                    title: 'Role',
+                    icon: 'key-round',
+                    permission: null,
+                },
+                {
+                    title: 'Permissions',
+                    icon: 'key-round',
+                    permission: null,
+                },
+                {
+                    title: 'Level',
+                    icon: 'key-round',
+                    permission: null,
+                },
+                {
+                    title: 'Group',
+                    icon: 'key-round',
+                    permission: null,
+                },
+            ],
+        },
+        {
+            title: 'App Settings',
+            icon: 'settings',
+            permission: null,
+            children: [
+                {
+                    title: 'Application',
+                    href: editTyancApplication(),
+                    icon: 'settings',
+                    permission: null,
+                },
+            ],
+        },
     ],
 };
 
@@ -59,7 +105,16 @@ export function useAppNavigation() {
     const sidebarNavigation = computed<SidebarNavigationData>(
         () => page.props.sidebarNavigation ?? fallbackSidebarNavigation,
     );
-    const apps = computed(() => mapSidebarApps(sidebarNavigation.value.apps));
+    const apps = computed(() =>
+        mapSidebarApps(sidebarNavigation.value.apps).map((app) =>
+            app.id === 'tyanc'
+                ? {
+                      ...app,
+                      title: page.props.brand?.app_name ?? app.title,
+                  }
+                : app,
+        ),
+    );
     const activeApp = computed(
         () =>
             apps.value.find((app) => app.id === activeAppId.value) ??
@@ -106,8 +161,23 @@ export function useAppNavigation() {
     ): BreadcrumbItem[] => [
         rootBreadcrumb.value,
         {
-            title: 'Settings',
+            title: 'Account',
             href: editProfile(),
+        },
+        {
+            title,
+            href,
+        },
+    ];
+
+    const tyancSettingsBreadcrumbs = (
+        title: string,
+        href: NonNullable<NavItem['href']>,
+    ): BreadcrumbItem[] => [
+        rootBreadcrumb.value,
+        {
+            title: 'App Settings',
+            href: editTyancApplication(),
         },
         {
             title,
@@ -124,5 +194,6 @@ export function useAppNavigation() {
         rootBreadcrumb,
         settingsBreadcrumbs,
         switchApp,
+        tyancSettingsBreadcrumbs,
     };
 }

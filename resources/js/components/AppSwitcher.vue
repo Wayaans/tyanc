@@ -15,8 +15,10 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { useAppNavigation } from '@/composables/useAppNavigation';
+import { useBranding } from '@/composables/useBranding';
 
 const { activeApp, activeAppId, apps, switchApp } = useAppNavigation();
+const { appLogo, appName } = useBranding();
 const { isMobile, state } = useSidebar();
 </script>
 
@@ -30,9 +32,16 @@ const { isMobile, state } = useSidebar();
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
                         <div
-                            class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground"
+                            class="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-accent text-sidebar-accent-foreground"
                         >
+                            <img
+                                v-if="activeApp.id === 'tyanc' && appLogo"
+                                :src="appLogo"
+                                :alt="appName"
+                                class="size-5 rounded-sm object-contain"
+                            />
                             <component
+                                v-else
                                 :is="activeApp.icon"
                                 class="size-4 fill-current"
                             />
@@ -41,7 +50,11 @@ const { isMobile, state } = useSidebar();
                             class="grid flex-1 text-left text-sm leading-tight"
                         >
                             <span class="truncate font-semibold">
-                                {{ activeApp.title }}
+                                {{
+                                    activeApp.id === 'tyanc'
+                                        ? appName
+                                        : activeApp.title
+                                }}
                             </span>
                             <span
                                 class="truncate text-xs text-muted-foreground"
@@ -78,9 +91,16 @@ const { isMobile, state } = useSidebar();
                             class="gap-3 p-2"
                         >
                             <div
-                                class="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                                class="flex size-7 items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground"
                             >
+                                <img
+                                    v-if="app.id === 'tyanc' && appLogo"
+                                    :src="appLogo"
+                                    :alt="appName"
+                                    class="size-4 rounded-sm object-contain"
+                                />
                                 <component
+                                    v-else
                                     :is="app.icon"
                                     class="size-3.5 fill-current"
                                 />
@@ -89,7 +109,9 @@ const { isMobile, state } = useSidebar();
                                 class="grid flex-1 text-left text-sm leading-tight"
                             >
                                 <span class="truncate font-medium">
-                                    {{ app.title }}
+                                    {{
+                                        app.id === 'tyanc' ? appName : app.title
+                                    }}
                                 </span>
                                 <span
                                     class="truncate text-xs text-muted-foreground"

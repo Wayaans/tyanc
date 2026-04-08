@@ -17,32 +17,64 @@ return [
                     'permission' => null,
                 ],
                 [
-                    'title' => 'Settings',
+                    'title' => 'User',
+                    'icon' => 'user',
+                    'permission' => null,
+                ],
+                [
+                    'title' => 'Role & Permission',
+                    'icon' => 'key-round',
+                    'permission' => null,
+                    'children' => [
+                        [
+                            'title' => 'Role',
+                            'icon' => 'key-round',
+                            'permission' => null,
+                        ],
+                        [
+                            'title' => 'Permissions',
+                            'icon' => 'key-round',
+                            'permission' => null,
+                        ],
+                        [
+                            'title' => 'Level',
+                            'icon' => 'key-round',
+                            'permission' => null,
+                        ],
+                        [
+                            'title' => 'Group',
+                            'icon' => 'key-round',
+                            'permission' => null,
+                        ],
+                    ],
+                ],
+                [
+                    'title' => 'App Settings',
                     'icon' => 'settings',
                     'permission' => null,
                     'children' => [
                         [
-                            'title' => 'Profile',
-                            'icon' => 'user',
-                            'route' => 'user-profile.edit',
+                            'title' => 'Application',
+                            'icon' => 'settings',
+                            'route' => 'tyanc.settings.application.edit',
                             'permission' => null,
                         ],
                         [
-                            'title' => 'Password',
-                            'icon' => 'key-round',
-                            'route' => 'password.edit',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'Two-Factor Auth',
-                            'icon' => 'shield-check',
-                            'route' => 'two-factor.show',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'Appearance',
+                            'title' => 'App Appearance',
                             'icon' => 'palette',
-                            'route' => 'appearance.edit',
+                            'route' => 'tyanc.settings.appearance.edit',
+                            'permission' => null,
+                        ],
+                        [
+                            'title' => 'Security',
+                            'icon' => 'shield-check',
+                            'route' => 'tyanc.settings.security.edit',
+                            'permission' => null,
+                        ],
+                        [
+                            'title' => 'Defaults for New Users',
+                            'icon' => 'user',
+                            'route' => 'tyanc.settings.user-defaults.edit',
                             'permission' => null,
                         ],
                     ],

@@ -99,5 +99,15 @@ watch(currentUrl, () => {
                 <span>{{ item.title }}</span>
             </Link>
         </SidebarMenuButton>
+
+        <!-- ─── Placeholder item: visible but not clickable ─── -->
+        <SidebarMenuButton
+            v-else
+            :tooltip="item.title"
+            class="cursor-default opacity-70"
+        >
+            <component :is="item.icon" v-if="item.icon" />
+            <span>{{ item.title }}</span>
+        </SidebarMenuButton>
     </SidebarMenuItem>
 </template>

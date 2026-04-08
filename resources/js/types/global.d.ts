@@ -1,4 +1,9 @@
-import type { AppId, SidebarNavigationData } from '@/types';
+import type {
+    AppId,
+    BrandProps,
+    SidebarNavigationData,
+    ThemeProps,
+} from '@/types';
 import type { Auth } from '@/types/auth';
 
 // Extend ImportMeta interface for Vite...
@@ -22,6 +27,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             currentApp: AppId;
             sidebarNavigation: SidebarNavigationData;
+            theme: ThemeProps;
+            brand: BrandProps;
             [key: string]: unknown;
         };
     }
