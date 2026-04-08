@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Form, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 import AppearanceSettingsController from '@/actions/App/Http/Controllers/Tyanc/Settings/AppearanceSettingsController';
 import InputError from '@/components/InputError.vue';
 import AppearancePreview from '@/components/tyanc/settings/AppearancePreview.vue';
@@ -45,6 +45,13 @@ const props = defineProps<{
     sidebarVariants: Option[];
     spacingDensities: SpacingDensity[];
 }>();
+
+const isOpen = ref(false);
+
+function handleSuccess() {
+    isOpen.value = false;
+    router.reload();
+}
 
 const BORDER_RADIUS_OPTIONS = [
     { value: '0rem', label: 'None' },
@@ -100,10 +107,22 @@ const previewSidebarLabel = computed(
         props.sidebarVariants.find((v) => v.value === sidebarVariant.value)
             ?.label ?? sidebarVariant.value,
 );
+
+watch(
+    () => props.settings,
+    (settings) => {
+        primaryColor.value = settings.primary_color;
+        secondaryColor.value = settings.secondary_color;
+        borderRadius.value = settings.border_radius;
+        spacingDensity.value = settings.spacing_density;
+        fontFamily.value = settings.font_family;
+        sidebarVariant.value = settings.sidebar_variant;
+    },
+);
 </script>
 
 <template>
-    <Sheet>
+    <Sheet v-model:open="isOpen">
         <SheetTrigger as-child>
             <Button variant="outline" size="sm">Edit appearance</Button>
         </SheetTrigger>
@@ -137,6 +156,7 @@ const previewSidebarLabel = computed(
                 v-bind="AppearanceSettingsController.update.form()"
                 :options="{ preserveScroll: true }"
                 class="flex-1 space-y-5 overflow-y-auto px-6 pb-6"
+                @success="handleSuccess"
                 v-slot="{ errors, processing, recentlySuccessful }"
             >
                 <!-- Colors -->

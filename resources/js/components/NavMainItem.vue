@@ -91,7 +91,7 @@ watch(currentUrl, () => {
         <SidebarMenuButton
             v-else-if="item.href"
             as-child
-            :is-active="isCurrentUrl(item.href)"
+            :is-active="isCurrentOrParentUrl(item.href)"
             :tooltip="item.title"
         >
             <Link :href="item.href">

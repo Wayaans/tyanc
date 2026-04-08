@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Actions\Settings\ResolveRuntimeSettings;
 use App\Actions\Settings\UpdateUserPreferences;
 use App\Models\User;
-use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,8 +24,6 @@ final readonly class UserPreferencesController
         $payload = [
             'preferences' => $runtimeSettings['preferences'],
             'appearances' => $this->mapSimpleOptions((array) config('tyanc.appearance_options', [])),
-            'locales' => $this->locales($runtimeSettings['preferences']->resolved_locale, $user->locale),
-            'timezones' => DateTimeZone::listIdentifiers(),
             'sidebarVariants' => $this->mapSimpleOptions((array) config('tyanc.sidebar_variants', [])),
             'spacingDensities' => $this->spacingDensities(),
         ];
@@ -41,8 +38,6 @@ final readonly class UserPreferencesController
     public function update(Request $request, #[CurrentUser] User $user, UpdateUserPreferences $action, ResolveRuntimeSettings $resolver): RedirectResponse|JsonResponse
     {
         $action->handle($user, [
-            'locale' => $request->input('locale'),
-            'timezone' => $request->input('timezone'),
             'appearance' => $request->input('appearance'),
             'sidebar_variant' => $request->input('sidebar_variant'),
             'spacing_density' => $request->input('spacing_density'),
@@ -53,8 +48,6 @@ final readonly class UserPreferencesController
         $payload = [
             'preferences' => $runtimeSettings['preferences'],
             'appearances' => $this->mapSimpleOptions((array) config('tyanc.appearance_options', [])),
-            'locales' => $this->locales($runtimeSettings['preferences']->resolved_locale, $user->locale),
-            'timezones' => DateTimeZone::listIdentifiers(),
             'sidebarVariants' => $this->mapSimpleOptions((array) config('tyanc.sidebar_variants', [])),
             'spacingDensities' => $this->spacingDensities(),
         ];
@@ -92,22 +85,6 @@ final readonly class UserPreferencesController
                 'value' => $value,
                 'label' => $label,
             ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function locales(string ...$locales): array
-    {
-        return Collection::make([
-            ...array_keys((array) config('tyanc.supported_locales', [])),
-            ...$locales,
-            (string) config('app.locale', 'en'),
-        ])
-            ->filter(fn (mixed $locale): bool => is_string($locale) && $locale !== '')
-            ->unique()
             ->values()
             ->all();
     }

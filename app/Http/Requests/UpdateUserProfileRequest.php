@@ -57,7 +57,7 @@ final class UpdateUserProfileRequest extends FormRequest
             'last_name' => ['nullable', 'string', 'max:255'],
             'phone_number' => ['nullable', 'string', 'max:30'],
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
-            'gender' => ['nullable', 'string', 'max:50'],
+            'gender' => ['nullable', Rule::in(['male', 'female'])],
             'address_line_1' => ['nullable', 'string', 'max:255'],
             'address_line_2' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],

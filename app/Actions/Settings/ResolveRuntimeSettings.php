@@ -39,8 +39,8 @@ final readonly class ResolveRuntimeSettings
         $resolvedSidebarVariant = $this->resolveSidebarVariant($preferences?->sidebar_variant);
         $resolvedSpacingDensity = $this->resolveSpacingDensity($preferences?->spacing_density);
         $resolvedFontFamily = $this->resolveFontFamily($this->appearanceSettings->font_family);
-        $resolvedLocale = $this->resolveLocale($preferences, $user);
-        $resolvedTimezone = $this->resolveTimezone($preferences, $user);
+        $resolvedLocale = $this->resolveLocale($user);
+        $resolvedTimezone = $this->resolveTimezone($user);
 
         return [
             'brand' => [
@@ -104,18 +104,16 @@ final readonly class ResolveRuntimeSettings
         return (string) config('tyanc.theme.appearance', 'system');
     }
 
-    private function resolveLocale(?UserPreference $preferences, ?User $user): string
+    private function resolveLocale(?User $user): string
     {
-        return $preferences?->locale
-            ?? $user?->locale
+        return $user?->locale
             ?? $this->userDefaultsSettings->locale
             ?? (string) config('app.locale', 'en');
     }
 
-    private function resolveTimezone(?UserPreference $preferences, ?User $user): string
+    private function resolveTimezone(?User $user): string
     {
-        return $preferences?->timezone
-            ?? $user?->timezone
+        return $user?->timezone
             ?? $this->userDefaultsSettings->timezone
             ?? (string) config('app.timezone', 'UTC');
     }

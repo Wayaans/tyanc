@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 
 it('renders profile edit page', function (): void {
@@ -50,6 +52,36 @@ it('may update profile information', function (): void {
         ->and($user->email)->toBe('new@example.com')
         ->and($user->profile)->not->toBeNull()
         ->and($user->profile->city)->toBe('Denpasar');
+});
+
+it('stores an uploaded avatar when updating the profile', function (): void {
+    Storage::fake('public');
+
+    $user = User::factory()->create([
+        'avatar' => null,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->fromRoute('user-profile.edit')
+        ->patch(route('user-profile.update'), [
+            'email' => $user->email,
+            'avatar' => UploadedFile::fake()->image('avatar.jpg', 256, 256),
+        ]);
+
+    $response->assertRedirectToRoute('user-profile.edit');
+
+    $user->refresh();
+
+    expect($user->avatar)->not->toBeNull();
+    Storage::disk('public')->assertExists((string) $user->avatar);
+
+    $this->actingAs($user)
+        ->get(route('user-profile.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where(
+                'auth.user.avatar',
+                '/storage/'.mb_ltrim((string) $user->avatar, '/'),
+            ));
 });
 
 it('keeps email verification when email changes while the feature is disabled', function (): void {

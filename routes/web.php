@@ -26,10 +26,12 @@ Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
 Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $demoPath): void {
     Route::redirect('dashboard', sprintf('/%s/dashboard', $adminPath));
 
-    Route::prefix($adminPath)->group(function (): void {
+    Route::prefix($adminPath)->group(function () use ($adminPath): void {
         Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
 
-        Route::prefix('settings')->name('tyanc.settings.')->group(function (): void {
+        Route::prefix('settings')->name('tyanc.settings.')->group(function () use ($adminPath): void {
+            Route::redirect('/', '/'.$adminPath.'/settings/application')->name('index');
+
             Route::get('application', [AppSettingsController::class, 'edit'])->name('application.edit');
             Route::patch('application', [AppSettingsController::class, 'update'])->name('application.update');
 

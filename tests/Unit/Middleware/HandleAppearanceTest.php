@@ -24,17 +24,22 @@ it('shares resolved appearance and css variables from the cookie with views', fu
         ->and(View::shared('themeCssVariables'))->not->toHaveKey('--secondary')
         ->and(View::shared('themeCssVariables')['--spacing-density'])->toBe('1')
         ->and(View::shared('appLocale'))->toBe(config('app.locale'))
+        ->and(View::shared('appTimezone'))->toBe(config('app.timezone'))
         ->and($response->getContent())->toBe('OK');
 });
 
-it('prefers persisted user preferences over the appearance cookie', function (): void {
+it('prefers persisted display preferences while keeping locale and timezone from the user profile', function (): void {
+    $originalTimezone = date_default_timezone_get();
+    $originalAppTimezone = config('app.timezone');
+
     $user = User::factory()->create([
         'locale' => 'en',
-        'timezone' => 'UTC',
+        'timezone' => 'Asia/Makassar',
     ]);
 
     UserPreference::factory()->for($user, 'user')->create([
         'locale' => 'id',
+        'timezone' => 'UTC',
         'appearance' => 'dark',
         'sidebar_variant' => 'floating',
         'spacing_density' => 'comfortable',
@@ -49,9 +54,15 @@ it('prefers persisted user preferences over the appearance cookie', function ():
     $middleware->handle($request, fn ($req): Response => response('OK'));
 
     expect(View::shared('appearance'))->toBe('dark')
-        ->and(View::shared('appLocale'))->toBe('id')
+        ->and(View::shared('appLocale'))->toBe('en')
+        ->and(View::shared('appTimezone'))->toBe('Asia/Makassar')
+        ->and(config('app.timezone'))->toBe('Asia/Makassar')
+        ->and(date_default_timezone_get())->toBe('Asia/Makassar')
         ->and(View::shared('themeCssVariables')['--sidebar-variant'])->toBe('floating')
         ->and(View::shared('themeCssVariables')['--spacing-density'])->toBe('1.25');
+
+    config(['app.timezone' => $originalAppTimezone]);
+    date_default_timezone_set($originalTimezone);
 });
 
 it('shares the resolved brand metadata with views', function (): void {

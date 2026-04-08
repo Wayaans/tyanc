@@ -15,12 +15,15 @@ defineProps<{
         data-slot="form-field-support"
         :data-state="error ? 'error' : hint ? 'hint' : 'empty'"
         aria-live="polite"
-        class="min-h-5"
+        class="min-h-4"
     >
-        <p v-if="error" class="text-sm text-red-600 dark:text-red-500">
+        <p
+            v-if="error"
+            class="text-sm leading-4 text-red-600 dark:text-red-500"
+        >
             {{ error }}
         </p>
-        <p v-else-if="hint" class="text-xs text-muted-foreground">
+        <p v-else-if="hint" class="text-xs leading-4 text-muted-foreground">
             {{ hint }}
         </p>
     </div>

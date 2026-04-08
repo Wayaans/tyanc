@@ -51,33 +51,8 @@ return [
                 [
                     'title' => 'App Settings',
                     'icon' => 'settings',
+                    'route' => 'tyanc.settings.index',
                     'permission' => null,
-                    'children' => [
-                        [
-                            'title' => 'Application',
-                            'icon' => 'settings',
-                            'route' => 'tyanc.settings.application.edit',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'App Appearance',
-                            'icon' => 'palette',
-                            'route' => 'tyanc.settings.appearance.edit',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'Security',
-                            'icon' => 'shield-check',
-                            'route' => 'tyanc.settings.security.edit',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'Defaults for New Users',
-                            'icon' => 'user',
-                            'route' => 'tyanc.settings.user-defaults.edit',
-                            'permission' => null,
-                        ],
-                    ],
                 ],
             ],
         ],

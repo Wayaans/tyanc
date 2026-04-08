@@ -7,7 +7,6 @@ namespace App\Data\Auth;
 use App\Enums\UserStatus;
 use App\Models\User;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Facades\Storage;
 use Spatie\LaravelData\Data;
 
 final class UserData extends Data
@@ -61,6 +60,6 @@ final class UserData extends Data
             return $avatar;
         }
 
-        return Storage::disk('public')->url($avatar);
+        return '/storage/'.mb_ltrim($avatar, '/');
     }
 }

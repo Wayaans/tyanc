@@ -70,7 +70,8 @@ it('shares tyanc as the default app', function (): void {
         ->and($shared['sidebarNavigation']['menu'][2]['title'])->toBe('Role & Permission')
         ->and($shared['sidebarNavigation']['menu'][2]['children'][0]['title'])->toBe('Role')
         ->and($shared['sidebarNavigation']['menu'][3]['title'])->toBe('App Settings')
-        ->and($shared['sidebarNavigation']['menu'][3]['children'][0]['href'])->toBe('/tyanc/settings/application')
+        ->and($shared['sidebarNavigation']['menu'][3]['href'])->toBe('/tyanc/settings')
+        ->and($shared['sidebarNavigation']['menu'][3])->not->toHaveKey('children')
         ->and($shared['theme'])->toMatchArray([
             'appearance' => 'system',
             'sidebar_variant' => 'inset',
@@ -173,8 +174,8 @@ it('shares resolved user preferences and theme overrides', function (): void {
 
     $shared = inertiaMiddleware()->share($request);
 
-    expect($shared['userPreferences']->resolved_locale)->toBe('id')
-        ->and($shared['userPreferences']->resolved_timezone)->toBe('Asia/Makassar')
+    expect($shared['userPreferences']->resolved_locale)->toBe('en')
+        ->and($shared['userPreferences']->resolved_timezone)->toBe('UTC')
         ->and($shared['userPreferences']->resolved_appearance)->toBe('dark')
         ->and($shared['theme'])->toMatchArray([
             'appearance' => 'dark',

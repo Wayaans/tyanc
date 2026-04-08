@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import UserDefaultsSettingsController from '@/actions/App/Http/Controllers/Tyanc/Settings/UserDefaultsSettingsController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import SettingsFormFooter from '@/components/tyanc/settings/SettingsFormFooter.vue';
 import { Label } from '@/components/ui/label';
 import {
@@ -96,26 +97,11 @@ const selectedAppearance = ref(props.settings.appearance);
 
                         <div class="grid gap-2">
                             <Label for="timezone">Default timezone</Label>
-                            <Select v-model="selectedTimezone">
-                                <SelectTrigger id="timezone" class="w-full">
-                                    <SelectValue
-                                        placeholder="Select timezone"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent class="max-h-60">
-                                    <SelectItem
-                                        v-for="tz in props.timezones"
-                                        :key="tz"
-                                        :value="tz"
-                                    >
-                                        {{ tz }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <input
-                                type="hidden"
+                            <TimezoneCombobox
+                                id="timezone"
+                                v-model="selectedTimezone"
                                 name="timezone"
-                                :value="selectedTimezone"
+                                :timezones="props.timezones"
                             />
                             <InputError :message="errors.timezone" />
                         </div>

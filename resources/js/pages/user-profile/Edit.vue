@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Camera, Github, Linkedin, Twitter } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/UserProfileController';
+import DatePickerField from '@/components/DatePickerField.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
+import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,12 +53,33 @@ function openAvatarPicker() {
     avatarInputRef.value?.click();
 }
 
+function revokeAvatarPreview() {
+    if (avatarPreview.value !== null) {
+        URL.revokeObjectURL(avatarPreview.value);
+    }
+}
+
 function handleAvatarChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
+        revokeAvatarPreview();
         avatarPreview.value = URL.createObjectURL(file);
     }
 }
+
+function handleSuccess() {
+    revokeAvatarPreview();
+    avatarPreview.value = null;
+
+    router.reload({
+        only: ['auth', 'theme', 'userPreferences'],
+        preserveScroll: true,
+    });
+}
+
+onUnmounted(() => {
+    revokeAvatarPreview();
+});
 
 const currentAvatarSrc = computed(
     () => avatarPreview.value ?? user.value.avatar ?? null,
@@ -67,10 +91,12 @@ const userInitials = computed(() => {
     return (first[0] ?? '') + (last[0] ?? '');
 });
 
-/** Locale / Timezone / Status reactive values (synced with hidden inputs) */
+/** Locale / Timezone / Status / Gender / DOB reactive values */
 const selectedLocale = ref<string>(user.value.locale ?? '');
 const selectedTimezone = ref<string>(user.value.timezone ?? '');
 const selectedStatus = ref<string>(user.value.status ?? '');
+const selectedGender = ref<string>(profile.value?.gender ?? '');
+const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 </script>
 
 <template>
@@ -84,6 +110,7 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                 v-bind="ProfileController.update.form()"
                 :options="{ preserveScroll: true }"
                 class="space-y-10"
+                @success="handleSuccess"
                 v-slot="{ errors, processing, recentlySuccessful }"
             >
                 <!-- ── Avatar ──────────────────────────────────────── -->
@@ -127,9 +154,6 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                             >
                                 Change photo
                             </Button>
-                            <p class="text-xs text-muted-foreground">
-                                JPG, PNG or WebP · Max 2 MB
-                            </p>
                         </div>
 
                         <!-- Hidden file input (name="avatar" feeds FormData) -->
@@ -142,7 +166,10 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                             @change="handleAvatarChange"
                         />
                     </div>
-                    <InputError :message="errors.avatar" />
+                    <FormFieldSupport
+                        hint="JPG, PNG or WebP · Max 2 MB"
+                        :error="errors.avatar"
+                    />
                 </div>
 
                 <Separator />
@@ -236,26 +263,11 @@ const selectedStatus = ref<string>(user.value.status ?? '');
 
                             <div class="grid gap-2">
                                 <Label for="timezone">Timezone</Label>
-                                <Select v-model="selectedTimezone">
-                                    <SelectTrigger id="timezone" class="w-full">
-                                        <SelectValue
-                                            placeholder="Select timezone"
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent class="max-h-60">
-                                        <SelectItem
-                                            v-for="tz in props.timezones"
-                                            :key="tz"
-                                            :value="tz"
-                                        >
-                                            {{ tz }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <input
-                                    type="hidden"
+                                <TimezoneCombobox
+                                    id="timezone"
+                                    v-model="selectedTimezone"
                                     name="timezone"
-                                    :value="selectedTimezone"
+                                    :timezones="props.timezones"
                                 />
                                 <InputError :message="errors.timezone" />
                             </div>
@@ -290,13 +302,14 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                                 name="status"
                                 :value="selectedStatus"
                             />
-                            <p
-                                v-if="!canManageStatus"
-                                class="text-xs text-muted-foreground"
-                            >
-                                Account status is managed by administrators.
-                            </p>
-                            <InputError :message="errors.status" />
+                            <FormFieldSupport
+                                :hint="
+                                    !canManageStatus
+                                        ? 'Account status is managed by administrators.'
+                                        : undefined
+                                "
+                                :error="errors.status"
+                            />
                         </div>
                     </div>
                 </div>
@@ -365,28 +378,35 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="date_of_birth">Date of birth</Label>
-                                <Input
+                                <DatePickerField
                                     id="date_of_birth"
-                                    type="date"
+                                    v-model="dateOfBirth"
                                     name="date_of_birth"
-                                    :default-value="
-                                        profile?.date_of_birth ?? undefined
-                                    "
-                                    autocomplete="bday"
                                 />
                                 <InputError :message="errors.date_of_birth" />
                             </div>
 
                             <div class="grid gap-2">
                                 <Label for="gender">Gender</Label>
-                                <Input
-                                    id="gender"
-                                    type="text"
+                                <Select v-model="selectedGender">
+                                    <SelectTrigger id="gender" class="w-full">
+                                        <SelectValue
+                                            placeholder="Select gender"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">
+                                            Male
+                                        </SelectItem>
+                                        <SelectItem value="female">
+                                            Female
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <input
+                                    type="hidden"
                                     name="gender"
-                                    :default-value="
-                                        profile?.gender ?? undefined
-                                    "
-                                    placeholder="e.g. non-binary"
+                                    :value="selectedGender"
                                 />
                                 <InputError :message="errors.gender" />
                             </div>
@@ -481,7 +501,7 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                                     autocomplete="postal-code"
                                     placeholder="10001"
                                 />
-                                <InputError :message="errors.postal_code" />
+                                <FormFieldSupport :error="errors.postal_code" />
                             </div>
 
                             <div class="grid gap-2">
@@ -497,10 +517,10 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                                     placeholder="US"
                                     maxlength="2"
                                 />
-                                <p class="text-xs text-muted-foreground">
-                                    2-letter ISO code (e.g. US, GB)
-                                </p>
-                                <InputError :message="errors.country" />
+                                <FormFieldSupport
+                                    hint="2-letter ISO code (e.g. US, GB)"
+                                    :error="errors.country"
+                                />
                             </div>
                         </div>
                     </div>

@@ -17,16 +17,14 @@ final readonly class UpdateUserPreferences
     public function handle(User $user, array $attributes): ?UserPreference
     {
         $validated = Validator::make($attributes, [
-            'locale' => ['nullable', Rule::in(array_keys((array) config('tyanc.supported_locales', [])))],
-            'timezone' => ['nullable', 'timezone'],
             'appearance' => ['nullable', Rule::in(array_keys((array) config('tyanc.appearance_options', [])))],
             'sidebar_variant' => ['nullable', Rule::in(array_keys((array) config('tyanc.sidebar_variants', [])))],
             'spacing_density' => ['nullable', Rule::in(array_keys((array) config('tyanc.spacing_densities', [])))],
         ])->validate();
 
         $values = [
-            'locale' => $this->nullableString($validated['locale'] ?? null),
-            'timezone' => $this->nullableString($validated['timezone'] ?? null),
+            'locale' => null,
+            'timezone' => null,
             'appearance' => $this->nullableString($validated['appearance'] ?? null),
             'sidebar_variant' => $this->nullableString($validated['sidebar_variant'] ?? null),
             'spacing_density' => $this->nullableString($validated['spacing_density'] ?? null),

@@ -14,9 +14,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { updateTheme } from '@/composables/useAppearance';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/settings/preferences';
+import type { Appearance } from '@/types';
 
 type Option = { value: string; label: string };
 type SpacingDensity = { value: string; label: string; density: number };
@@ -38,8 +41,6 @@ type Preferences = {
 type Props = {
     preferences: Preferences;
     appearances: Option[];
-    locales: string[];
-    timezones: string[];
     sidebarVariants: Option[];
     spacingDensities: SpacingDensity[];
 };
@@ -56,10 +57,6 @@ const breadcrumbItems = computed(() =>
  */
 const SYSTEM_DEFAULT = '';
 
-const selectedLocale = ref<string>(props.preferences.locale ?? SYSTEM_DEFAULT);
-const selectedTimezone = ref<string>(
-    props.preferences.timezone ?? SYSTEM_DEFAULT,
-);
 const selectedAppearance = ref<string>(
     props.preferences.appearance ?? SYSTEM_DEFAULT,
 );
@@ -73,8 +70,6 @@ const selectedSpacingDensity = ref<string>(
 watch(
     () => props.preferences,
     (preferences) => {
-        selectedLocale.value = preferences.locale ?? SYSTEM_DEFAULT;
-        selectedTimezone.value = preferences.timezone ?? SYSTEM_DEFAULT;
         selectedAppearance.value = preferences.appearance ?? SYSTEM_DEFAULT;
         selectedSidebarVariant.value =
             preferences.sidebar_variant ?? SYSTEM_DEFAULT;
@@ -83,21 +78,18 @@ watch(
     },
 );
 
+/** Live-preview theme when the user picks a different appearance option. */
+watch(selectedAppearance, (val) => {
+    const theme = (
+        val !== SYSTEM_DEFAULT ? val : props.preferences.resolved_appearance
+    ) as Appearance;
+    updateTheme(theme);
+});
+
 function clearField(
-    field:
-        | 'locale'
-        | 'timezone'
-        | 'appearance'
-        | 'sidebar_variant'
-        | 'spacing_density',
+    field: 'appearance' | 'sidebar_variant' | 'spacing_density',
 ) {
     switch (field) {
-        case 'locale':
-            selectedLocale.value = SYSTEM_DEFAULT;
-            break;
-        case 'timezone':
-            selectedTimezone.value = SYSTEM_DEFAULT;
-            break;
         case 'appearance':
             selectedAppearance.value = SYSTEM_DEFAULT;
             break;
@@ -110,12 +102,6 @@ function clearField(
     }
 }
 
-const resolvedLocaleLabel = computed(() =>
-    props.preferences.resolved_locale.toUpperCase(),
-);
-const resolvedTimezoneLabel = computed(
-    () => props.preferences.resolved_timezone,
-);
 const resolvedAppearanceLabel = computed(
     () =>
         props.appearances.find(
@@ -142,127 +128,19 @@ const resolvedSpacingLabel = computed(
 
         <h1 class="sr-only">Preferences</h1>
 
-        <div class="px-4 py-6">
-            <div class="mb-6">
+        <SettingsLayout>
+            <div class="space-y-6">
                 <Heading
                     title="Preferences"
-                    description="Personalise your experience — these settings override application defaults"
+                    description="Personalise your display — these settings override application defaults"
                 />
-            </div>
 
-            <div class="max-w-2xl">
                 <Form
                     v-bind="UserPreferencesController.update.form()"
                     :options="{ preserveScroll: true }"
                     class="space-y-6"
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
-                    <!-- Locale & time -->
-                    <div class="space-y-4">
-                        <Heading
-                            variant="small"
-                            title="Locale & time"
-                            description="Your personal language and timezone — overrides system defaults"
-                        />
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <!-- Locale -->
-                            <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="locale">Language</Label>
-                                    <button
-                                        v-if="selectedLocale !== SYSTEM_DEFAULT"
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('locale')"
-                                    >
-                                        Use system default
-                                    </button>
-                                </div>
-                                <Select v-model="selectedLocale">
-                                    <SelectTrigger id="locale" class="w-full">
-                                        <SelectValue
-                                            :placeholder="`System default (${resolvedLocaleLabel})`"
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            v-for="locale in props.locales"
-                                            :key="locale"
-                                            :value="locale"
-                                        >
-                                            {{ locale.toUpperCase() }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <!-- Only sent when explicitly set -->
-                                <input
-                                    v-if="selectedLocale !== SYSTEM_DEFAULT"
-                                    type="hidden"
-                                    name="locale"
-                                    :value="selectedLocale"
-                                />
-                                <FormFieldSupport
-                                    :hint="
-                                        selectedLocale === SYSTEM_DEFAULT
-                                            ? `Using system default: ${resolvedLocaleLabel}`
-                                            : undefined
-                                    "
-                                    :error="errors.locale"
-                                />
-                            </div>
-
-                            <!-- Timezone -->
-                            <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="timezone">Timezone</Label>
-                                    <button
-                                        v-if="
-                                            selectedTimezone !== SYSTEM_DEFAULT
-                                        "
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('timezone')"
-                                    >
-                                        Use system default
-                                    </button>
-                                </div>
-                                <Select v-model="selectedTimezone">
-                                    <SelectTrigger id="timezone" class="w-full">
-                                        <SelectValue
-                                            :placeholder="`System default (${resolvedTimezoneLabel})`"
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent class="max-h-60">
-                                        <SelectItem
-                                            v-for="tz in props.timezones"
-                                            :key="tz"
-                                            :value="tz"
-                                        >
-                                            {{ tz }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <input
-                                    v-if="selectedTimezone !== SYSTEM_DEFAULT"
-                                    type="hidden"
-                                    name="timezone"
-                                    :value="selectedTimezone"
-                                />
-                                <FormFieldSupport
-                                    :hint="
-                                        selectedTimezone === SYSTEM_DEFAULT
-                                            ? `Using system default: ${resolvedTimezoneLabel}`
-                                            : undefined
-                                    "
-                                    :error="errors.timezone"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <Separator />
-
                     <!-- Display preferences -->
                     <div class="space-y-4">
                         <Heading
@@ -462,6 +340,6 @@ const resolvedSpacingLabel = computed(
                     </div>
                 </Form>
             </div>
-        </div>
+        </SettingsLayout>
     </AppLayout>
 </template>

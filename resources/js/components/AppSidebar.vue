@@ -13,7 +13,7 @@ import {
 import { useAppNavigation } from '@/composables/useAppNavigation';
 
 const page = usePage();
-const { activeApp, mainNavItems } = useAppNavigation();
+const { mainNavItems } = useAppNavigation();
 
 const sidebarVariant = computed(() => {
     const variant = page.props.theme?.sidebar_variant;
@@ -33,7 +33,7 @@ const sidebarVariant = computed(() => {
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" :label="activeApp.title" />
+            <NavMain :items="mainNavItems" label="Main menu" />
         </SidebarContent>
 
         <SidebarFooter>

@@ -71,16 +71,9 @@ const fallbackSidebarNavigation: SidebarNavigationData = {
         },
         {
             title: 'App Settings',
+            href: '/tyanc/settings',
             icon: 'settings',
             permission: null,
-            children: [
-                {
-                    title: 'Application',
-                    href: editTyancApplication(),
-                    icon: 'settings',
-                    permission: null,
-                },
-            ],
         },
     ],
 };

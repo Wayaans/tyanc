@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { Camera } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
+import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
+import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +39,23 @@ function openAvatarPicker() {
     avatarInputRef.value?.click();
 }
 
+function revokeAvatarPreview() {
+    if (avatarPreview.value !== null) {
+        URL.revokeObjectURL(avatarPreview.value);
+    }
+}
+
 function handleAvatarChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
+        revokeAvatarPreview();
         avatarPreview.value = URL.createObjectURL(file);
     }
 }
+
+onUnmounted(() => {
+    revokeAvatarPreview();
+});
 </script>
 
 <template>
@@ -83,9 +96,6 @@ function handleAvatarChange(event: Event) {
                             <Camera class="size-3" />
                         </button>
                     </div>
-                    <p class="text-xs text-muted-foreground">
-                        Profile photo · JPG, PNG or WebP · Max 2 MB
-                    </p>
                     <input
                         ref="avatarInputRef"
                         type="file"
@@ -94,7 +104,10 @@ function handleAvatarChange(event: Event) {
                         class="hidden"
                         @change="handleAvatarChange"
                     />
-                    <InputError :message="errors.avatar" />
+                    <FormFieldSupport
+                        hint="Profile photo · JPG, PNG or WebP · Max 2 MB"
+                        :error="errors.avatar"
+                    />
                 </div>
 
                 <!-- Name row -->
@@ -221,28 +234,11 @@ function handleAvatarChange(event: Event) {
 
                     <div class="grid gap-2">
                         <Label for="timezone">Timezone</Label>
-                        <Select v-model="selectedTimezone">
-                            <SelectTrigger
-                                id="timezone"
-                                class="w-full"
-                                :tabindex="8"
-                            >
-                                <SelectValue placeholder="Select timezone" />
-                            </SelectTrigger>
-                            <SelectContent class="max-h-60">
-                                <SelectItem
-                                    v-for="tz in props.timezones"
-                                    :key="tz"
-                                    :value="tz"
-                                >
-                                    {{ tz }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <input
-                            type="hidden"
+                        <TimezoneCombobox
+                            id="timezone"
+                            v-model="selectedTimezone"
                             name="timezone"
-                            :value="selectedTimezone"
+                            :timezones="props.timezones"
                         />
                         <InputError :message="errors.timezone" />
                     </div>
