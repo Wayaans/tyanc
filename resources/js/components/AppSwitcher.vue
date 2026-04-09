@@ -31,6 +31,7 @@ const { __ } = useTranslations();
                 <DropdownMenuTrigger as-child>
                     <SidebarMenuButton
                         size="lg"
+                        :tooltip="activeApp.title"
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
                         <div

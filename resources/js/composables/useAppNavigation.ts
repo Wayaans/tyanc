@@ -14,70 +14,73 @@ import type {
     SidebarNavigationData,
 } from '@/types';
 
-const fallbackSidebarNavigation: SidebarNavigationData = {
+const resolveFallbackSidebarNavigation = (
+    appName: string,
+    translate: (key: string) => string,
+): SidebarNavigationData => ({
     apps: [
         {
             id: 'tyanc',
-            title: 'Tyanc',
-            subtitle: 'Admin panel',
+            title: appName,
+            subtitle: translate('Admin panel'),
             href: dashboard(),
             icon: 'app-logo',
         },
         {
             id: 'demo',
             title: 'Demo',
-            subtitle: 'Sandbox',
+            subtitle: translate('Sandbox'),
             href: demoDashboard(),
             icon: 'flask-conical',
         },
     ],
     menu: [
         {
-            title: 'Dashboard',
+            title: translate('Dashboard'),
             href: dashboard(),
             icon: 'layout-grid',
             permission: null,
         },
         {
-            title: 'User',
+            title: translate('User'),
             icon: 'user',
             permission: null,
         },
         {
-            title: 'Role & Permission',
+            title: translate('Role & Permission'),
             icon: 'key-round',
             permission: null,
             children: [
                 {
-                    title: 'Role',
+                    title: translate('Role'),
                     icon: 'key-round',
                     permission: null,
                 },
                 {
-                    title: 'Permissions',
+                    title: translate('Permissions'),
                     icon: 'key-round',
                     permission: null,
                 },
                 {
-                    title: 'Level',
+                    title: translate('Level'),
                     icon: 'key-round',
                     permission: null,
                 },
                 {
-                    title: 'Group',
+                    title: translate('Group'),
                     icon: 'key-round',
                     permission: null,
                 },
             ],
         },
         {
-            title: 'App Settings',
-            href: '/tyanc/settings',
+            title: translate('App Settings'),
+            href: editTyancApplication(),
             icon: 'settings',
             permission: null,
         },
     ],
-};
+});
 
 const persistCurrentApp = (appId: AppId) => {
     if (typeof document === 'undefined') {
@@ -97,9 +100,16 @@ export function useAppNavigation() {
         page.props.currentApp === 'demo' ? 'demo' : 'tyanc',
     );
 
-    const sidebarNavigation = computed<SidebarNavigationData>(
-        () => page.props.sidebarNavigation ?? fallbackSidebarNavigation,
-    );
+    const sidebarNavigation = computed<SidebarNavigationData>(() => {
+        if (page.props.sidebarNavigation) {
+            return page.props.sidebarNavigation;
+        }
+
+        return resolveFallbackSidebarNavigation(
+            page.props.brand?.app_name ?? 'Tyanc',
+            __,
+        );
+    });
     const apps = computed(() =>
         mapSidebarApps(sidebarNavigation.value.apps).map((app) =>
             app.id === 'tyanc'

@@ -21,6 +21,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/composables/useAppearance';
+import { useTranslations } from '@/lib/translations';
 import type { Appearance } from '@/types';
 
 type AppearanceOption = {
@@ -29,35 +30,37 @@ type AppearanceOption = {
     icon: typeof Sun;
 };
 
-const appearanceOptions: AppearanceOption[] = [
-    {
-        value: 'light',
-        label: 'Light',
-        icon: Sun,
-    },
-    {
-        value: 'dark',
-        label: 'Dark',
-        icon: Moon,
-    },
-    {
-        value: 'system',
-        label: 'System',
-        icon: Monitor,
-    },
-];
-
 const { appearance, updateAppearance } = useAppearance();
 const {
     isFullscreen,
     isSupported: isFullscreenSupported,
     toggle: toggleFullscreen,
 } = useFullscreen();
+const { __ } = useTranslations();
+
+const appearanceOptions = computed<AppearanceOption[]>(() => [
+    {
+        value: 'light',
+        label: __('Light'),
+        icon: Sun,
+    },
+    {
+        value: 'dark',
+        label: __('Dark'),
+        icon: Moon,
+    },
+    {
+        value: 'system',
+        label: __('System'),
+        icon: Monitor,
+    },
+]);
 
 const currentAppearance = computed(
     () =>
-        appearanceOptions.find((option) => option.value === appearance.value) ??
-        appearanceOptions[2],
+        appearanceOptions.value.find(
+            (option) => option.value === appearance.value,
+        ) ?? appearanceOptions.value[2],
 );
 
 const handleAppearanceChange = (value: string) => {
@@ -82,16 +85,16 @@ const handleFullscreenToggle = async () => {
 </script>
 
 <template>
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-0.5 sm:gap-1">
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
                 <Button variant="ghost" size="icon" class="size-8">
                     <component :is="currentAppearance.icon" class="size-4" />
-                    <span class="sr-only">Color mode</span>
+                    <span class="sr-only">{{ __('Color mode') }}</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-44 rounded-lg">
-                <DropdownMenuLabel>Color mode</DropdownMenuLabel>
+                <DropdownMenuLabel>{{ __('Color mode') }}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup
                     :model-value="appearance"
@@ -113,14 +116,14 @@ const handleFullscreenToggle = async () => {
             <DropdownMenuTrigger as-child>
                 <Button variant="ghost" size="icon" class="size-8">
                     <Bell class="size-4" />
-                    <span class="sr-only">Notifications</span>
+                    <span class="sr-only">{{ __('Notifications') }}</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-72 rounded-lg">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuLabel>{{ __('Notifications') }}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div class="px-2 py-4 text-sm text-muted-foreground">
-                    You're all caught up.
+                    {{ __("You're all caught up.") }}
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>
@@ -129,14 +132,14 @@ const handleFullscreenToggle = async () => {
             <DropdownMenuTrigger as-child>
                 <Button variant="ghost" size="icon" class="size-8">
                     <MessageSquareMore class="size-4" />
-                    <span class="sr-only">Chats</span>
+                    <span class="sr-only">{{ __('Chats') }}</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-72 rounded-lg">
-                <DropdownMenuLabel>Chats</DropdownMenuLabel>
+                <DropdownMenuLabel>{{ __('Chats') }}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div class="px-2 py-4 text-sm text-muted-foreground">
-                    No unread conversations.
+                    {{ __('No unread conversations.') }}
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>
@@ -150,7 +153,7 @@ const handleFullscreenToggle = async () => {
         >
             <Maximize v-if="!isFullscreen" class="size-4" />
             <Minimize v-else class="size-4" />
-            <span class="sr-only">Toggle fullscreen</span>
+            <span class="sr-only">{{ __('Toggle fullscreen') }}</span>
         </Button>
     </div>
 </template>

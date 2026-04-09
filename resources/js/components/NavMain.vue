@@ -12,15 +12,15 @@ const props = withDefaults(
         items: NavItem[];
         label?: string;
     }>(),
-    {
-        label: 'Platform',
-    },
+    {},
 );
 </script>
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel>{{ props.label }}</SidebarGroupLabel>
+        <SidebarGroupLabel v-if="props.label">{{
+            props.label
+        }}</SidebarGroupLabel>
         <SidebarMenu>
             <NavMainItem
                 v-for="item in items"

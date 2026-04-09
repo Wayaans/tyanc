@@ -45,6 +45,26 @@ it('shares locale metadata and route translations', function (): void {
         ->and($shared['translations']['Welcome back'])->toBe('Selamat datang kembali');
 });
 
+it('shares dashboard shell translations for app-aware routes', function (): void {
+    app()->setLocale('id');
+
+    $request = Request::create('/tyanc/dashboard', 'GET');
+    $request->setLocale('id');
+
+    $route = new Route('GET', '/tyanc/dashboard', fn (): null => null);
+    $route->name('dashboard');
+
+    $request->setRouteResolver(fn (): Route => $route);
+
+    $shared = inertiaMiddleware()->share($request);
+
+    expect($shared['translations'])
+        ->toHaveKey('Notifications')
+        ->and($shared['translations']['Notifications'])->toBe('Notifikasi')
+        ->and($shared['translations'])->toHaveKey('Ready for the next module')
+        ->and($shared['translations']['Ready for the next module'])->toBe('Siap untuk modul berikutnya');
+});
+
 it('shares null user when guest', function (): void {
     $request = Request::create('/', 'GET');
 

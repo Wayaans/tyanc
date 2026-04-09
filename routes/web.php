@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Demo\DashboardController as DemoDashboardController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\Tyanc\DashboardController as TyancDashboardController;
 use App\Http\Controllers\Tyanc\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Tyanc\Settings\AppSettingsController;
 use App\Http\Controllers\Tyanc\Settings\SecuritySettingsController;
@@ -29,7 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $dem
     Route::redirect('dashboard', sprintf('/%s/dashboard', $adminPath));
 
     Route::prefix($adminPath)->group(function () use ($adminPath): void {
-        Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+        Route::get('dashboard', [TyancDashboardController::class, 'show'])->name('dashboard');
 
         Route::prefix('settings')->name('tyanc.settings.')->group(function () use ($adminPath): void {
             Route::redirect('/', '/'.$adminPath.'/settings/application')->name('index');
@@ -49,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $dem
     });
 
     Route::prefix($demoPath)->name('demo.')->group(function (): void {
-        Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+        Route::get('dashboard', [DemoDashboardController::class, 'show'])->name('dashboard');
     });
 });
 
