@@ -1,3 +1,8 @@
+# Project Identity
+
+- Read `README.md` first for a concise overview of what Tyanc is before planning or implementing new work.
+- Tyanc is an installable admin foundation. The `tyanc` app is the central control plane for users, roles, permissions, app access, page access, and system settings across future apps such as ERP or Tasks.
+
 <laravel-boost-guidelines>
 === .agents/app.actions rules ===
 
