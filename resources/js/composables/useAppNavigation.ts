@@ -5,7 +5,14 @@ import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
+import { index as activityLogRoute } from '@/routes/tyanc/activity-log';
 import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
+import {
+    create as usersCreate,
+    edit as usersEdit,
+    index as usersRoute,
+    show as usersShow,
+} from '@/routes/tyanc/users';
 import { edit as editProfile } from '@/routes/user-profile';
 import type {
     AppId,
@@ -42,8 +49,15 @@ const resolveFallbackSidebarNavigation = (
             permission: null,
         },
         {
-            title: translate('User'),
+            title: translate('Users'),
+            href: usersRoute(),
             icon: 'user',
+            permission: null,
+        },
+        {
+            title: translate('Activity log'),
+            href: activityLogRoute(),
+            icon: 'shield-check',
             permission: null,
         },
         {
@@ -190,6 +204,32 @@ export function useAppNavigation() {
         },
     ];
 
+    const usersBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Users'), href: usersRoute() },
+    ]);
+
+    const usersCreateBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Users'), href: usersRoute() },
+        { title: __('New user'), href: usersCreate() },
+    ]);
+
+    const usersShowBreadcrumbs = (userName: string, userId: string) =>
+        computed<BreadcrumbItem[]>(() => [
+            rootBreadcrumb.value,
+            { title: __('Users'), href: usersRoute() },
+            { title: userName, href: usersShow({ user: userId }) },
+        ]);
+
+    const usersEditBreadcrumbs = (userName: string, userId: string) =>
+        computed<BreadcrumbItem[]>(() => [
+            rootBreadcrumb.value,
+            { title: __('Users'), href: usersRoute() },
+            { title: userName, href: usersShow({ user: userId }) },
+            { title: __('Edit'), href: usersEdit({ user: userId }) },
+        ]);
+
     return {
         activeApp,
         activeAppId,
@@ -200,5 +240,13 @@ export function useAppNavigation() {
         settingsBreadcrumbs,
         switchApp,
         tyancSettingsBreadcrumbs,
+        usersBreadcrumbs,
+        usersCreateBreadcrumbs,
+        usersShowBreadcrumbs,
+        usersEditBreadcrumbs,
+        activityLogBreadcrumbs: computed<BreadcrumbItem[]>(() => [
+            rootBreadcrumb.value,
+            { title: __('Activity log'), href: activityLogRoute() },
+        ]),
     };
 }

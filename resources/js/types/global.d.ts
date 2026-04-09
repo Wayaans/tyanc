@@ -1,6 +1,7 @@
 import type {
     AppId,
     BrandProps,
+    NotificationsPayload,
     SidebarNavigationData,
     ThemeProps,
 } from '@/types';
@@ -40,6 +41,8 @@ declare module '@inertiajs/core' {
             availableLocales: string[];
             /** Flat JSON translation map for the current locale. */
             translations: Record<string, string>;
+            /** Notification summary shared on every authenticated page. */
+            notifications: NotificationsPayload | null;
             [key: string]: unknown;
         };
     }

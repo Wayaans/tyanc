@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Observers\UserObserver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -23,6 +24,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->bootAuthorizationRules();
         $this->bootReservedRoleRules();
+        $this->bootObservers();
         $this->bootLoginTelemetry();
     }
 
@@ -52,6 +54,11 @@ final class AppServiceProvider extends ServiceProvider
         });
     }
 
+    private function bootObservers(): void
+    {
+        User::observe(UserObserver::class);
+    }
+
     private function bootLoginTelemetry(): void
     {
         Event::listen(Login::class, function (Login $event): void {
@@ -63,6 +70,15 @@ final class AppServiceProvider extends ServiceProvider
                 'last_login_at' => now(),
                 'last_login_ip' => request()->ip(),
             ])->saveQuietly();
+
+            activity('auth')
+                ->performedOn($event->user)
+                ->causedBy($event->user)
+                ->event('login')
+                ->withProperties([
+                    'ip_address' => request()->ip(),
+                ])
+                ->log('User signed in');
         });
     }
 }

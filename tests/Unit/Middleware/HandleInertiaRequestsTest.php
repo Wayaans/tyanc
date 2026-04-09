@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use App\Models\UserPreference;
+use App\Notifications\NewApprovalRequestedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
@@ -104,13 +105,15 @@ it('shares tyanc as the default app', function (): void {
         ->and($shared['sidebarNavigation']['apps'][0]['href'])->toBe('/tyanc/dashboard')
         ->and($shared['sidebarNavigation']['menu'][0]['title'])->toBe('Dashboard')
         ->and($shared['sidebarNavigation']['menu'][0]['href'])->toBe('/tyanc/dashboard')
-        ->and($shared['sidebarNavigation']['menu'][1]['title'])->toBe('User')
-        ->and($shared['sidebarNavigation']['menu'][1])->not->toHaveKey('href')
+        ->and($shared['sidebarNavigation']['menu'][1]['title'])->toBe('Users')
+        ->and($shared['sidebarNavigation']['menu'][1]['href'])->toBe('/tyanc/users')
         ->and($shared['sidebarNavigation']['menu'][2]['title'])->toBe('Role & Permission')
         ->and($shared['sidebarNavigation']['menu'][2]['children'][0]['title'])->toBe('Role')
-        ->and($shared['sidebarNavigation']['menu'][3]['title'])->toBe('App Settings')
-        ->and($shared['sidebarNavigation']['menu'][3]['href'])->toBe('/tyanc/settings')
-        ->and($shared['sidebarNavigation']['menu'][3])->not->toHaveKey('children')
+        ->and($shared['sidebarNavigation']['menu'][3]['title'])->toBe('Activity log')
+        ->and($shared['sidebarNavigation']['menu'][3]['href'])->toBe('/tyanc/activity-log')
+        ->and($shared['sidebarNavigation']['menu'][4]['title'])->toBe('App Settings')
+        ->and($shared['sidebarNavigation']['menu'][4]['href'])->toBe('/tyanc/settings')
+        ->and($shared['sidebarNavigation']['menu'][4])->not->toHaveKey('children')
         ->and($shared['theme'])->toMatchArray([
             'appearance' => 'system',
             'sidebar_variant' => 'inset',
@@ -225,6 +228,26 @@ it('shares resolved user preferences and theme overrides', function (): void {
             'spacing_density' => 'comfortable',
             'spacing_density_value' => 1.25,
         ]);
+});
+
+it('shares unread notifications for authenticated users', function (): void {
+    $user = User::factory()->create();
+
+    $user->notify(new NewApprovalRequestedNotification());
+
+    $request = Request::create('/tyanc/dashboard', 'GET');
+    $request->setUserResolver(fn (): User => $user);
+
+    $route = new Route('GET', '/tyanc/dashboard', fn (): null => null);
+    $route->name('dashboard');
+
+    $request->setRouteResolver(fn (): Route => $route);
+
+    $shared = inertiaMiddleware()->share($request);
+
+    expect($shared['notifications']['unread_count'])->toBe(1)
+        ->and($shared['notifications']['recent'])->toHaveCount(1)
+        ->and($shared['notifications']['recent'][0]->title)->toBe('New approval requested');
 });
 
 it('includes parent shared data', function (): void {

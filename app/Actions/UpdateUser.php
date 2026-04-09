@@ -28,7 +28,11 @@ final readonly class UpdateUser
             $userAttributes = [
                 'username' => $attributes['username'] ?? $user->username,
                 'email' => $attributes['email'] ?? $user->email,
-                'avatar' => $this->storeAvatar($attributes['avatar'] ?? null, $user->avatar),
+                'avatar' => $this->storeAvatar(
+                    avatar: $attributes['avatar'] ?? null,
+                    currentAvatar: $user->avatar,
+                    removeAvatar: (bool) ($attributes['remove_avatar'] ?? false),
+                ),
                 'status' => $attributes['status'] ?? $user->status ?? UserStatus::Active,
                 'timezone' => $attributes['timezone'] ?? $user->timezone,
                 'locale' => $attributes['locale'] ?? $user->locale,
@@ -57,8 +61,13 @@ final readonly class UpdateUser
         });
     }
 
-    private function storeAvatar(mixed $avatar, ?string $currentAvatar): ?string
+    private function storeAvatar(mixed $avatar, ?string $currentAvatar, bool $removeAvatar = false): ?string
     {
+        if ($removeAvatar && is_string($currentAvatar) && $currentAvatar !== '') {
+            Storage::disk('public')->delete($currentAvatar);
+            $currentAvatar = null;
+        }
+
         if (! $avatar instanceof UploadedFile) {
             return $currentAvatar;
         }

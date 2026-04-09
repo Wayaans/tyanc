@@ -8,8 +8,10 @@ use App\Actions\ResolveSidebarNavigation;
 use App\Actions\ResolveTranslations;
 use App\Actions\Settings\ResolveRuntimeSettings;
 use App\Data\Auth\UserData;
+use App\Data\Notifications\NotificationData;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
@@ -49,7 +51,7 @@ final class HandleInertiaRequests extends Middleware
         $authenticatedUser = $user instanceof User ? $user->loadMissing('profile', 'preference') : null;
         $runtimeSettings = $this->resolveRuntimeSettings($request, $authenticatedUser);
 
-        if ($routeName === 'dashboard') {
+        if ($routeName === 'dashboard' || str_starts_with($routeName, 'tyanc.')) {
             $currentApp = $defaultApp;
         } elseif (str_starts_with($routeName, 'demo.')) {
             $currentApp = 'demo';
@@ -74,6 +76,7 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,
             ],
+            'notifications' => $this->notifications($authenticatedUser),
             'currentApp' => $currentApp,
             'sidebarNavigation' => resolve(ResolveSidebarNavigation::class)->handle($currentApp),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
@@ -130,5 +133,28 @@ final class HandleInertiaRequests extends Middleware
     private function availableLocales(): array
     {
         return array_values(array_keys((array) config('tyanc.supported_locales', [])));
+    }
+
+    /**
+     * @return array{unread_count: int, recent: list<NotificationData>}
+     */
+    private function notifications(?User $user): array
+    {
+        if (! $user instanceof User) {
+            return [
+                'unread_count' => 0,
+                'recent' => [],
+            ];
+        }
+
+        return [
+            'unread_count' => $user->unreadNotifications()->count(),
+            'recent' => $user->notifications()
+                ->latest()
+                ->limit(8)
+                ->get()
+                ->map(fn (DatabaseNotification $notification): NotificationData => NotificationData::fromModel($notification))
+                ->all(),
+        ];
     }
 }

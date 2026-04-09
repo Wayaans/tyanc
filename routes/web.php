@@ -5,11 +5,14 @@ declare(strict_types=1);
 use App\Http\Controllers\Demo\DashboardController as DemoDashboardController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\Tyanc\ActivityLogController;
 use App\Http\Controllers\Tyanc\DashboardController as TyancDashboardController;
+use App\Http\Controllers\Tyanc\NotificationController;
 use App\Http\Controllers\Tyanc\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Tyanc\Settings\AppSettingsController;
 use App\Http\Controllers\Tyanc\Settings\SecuritySettingsController;
 use App\Http\Controllers\Tyanc\Settings\UserDefaultsSettingsController;
+use App\Http\Controllers\Tyanc\UserController as TyancUserController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -32,6 +35,25 @@ Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $dem
 
     Route::prefix($adminPath)->group(function () use ($adminPath): void {
         Route::get('dashboard', [TyancDashboardController::class, 'show'])->name('dashboard');
+
+        Route::prefix('users')->name('tyanc.users.')->group(function (): void {
+            Route::get('/', new TyancUserController()->index(...))->name('index');
+            Route::get('create', new TyancUserController()->create(...))->name('create');
+            Route::post('/', new TyancUserController()->store(...))->name('store');
+            Route::get('{user}', new TyancUserController()->show(...))->name('show');
+            Route::get('{user}/edit', new TyancUserController()->edit(...))->name('edit');
+            Route::patch('{user}', new TyancUserController()->update(...))->name('update');
+            Route::patch('{user}/suspend', new TyancUserController()->suspend(...))->name('suspend');
+            Route::delete('{user}', new TyancUserController()->destroy(...))->name('destroy');
+        });
+
+        Route::get('activity-log', [ActivityLogController::class, 'index'])->name('tyanc.activity-log.index');
+
+        Route::prefix('notifications')->name('tyanc.notifications.')->group(function (): void {
+            Route::get('/', [NotificationController::class, 'index'])->name('index');
+            Route::patch('mark-all-read', [NotificationController::class, 'markAllRead'])->name('mark-all-read');
+            Route::patch('{notification}', [NotificationController::class, 'update'])->name('update');
+        });
 
         Route::prefix('settings')->name('tyanc.settings.')->group(function () use ($adminPath): void {
             Route::redirect('/', '/'.$adminPath.'/settings/application')->name('index');

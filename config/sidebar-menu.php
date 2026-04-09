@@ -17,8 +17,9 @@ return [
                     'permission' => null,
                 ],
                 [
-                    'title' => 'User',
+                    'title' => 'Users',
                     'icon' => 'user',
+                    'route' => 'tyanc.users.index',
                     'permission' => null,
                 ],
                 [
@@ -47,6 +48,12 @@ return [
                             'permission' => null,
                         ],
                     ],
+                ],
+                [
+                    'title' => 'Activity log',
+                    'icon' => 'shield-check',
+                    'route' => 'tyanc.activity-log.index',
+                    'permission' => null,
                 ],
                 [
                     'title' => 'App Settings',

@@ -7,7 +7,13 @@ declare module '@tanstack/vue-table' {
     }
 }
 
-export type DataTablePrimitive = string | number | boolean | null;
+export type DataTablePrimitive =
+    | string
+    | number
+    | boolean
+    | null
+    | string[]
+    | Record<string, unknown>;
 
 export type DataTableQuery = {
     page: number;

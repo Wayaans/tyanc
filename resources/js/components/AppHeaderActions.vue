@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useFullscreen } from '@vueuse/core';
 import {
-    Bell,
     Maximize,
     MessageSquareMore,
     Minimize,
@@ -10,6 +9,7 @@ import {
     Sun,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
+import NotificationDropdown from '@/components/admin/NotificationDropdown.vue';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -112,21 +112,7 @@ const handleFullscreenToggle = async () => {
             </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="size-8">
-                    <Bell class="size-4" />
-                    <span class="sr-only">{{ __('Notifications') }}</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-72 rounded-lg">
-                <DropdownMenuLabel>{{ __('Notifications') }}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div class="px-2 py-4 text-sm text-muted-foreground">
-                    {{ __("You're all caught up.") }}
-                </div>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationDropdown />
 
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
