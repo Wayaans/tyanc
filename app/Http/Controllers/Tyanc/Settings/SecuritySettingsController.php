@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc\Settings;
 
-use App\Actions\Settings\UpdateSecuritySettings;
+use App\Actions\Tyanc\Settings\UpdateSecuritySettings;
 use App\Data\Settings\SecuritySettingsData;
 use App\Models\User;
 use App\Settings\SecuritySettings;

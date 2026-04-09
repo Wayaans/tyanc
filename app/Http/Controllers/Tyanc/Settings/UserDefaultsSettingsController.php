@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc\Settings;
 
-use App\Actions\Settings\UpdateUserDefaultsSettings;
+use App\Actions\Tyanc\Settings\UpdateUserDefaultsSettings;
 use App\Data\Settings\UserDefaultsSettingsData;
 use App\Models\User;
 use App\Settings\UserDefaultsSettings;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
-use App\Data\Activity\ActivityLogEntryData;
 use App\Data\Tables\DataTableQueryData;
+use App\Data\Tyanc\Activity\ActivityLogEntryData;
 use App\Models\User;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Database\Eloquent\Builder;

@@ -334,7 +334,10 @@ const genderOptions = computed<SelectOption[]>(() => [
         </div>
 
         <!-- Password fields -->
-        <div v-if="props.showPasswordFields" class="grid gap-4 sm:grid-cols-2">
+        <div
+            v-if="props.showPasswordFields"
+            class="grid items-start gap-4 sm:grid-cols-2"
+        >
             <div class="grid gap-2">
                 <Label for="uf-password">{{ __('Password') }}</Label>
                 <Input
@@ -369,7 +372,7 @@ const genderOptions = computed<SelectOption[]>(() => [
                         update('password_confirmation', String($event))
                     "
                 />
-                <InputError :message="props.errors.password_confirmation" />
+                <FormFieldSupport :error="props.errors.password_confirmation" />
             </div>
         </div>
     </div>

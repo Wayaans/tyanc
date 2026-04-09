@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/input-otp';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { useTranslations } from '@/lib/translations';
-import { store } from '@/routes/two-factor/login';
+import { store } from '@/routes/login';
 import type { TwoFactorConfigContent } from '@/types';
 
 withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });

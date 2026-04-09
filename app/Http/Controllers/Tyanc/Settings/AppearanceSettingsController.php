@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc\Settings;
 
-use App\Actions\Settings\UpdateAppearanceSettings;
+use App\Actions\Tyanc\Settings\UpdateAppearanceSettings;
 use App\Data\Settings\AppearanceSettingsData;
 use App\Models\User;
 use App\Settings\AppearanceSettings;

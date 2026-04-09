@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Users;
+namespace App\Actions\Tyanc\Users;
 
-use App\Data\Users\UserFormData;
+use App\Data\Tyanc\Users\UserFormData;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 

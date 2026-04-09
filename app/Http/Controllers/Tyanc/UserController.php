@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
-use App\Actions\Users\DeleteUser;
-use App\Actions\Users\ListUsers;
-use App\Actions\Users\StoreUser;
-use App\Actions\Users\SuspendUser;
-use App\Actions\Users\UpdateUser;
-use App\Data\Users\UserFormData;
-use App\Data\Users\UserIndexData;
+use App\Actions\Tyanc\Users\DeleteUser;
+use App\Actions\Tyanc\Users\ListUsers;
+use App\Actions\Tyanc\Users\StoreUser;
+use App\Actions\Tyanc\Users\SuspendUser;
+use App\Actions\Tyanc\Users\UpdateUser;
+use App\Data\Tyanc\Users\UserFormData;
+use App\Data\Tyanc\Users\UserIndexData;
 use App\Enums\UserStatus;
 use App\Http\Requests\Tyanc\StoreUserRequest;
 use App\Http\Requests\Tyanc\UpdateUserRequest;

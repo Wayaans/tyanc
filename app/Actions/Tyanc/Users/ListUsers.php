@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Users;
+namespace App\Actions\Tyanc\Users;
 
 use App\Data\Tables\DataTableQueryData;
-use App\Data\Users\UserIndexData;
+use App\Data\Tyanc\Users\UserIndexData;
 use App\Enums\UserStatus;
 use App\Http\Requests\Tyanc\UserIndexRequest;
 use App\Models\Role;

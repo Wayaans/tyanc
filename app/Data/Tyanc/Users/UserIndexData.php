@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Data\Users;
+namespace App\Data\Tyanc\Users;
 
 use App\Enums\UserStatus;
 use App\Models\User;

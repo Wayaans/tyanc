@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Settings;
+namespace App\Actions\Tyanc\Settings;
 
 use App\Models\User;
 use App\Settings\AppearanceSettings;
