@@ -7,6 +7,7 @@ import {
     initializeTheme,
     syncThemeFromPageProps,
 } from '@/composables/useAppearance';
+import { registerTranslations } from '@/lib/translations';
 import type { ThemeProps } from '@/types';
 
 const appName = 'Tyanc';
@@ -27,9 +28,14 @@ void createInertiaApp({
             syncThemeFromPageProps(initialTheme);
         }
 
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .mount(el);
+        const vueApp = createApp({ render: () => h(App, props) });
+
+        registerTranslations(
+            vueApp,
+            props.initialPage.props as Record<string, unknown>,
+        );
+
+        vueApp.use(plugin).mount(el);
     },
     progress: {
         color: '#4B5563',

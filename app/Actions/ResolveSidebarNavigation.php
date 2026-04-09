@@ -38,8 +38,8 @@ final readonly class ResolveSidebarNavigation
         foreach ($apps as $id => $app) {
             $resolvedApps[] = [
                 'id' => $id,
-                'title' => (string) ($app['title'] ?? ''),
-                'subtitle' => (string) ($app['subtitle'] ?? ''),
+                'title' => __((string) ($app['title'] ?? '')),
+                'subtitle' => __((string) ($app['subtitle'] ?? '')),
                 'icon' => (string) ($app['icon'] ?? 'layout-grid'),
                 'href' => $this->resolveHref($app),
             ];
@@ -58,7 +58,7 @@ final readonly class ResolveSidebarNavigation
 
         foreach ($items as $item) {
             $resolvedItem = [
-                'title' => (string) ($item['title'] ?? ''),
+                'title' => __((string) ($item['title'] ?? '')),
             ];
 
             if (isset($item['icon'])) {

@@ -11,6 +11,7 @@ import { useAppNavigation } from '@/composables/useAppNavigation';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { disable, enable } from '@/lib/two-factor-routes';
 import { show } from '@/routes/two-factor';
 
@@ -29,6 +30,8 @@ withDefaults(defineProps<Props>(), {
 const { settingsBreadcrumbs } = useAppNavigation();
 const breadcrumbs = settingsBreadcrumbs('Two-Factor Auth', show());
 
+const { __ } = useTranslations();
+
 const { hasSetupData, clearTwoFactorAuthData } = useTwoFactorAuth();
 const showSetupModal = ref<boolean>(false);
 
@@ -39,29 +42,32 @@ onUnmounted(() => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Two-Factor Authentication" />
+        <Head :title="__('Two-Factor Authentication')" />
 
-        <h1 class="sr-only">Two-Factor Authentication Settings</h1>
+        <h1 class="sr-only">{{ __('Two-Factor Authentication Settings') }}</h1>
 
         <SettingsLayout>
             <!-- Feature disabled notice -->
             <div v-if="!canManageTwoFactor" class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Two-factor authentication"
-                    description="Add an extra layer of security to your account"
+                    :title="__('Two-factor authentication')"
+                    :description="
+                        __('Add an extra layer of security to your account')
+                    "
                 />
 
                 <Alert>
                     <ShieldOff class="size-4" />
-                    <AlertTitle
-                        >Two-factor authentication is disabled</AlertTitle
-                    >
+                    <AlertTitle>{{
+                        __('Two-factor authentication is disabled')
+                    }}</AlertTitle>
                     <AlertDescription>
-                        Two-factor authentication (2FA) is not available on this
-                        application. When enabled, you would be prompted for a
-                        secure code during sign-in. Contact your administrator
-                        for more information.
+                        {{
+                            __(
+                                'Two-factor authentication (2FA) is not available on this application. When enabled, you would be prompted for a secure code during sign-in. Contact your administrator for more information.',
+                            )
+                        }}
                     </AlertDescription>
                 </Alert>
             </div>
@@ -70,8 +76,10 @@ onUnmounted(() => {
             <div v-else class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Two-factor authentication"
-                    description="Manage your two-factor authentication settings"
+                    :title="__('Two-factor authentication')"
+                    :description="
+                        __('Manage your two-factor authentication settings')
+                    "
                 />
 
                 <!-- 2FA not yet enabled -->
@@ -80,10 +88,11 @@ onUnmounted(() => {
                     class="flex flex-col items-start justify-start space-y-4"
                 >
                     <p class="text-sm text-muted-foreground">
-                        When you enable two-factor authentication, you will be
-                        prompted for a secure pin during login. Retrieve this
-                        pin from any TOTP-compatible app (such as Google
-                        Authenticator or Authy) on your phone.
+                        {{
+                            __(
+                                'When you enable two-factor authentication, you will be prompted for a secure pin during login. Retrieve this pin from any TOTP-compatible app (such as Google Authenticator or Authy) on your phone.',
+                            )
+                        }}
                     </p>
 
                     <div>
@@ -91,7 +100,7 @@ onUnmounted(() => {
                             v-if="hasSetupData"
                             @click="showSetupModal = true"
                         >
-                            Continue setup
+                            {{ __('Continue setup') }}
                         </Button>
                         <Form
                             v-else
@@ -100,7 +109,7 @@ onUnmounted(() => {
                             #default="{ processing }"
                         >
                             <Button type="submit" :disabled="processing">
-                                Enable two-factor auth
+                                {{ __('Enable two-factor auth') }}
                             </Button>
                         </Form>
                     </div>
@@ -112,9 +121,11 @@ onUnmounted(() => {
                     class="flex flex-col items-start justify-start space-y-4"
                 >
                     <p class="text-sm text-muted-foreground">
-                        Two-factor authentication is active. You'll be prompted
-                        for a secure code from your authenticator app each time
-                        you sign in.
+                        {{
+                            __(
+                                "Two-factor authentication is active. You'll be prompted for a secure code from your authenticator app each time you sign in.",
+                            )
+                        }}
                     </p>
 
                     <div class="relative inline">
@@ -124,7 +135,7 @@ onUnmounted(() => {
                                 type="submit"
                                 :disabled="processing"
                             >
-                                Disable two-factor auth
+                                {{ __('Disable two-factor auth') }}
                             </Button>
                         </Form>
                     </div>

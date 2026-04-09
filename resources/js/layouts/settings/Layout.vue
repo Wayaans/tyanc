@@ -3,12 +3,15 @@ import { Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { edit as editPassword } from '@/routes/password';
 import { edit as editPreferences } from '@/routes/settings/preferences';
 import { show as showTwoFactorAuth } from '@/routes/two-factor';
 import { edit as editProfile } from '@/routes/user-profile';
 import type { NavLinkItem } from '@/types';
+
+const { __ } = useTranslations();
 
 const sidebarNavItems: NavLinkItem[] = [
     {
@@ -44,8 +47,8 @@ const activeTab = (): string => {
 <template>
     <div class="px-4 py-6">
         <Heading
-            title="Account"
-            description="Manage your profile and account settings"
+            :title="__('Account')"
+            :description="__('Manage your profile and account settings')"
         />
 
         <!-- Top tabs navigation -->
@@ -58,7 +61,7 @@ const activeTab = (): string => {
                     as-child
                 >
                     <Link :href="toUrl(item.href)">
-                        {{ item.title }}
+                        {{ __(item.title) }}
                     </Link>
                 </TabsTrigger>
             </TabsList>

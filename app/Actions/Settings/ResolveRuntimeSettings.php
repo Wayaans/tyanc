@@ -39,8 +39,8 @@ final readonly class ResolveRuntimeSettings
         $resolvedSidebarVariant = $this->resolveSidebarVariant($preferences?->sidebar_variant);
         $resolvedSpacingDensity = $this->resolveSpacingDensity($preferences?->spacing_density);
         $resolvedFontFamily = $this->resolveFontFamily($this->appearanceSettings->font_family);
-        $resolvedLocale = $this->resolveLocale($user);
-        $resolvedTimezone = $this->resolveTimezone($user);
+        $resolvedLocale = $this->resolveLocale($request, $user, $preferences);
+        $resolvedTimezone = $this->resolveTimezone($user, $preferences);
 
         return [
             'brand' => [
@@ -104,16 +104,34 @@ final readonly class ResolveRuntimeSettings
         return (string) config('tyanc.theme.appearance', 'system');
     }
 
-    private function resolveLocale(?User $user): string
+    private function resolveLocale(Request $request, ?User $user, ?UserPreference $preferences): string
     {
-        return $user?->locale
-            ?? $this->userDefaultsSettings->locale
-            ?? (string) config('app.locale', 'en');
+        $supportedLocales = array_keys((array) config('tyanc.supported_locales', []));
+        $requestLocale = $request->getLocale();
+
+        if (is_string($preferences?->locale) && in_array($preferences->locale, $supportedLocales, true)) {
+            return $preferences->locale;
+        }
+
+        if (is_string($user?->locale) && in_array($user->locale, $supportedLocales, true)) {
+            return $user->locale;
+        }
+
+        if (in_array($requestLocale, $supportedLocales, true)) {
+            return $requestLocale;
+        }
+
+        if (in_array($this->userDefaultsSettings->locale, $supportedLocales, true)) {
+            return $this->userDefaultsSettings->locale;
+        }
+
+        return (string) config('app.locale', 'en');
     }
 
-    private function resolveTimezone(?User $user): string
+    private function resolveTimezone(?User $user, ?UserPreference $preferences): string
     {
-        return $user?->timezone
+        return $preferences?->timezone
+            ?? $user?->timezone
             ?? $this->userDefaultsSettings->timezone
             ?? (string) config('app.timezone', 'UTC');
     }

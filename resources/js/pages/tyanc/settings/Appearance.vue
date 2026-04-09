@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TyancSettingsLayout from '@/layouts/tyanc/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/tyanc/settings/appearance';
 
 type Option = { value: string; label: string };
@@ -38,6 +39,7 @@ const { tyancSettingsBreadcrumbs } = useAppNavigation();
 const breadcrumbItems = computed(() =>
     tyancSettingsBreadcrumbs('App Appearance', edit()),
 );
+const { __ } = useTranslations();
 
 const currentFontLabel = computed(
     () =>
@@ -62,17 +64,21 @@ const currentSidebarLabel = computed(
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="App Appearance settings" />
+        <Head :title="__('App Appearance settings')" />
 
-        <h1 class="sr-only">App Appearance settings</h1>
+        <h1 class="sr-only">{{ __('App Appearance settings') }}</h1>
 
         <TyancSettingsLayout>
             <div class="space-y-6">
                 <div class="flex items-start justify-between gap-4">
                     <Heading
                         variant="small"
-                        title="App Appearance"
-                        description="Control the global look and feel of the application"
+                        :title="__('App Appearance')"
+                        :description="
+                            __(
+                                'Control the global look and feel of the application',
+                            )
+                        "
                     />
 
                     <AppearanceSheet
@@ -89,8 +95,12 @@ const currentSidebarLabel = computed(
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Current settings"
-                        description="A preview of the active appearance configuration"
+                        :title="__('Current settings')"
+                        :description="
+                            __(
+                                'A preview of the active appearance configuration',
+                            )
+                        "
                     />
 
                     <AppearancePreview
@@ -110,15 +120,15 @@ const currentSidebarLabel = computed(
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Details"
-                        description="All active appearance values"
+                        :title="__('Details')"
+                        :description="__('All active appearance values')"
                     />
 
                     <dl
                         class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm"
                     >
                         <dt class="font-medium text-foreground">
-                            Primary color
+                            {{ __('Primary color') }}
                         </dt>
                         <dd
                             class="flex items-center gap-2 text-muted-foreground"
@@ -133,7 +143,7 @@ const currentSidebarLabel = computed(
                         </dd>
 
                         <dt class="font-medium text-foreground">
-                            Secondary color
+                            {{ __('Secondary color') }}
                         </dt>
                         <dd
                             class="flex items-center gap-2 text-muted-foreground"
@@ -148,19 +158,21 @@ const currentSidebarLabel = computed(
                         </dd>
 
                         <dt class="font-medium text-foreground">
-                            Border radius
+                            {{ __('Border radius') }}
                         </dt>
                         <dd class="text-muted-foreground">
                             {{ props.settings.border_radius }}
                         </dd>
 
-                        <dt class="font-medium text-foreground">Font family</dt>
+                        <dt class="font-medium text-foreground">
+                            {{ __('Font family') }}
+                        </dt>
                         <dd class="text-muted-foreground">
                             {{ currentFontLabel }}
                         </dd>
 
                         <dt class="font-medium text-foreground">
-                            Spacing density
+                            {{ __('Spacing density') }}
                         </dt>
                         <dd class="text-muted-foreground">
                             {{ currentSpacingLabel }}
@@ -170,7 +182,7 @@ const currentSidebarLabel = computed(
                         </dd>
 
                         <dt class="font-medium text-foreground">
-                            Sidebar style
+                            {{ __('Sidebar style') }}
                         </dt>
                         <dd class="text-muted-foreground">
                             {{ currentSidebarLabel }}

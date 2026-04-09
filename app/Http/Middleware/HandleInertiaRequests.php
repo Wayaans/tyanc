@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Actions\ResolveSidebarNavigation;
+use App\Actions\ResolveTranslations;
 use App\Actions\Settings\ResolveRuntimeSettings;
 use App\Data\Auth\UserData;
 use App\Models\User;
@@ -20,7 +21,10 @@ final class HandleInertiaRequests extends Middleware
      */
     protected $rootView = 'app';
 
-    public function __construct(private readonly ResolveRuntimeSettings $runtimeSettings) {}
+    public function __construct(
+        private readonly ResolveRuntimeSettings $runtimeSettings,
+        private readonly ResolveTranslations $translations,
+    ) {}
 
     /**
      * @see https://inertiajs.com/asset-versioning
@@ -53,11 +57,19 @@ final class HandleInertiaRequests extends Middleware
             $currentApp = $defaultApp;
         }
 
+        $locale = $this->resolveLocale($request, $runtimeSettings);
+
+        app()->setLocale($locale);
+        $request->setLocale($locale);
+
         return [
             ...parent::share($request),
             'name' => $runtimeSettings['brand']['app_name'],
             'brand' => $runtimeSettings['brand'],
             'theme' => $runtimeSettings['theme'],
+            'locale' => $locale,
+            'availableLocales' => $this->availableLocales(),
+            'translations' => $this->translations->handle($routeName, $locale),
             'userPreferences' => $runtimeSettings['preferences'],
             'auth' => [
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,
@@ -84,5 +96,39 @@ final class HandleInertiaRequests extends Middleware
         $request->attributes->set('tyanc.runtime_settings', $runtimeSettings);
 
         return $runtimeSettings;
+    }
+
+    /**
+     * @param  array<string, mixed>  $runtimeSettings
+     */
+    private function resolveLocale(Request $request, array $runtimeSettings): string
+    {
+        $supportedLocales = $this->availableLocales();
+        $preferenceLocale = $runtimeSettings['preferences']->resolved_locale ?? null;
+        $sessionLocale = $request->hasSession() ? $request->session()->get('locale') : null;
+
+        if ($request->user() !== null && is_string($preferenceLocale) && in_array($preferenceLocale, $supportedLocales, true)) {
+            return $preferenceLocale;
+        }
+
+        if (is_string($sessionLocale) && in_array($sessionLocale, $supportedLocales, true)) {
+            return $sessionLocale;
+        }
+
+        $requestLocale = $request->getLocale();
+
+        if (in_array($requestLocale, $supportedLocales, true)) {
+            return $requestLocale;
+        }
+
+        return (string) config('app.locale', 'en');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function availableLocales(): array
+    {
+        return array_values(array_keys((array) config('tyanc.supported_locales', [])));
     }
 }

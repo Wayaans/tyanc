@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/user-profile';
 import { send } from '@/routes/verification';
 
@@ -40,6 +41,8 @@ const props = defineProps<Props>();
 
 const { settingsBreadcrumbs } = useAppNavigation();
 const breadcrumbItems = computed(() => settingsBreadcrumbs('Profile', edit()));
+
+const { __ } = useTranslations();
 
 const page = usePage();
 const user = computed(() => page.props.auth.user!);
@@ -101,9 +104,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Profile settings" />
+        <Head :title="__('Profile settings')" />
 
-        <h1 class="sr-only">Profile settings</h1>
+        <h1 class="sr-only">{{ __('Profile settings') }}</h1>
 
         <SettingsLayout>
             <Form
@@ -117,8 +120,8 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Profile photo"
-                        description="A photo helps people recognize you"
+                        :title="__('Profile photo')"
+                        :description="__('A photo helps people recognize you')"
                     />
 
                     <div class="flex items-center gap-4">
@@ -139,7 +142,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                                 type="button"
                                 class="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm transition hover:bg-muted"
                                 @click="openAvatarPicker"
-                                aria-label="Change profile photo"
+                                :aria-label="__('Change profile photo')"
                             >
                                 <Camera class="size-3" />
                             </button>
@@ -152,7 +155,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                                 size="sm"
                                 @click="openAvatarPicker"
                             >
-                                Change photo
+                                {{ __('Change photo') }}
                             </Button>
                         </div>
 
@@ -178,14 +181,16 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Account information"
-                        description="Your sign-in details and preferences"
+                        :title="__('Account information')"
+                        :description="
+                            __('Your sign-in details and preferences')
+                        "
                     />
 
                     <div class="grid gap-4">
                         <!-- Username -->
                         <div class="grid gap-2">
-                            <Label for="username">Username</Label>
+                            <Label for="username">{{ __('Username') }}</Label>
                             <Input
                                 id="username"
                                 type="text"
@@ -199,7 +204,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
                         <!-- Email -->
                         <div class="grid gap-2">
-                            <Label for="email">Email address</Label>
+                            <Label for="email">{{ __('Email address') }}</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -215,32 +220,35 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                         <!-- Email verification notice -->
                         <div v-if="mustVerifyEmail && !user.email_verified_at">
                             <p class="text-sm text-muted-foreground">
-                                Your email address is unverified.
+                                {{ __('Your email address is unverified.') }}
                                 <Link
                                     :href="send()"
                                     as="button"
                                     class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                                 >
-                                    Resend verification email.
+                                    {{ __('Resend verification email.') }}
                                 </Link>
                             </p>
                             <div
                                 v-if="status === 'verification-link-sent'"
                                 class="mt-2 text-sm font-medium text-green-600"
                             >
-                                A new verification link has been sent to your
-                                email address.
+                                {{
+                                    __(
+                                        'A new verification link has been sent to your email address.',
+                                    )
+                                }}
                             </div>
                         </div>
 
                         <!-- Locale + Timezone -->
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="locale">Language</Label>
+                                <Label for="locale">{{ __('Language') }}</Label>
                                 <Select v-model="selectedLocale">
                                     <SelectTrigger id="locale" class="w-full">
                                         <SelectValue
-                                            placeholder="Select language"
+                                            :placeholder="__('Select language')"
                                         />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -262,7 +270,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="timezone">Timezone</Label>
+                                <Label for="timezone">{{
+                                    __('Timezone')
+                                }}</Label>
                                 <TimezoneCombobox
                                     id="timezone"
                                     v-model="selectedTimezone"
@@ -275,13 +285,17 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
                         <!-- Status -->
                         <div v-if="props.statuses?.length" class="grid gap-2">
-                            <Label for="status">Account status</Label>
+                            <Label for="status">{{
+                                __('Account status')
+                            }}</Label>
                             <Select
                                 v-model="selectedStatus"
                                 :disabled="!canManageStatus"
                             >
                                 <SelectTrigger id="status" class="w-full">
-                                    <SelectValue placeholder="Select status" />
+                                    <SelectValue
+                                        :placeholder="__('Select status')"
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
@@ -305,7 +319,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             <FormFieldSupport
                                 :hint="
                                     !canManageStatus
-                                        ? 'Account status is managed by administrators.'
+                                        ? __(
+                                              'Account status is managed by administrators.',
+                                          )
                                         : undefined
                                 "
                                 :error="errors.status"
@@ -320,15 +336,19 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Personal details"
-                        description="Your name, contact, and personal information"
+                        :title="__('Personal details')"
+                        :description="
+                            __('Your name, contact, and personal information')
+                        "
                     />
 
                     <div class="grid gap-4">
                         <!-- First + Last name -->
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="first_name">First name</Label>
+                                <Label for="first_name">{{
+                                    __('First name')
+                                }}</Label>
                                 <Input
                                     id="first_name"
                                     type="text"
@@ -343,7 +363,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="last_name">Last name</Label>
+                                <Label for="last_name">{{
+                                    __('Last name')
+                                }}</Label>
                                 <Input
                                     id="last_name"
                                     type="text"
@@ -360,7 +382,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
                         <!-- Phone -->
                         <div class="grid gap-2">
-                            <Label for="phone_number">Phone number</Label>
+                            <Label for="phone_number">{{
+                                __('Phone number')
+                            }}</Label>
                             <Input
                                 id="phone_number"
                                 type="tel"
@@ -377,7 +401,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                         <!-- Date of birth + Gender -->
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="date_of_birth">Date of birth</Label>
+                                <Label for="date_of_birth">{{
+                                    __('Date of birth')
+                                }}</Label>
                                 <DatePickerField
                                     id="date_of_birth"
                                     v-model="dateOfBirth"
@@ -387,19 +413,19 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="gender">Gender</Label>
+                                <Label for="gender">{{ __('Gender') }}</Label>
                                 <Select v-model="selectedGender">
                                     <SelectTrigger id="gender" class="w-full">
                                         <SelectValue
-                                            placeholder="Select gender"
+                                            :placeholder="__('Select gender')"
                                         />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="male">
-                                            Male
+                                            {{ __('Male') }}
                                         </SelectItem>
                                         <SelectItem value="female">
-                                            Female
+                                            {{ __('Female') }}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -420,13 +446,15 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Address"
-                        description="Your mailing or home address"
+                        :title="__('Address')"
+                        :description="__('Your mailing or home address')"
                     />
 
                     <div class="grid gap-4">
                         <div class="grid gap-2">
-                            <Label for="address_line_1">Address line 1</Label>
+                            <Label for="address_line_1">{{
+                                __('Address line 1')
+                            }}</Label>
                             <Input
                                 id="address_line_1"
                                 type="text"
@@ -444,7 +472,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             <Label for="address_line_2">
                                 Address line 2
                                 <span class="ml-1 text-xs text-muted-foreground"
-                                    >(optional)</span
+                                    >({{ __('optional') }})</span
                                 >
                             </Label>
                             <Input
@@ -462,7 +490,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="city">City</Label>
+                                <Label for="city">{{ __('City') }}</Label>
                                 <Input
                                     id="city"
                                     type="text"
@@ -475,7 +503,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="state">State / Province</Label>
+                                <Label for="state">{{
+                                    __('State / Province')
+                                }}</Label>
                                 <Input
                                     id="state"
                                     type="text"
@@ -490,7 +520,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="postal_code">Postal code</Label>
+                                <Label for="postal_code">{{
+                                    __('Postal code')
+                                }}</Label>
                                 <Input
                                     id="postal_code"
                                     type="text"
@@ -505,7 +537,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="country">Country</Label>
+                                <Label for="country">{{ __('Country') }}</Label>
                                 <Input
                                     id="country"
                                     type="text"
@@ -532,14 +564,18 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Professional"
-                        description="Your work and public profile information"
+                        :title="__('Professional')"
+                        :description="
+                            __('Your work and public profile information')
+                        "
                     />
 
                     <div class="grid gap-4">
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="company_name">Company</Label>
+                                <Label for="company_name">{{
+                                    __('Company')
+                                }}</Label>
                                 <Input
                                     id="company_name"
                                     type="text"
@@ -554,7 +590,9 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="job_title">Job title</Label>
+                                <Label for="job_title">{{
+                                    __('Job title')
+                                }}</Label>
                                 <Input
                                     id="job_title"
                                     type="text"
@@ -570,7 +608,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="bio">Bio</Label>
+                            <Label for="bio">{{ __('Bio') }}</Label>
                             <textarea
                                 id="bio"
                                 name="bio"
@@ -590,8 +628,8 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Social links"
-                        description="Connect your public profiles"
+                        :title="__('Social links')"
+                        :description="__('Connect your public profiles')"
                     />
 
                     <div class="grid gap-4">
@@ -672,7 +710,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                         :disabled="processing"
                         data-test="update-profile-button"
                     >
-                        Save changes
+                        {{ __('Save changes') }}
                     </Button>
 
                     <Transition
@@ -685,7 +723,7 @@ const dateOfBirth = ref<string | null>(profile.value?.date_of_birth ?? null);
                             v-show="recentlySuccessful"
                             class="text-sm text-neutral-600"
                         >
-                            Saved.
+                            {{ __('Saved.') }}
                         </p>
                     </Transition>
                 </div>

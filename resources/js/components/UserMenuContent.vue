@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
 import { useBranding } from '@/composables/useBranding';
+import { useTranslations } from '@/lib/translations';
 import { logout } from '@/routes';
 import { edit as editPassword } from '@/routes/password';
 import { edit as editPreferences } from '@/routes/settings/preferences';
@@ -27,6 +28,7 @@ type Props = {
 };
 
 const { appName } = useBranding();
+const { __ } = useTranslations();
 
 const handleLogout = () => {
     router.flushAll();
@@ -42,7 +44,7 @@ defineProps<Props>();
                 <UserInfo :user="user" :show-email="true" />
             </div>
             <p class="px-1 text-xs text-muted-foreground">
-                Signed in to {{ appName }}
+                {{ __('Signed in to :app', { app: appName }) }}
             </p>
         </div>
     </DropdownMenuLabel>
@@ -57,7 +59,7 @@ defineProps<Props>();
                 prefetch
             >
                 <Settings class="mr-2 h-4 w-4" />
-                Profile
+                {{ __('Profile') }}
             </Link>
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
@@ -67,7 +69,7 @@ defineProps<Props>();
                 prefetch
             >
                 <KeyRound class="mr-2 h-4 w-4" />
-                Password
+                {{ __('Password') }}
             </Link>
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
@@ -77,7 +79,7 @@ defineProps<Props>();
                 prefetch
             >
                 <ShieldCheck class="mr-2 h-4 w-4" />
-                Two-Factor Auth
+                {{ __('Two-Factor Auth') }}
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
@@ -93,7 +95,7 @@ defineProps<Props>();
                 prefetch
             >
                 <SlidersHorizontal class="mr-2 h-4 w-4" />
-                Preferences
+                {{ __('Preferences') }}
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
@@ -108,7 +110,7 @@ defineProps<Props>();
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
-            Log out
+            {{ __('Log out') }}
         </Link>
     </DropdownMenuItem>
 </template>

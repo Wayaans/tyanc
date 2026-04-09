@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
 import { mapSidebarApps, mapSidebarItems } from '@/lib/sidebar-navigation';
+import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
@@ -90,6 +91,7 @@ const persistCurrentApp = (appId: AppId) => {
 
 export function useAppNavigation() {
     const page = usePage();
+    const { __ } = useTranslations();
 
     const activeAppId = computed<AppId>(() =>
         page.props.currentApp === 'demo' ? 'demo' : 'tyanc',
@@ -123,7 +125,7 @@ export function useAppNavigation() {
     const dashboardBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         {
-            title: 'Dashboard',
+            title: __('Dashboard'),
             href: activeApp.value.href,
         },
     ]);
@@ -154,11 +156,11 @@ export function useAppNavigation() {
     ): BreadcrumbItem[] => [
         rootBreadcrumb.value,
         {
-            title: 'Account',
+            title: __('Account'),
             href: editProfile(),
         },
         {
-            title,
+            title: __(title),
             href,
         },
     ];
@@ -169,11 +171,11 @@ export function useAppNavigation() {
     ): BreadcrumbItem[] => [
         rootBreadcrumb.value,
         {
-            title: 'App Settings',
+            title: __('App Settings'),
             href: editTyancApplication(),
         },
         {
-            title,
+            title: __(title),
             href,
         },
     ];

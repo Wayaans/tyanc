@@ -6,6 +6,11 @@ import type {
 } from '@/types';
 import type { Auth } from '@/types/auth';
 
+type TranslateFn = (
+    key: string,
+    replacements?: Record<string, string>,
+) => string;
+
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
     interface ImportMetaEnv {
@@ -29,6 +34,12 @@ declare module '@inertiajs/core' {
             sidebarNavigation: SidebarNavigationData;
             theme: ThemeProps;
             brand: BrandProps;
+            /** Current active locale code (e.g. "en", "fr"). */
+            locale: string;
+            /** All locales the application supports. */
+            availableLocales: string[];
+            /** Flat JSON translation map for the current locale. */
+            translations: Record<string, string>;
             [key: string]: unknown;
         };
     }
@@ -39,5 +50,7 @@ declare module 'vue' {
         $inertia: typeof Router;
         $page: Page;
         $headManager: ReturnType<typeof createHeadManager>;
+        /** Translate a key with optional :placeholder replacement. */
+        $__: TranslateFn;
     }
 }

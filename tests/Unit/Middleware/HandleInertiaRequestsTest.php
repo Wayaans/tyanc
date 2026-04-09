@@ -26,6 +26,25 @@ it('shares the resolved app name from runtime settings', function (): void {
         ]);
 });
 
+it('shares locale metadata and route translations', function (): void {
+    app()->setLocale('id');
+
+    $request = Request::create('/login', 'GET');
+    $request->setLocale('id');
+
+    $route = new Route('GET', '/login', fn (): null => null);
+    $route->name('login');
+
+    $request->setRouteResolver(fn (): Route => $route);
+
+    $shared = inertiaMiddleware()->share($request);
+
+    expect($shared['locale'])->toBe('id')
+        ->and($shared['availableLocales'])->toBe(['en', 'id'])
+        ->and($shared['translations'])->toHaveKey('Welcome back')
+        ->and($shared['translations']['Welcome back'])->toBe('Selamat datang kembali');
+});
+
 it('shares null user when guest', function (): void {
     $request = Request::create('/', 'GET');
 
@@ -168,14 +187,17 @@ it('shares resolved user preferences and theme overrides', function (): void {
         'spacing_density' => 'comfortable',
     ]);
 
+    app()->setLocale('id');
+
     $request = Request::create('/', 'GET');
+    $request->setLocale('id');
     $request->setUserResolver(fn (): User => $user);
     $request->cookies->set('appearance', 'light');
 
     $shared = inertiaMiddleware()->share($request);
 
-    expect($shared['userPreferences']->resolved_locale)->toBe('en')
-        ->and($shared['userPreferences']->resolved_timezone)->toBe('UTC')
+    expect($shared['userPreferences']->resolved_locale)->toBe('id')
+        ->and($shared['userPreferences']->resolved_timezone)->toBe('Asia/Makassar')
         ->and($shared['userPreferences']->resolved_appearance)->toBe('dark')
         ->and($shared['theme'])->toMatchArray([
             'appearance' => 'dark',

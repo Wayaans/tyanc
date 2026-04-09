@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+$supportedLocales = array_values(array_filter(array_map(
+    mb_trim(...),
+    explode(',', (string) env('TYANC_SUPPORTED_LOCALES', 'en,id')),
+)));
+
+if ($supportedLocales === []) {
+    $supportedLocales = ['en', 'id'];
+}
+
 return [
     'admin_path' => env('TYANC_ADMIN_PATH', 'tyanc'),
     'demo_path' => env('TYANC_DEMO_PATH', 'demo'),
@@ -26,10 +35,13 @@ return [
         'dark' => 'Dark',
         'system' => 'System',
     ],
-    'supported_locales' => [
-        'en' => 'English',
-        'id' => 'Bahasa Indonesia',
-    ],
+    'supported_locales' => collect($supportedLocales)
+        ->mapWithKeys(static fn (string $locale): array => [$locale => match ($locale) {
+            'en' => 'English',
+            'id' => 'Bahasa Indonesia',
+            default => mb_strtoupper($locale),
+        }])
+        ->all(),
     'sidebar_variants' => [
         'inset' => 'Inset',
         'sidebar' => 'Sidebar',

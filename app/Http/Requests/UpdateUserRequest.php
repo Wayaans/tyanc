@@ -38,7 +38,7 @@ final class UpdateUserRequest extends FormRequest
             ],
             'avatar' => ['nullable', 'image', 'max:2048'],
             'status' => ['nullable', Rule::in(UserStatus::values())],
-            'locale' => ['nullable', 'string', 'max:12'],
+            'locale' => ['nullable', Rule::in(array_keys((array) config('tyanc.supported_locales', [])))],
             'timezone' => ['nullable', 'timezone'],
         ];
     }

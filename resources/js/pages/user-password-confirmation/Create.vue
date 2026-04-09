@@ -8,17 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { useTranslations } from '@/lib/translations';
 import { store } from '@/routes/password/confirm';
 
 withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
+
+const { __ } = useTranslations();
 </script>
 
 <template>
     <AuthLayout
-        title="Confirm your identity"
-        description="This is a protected area. Please re-enter your password to proceed."
+        :title="__('Confirm your identity')"
+        :description="
+            __(
+                'This is a protected area. Please re-enter your password to proceed.',
+            )
+        "
     >
-        <Head title="Confirm password" />
+        <Head :title="__('Confirm password')" />
 
         <template v-if="enabled">
             <Form
@@ -28,7 +35,9 @@ withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
             >
                 <div class="space-y-6">
                     <div class="grid gap-2">
-                        <Label for="password">Current password</Label>
+                        <Label for="password">{{
+                            __('Current password')
+                        }}</Label>
                         <PasswordInput
                             id="password"
                             name="password"
@@ -36,7 +45,7 @@ withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
                             required
                             autocomplete="current-password"
                             autofocus
-                            placeholder="Your password"
+                            :placeholder="__('Your password')"
                         />
 
                         <InputError :message="errors.password" />
@@ -49,7 +58,7 @@ withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
                             data-test="confirm-password-button"
                         >
                             <Spinner v-if="processing" />
-                            Confirm and continue
+                            {{ __('Confirm and continue') }}
                         </Button>
                     </div>
                 </div>
@@ -59,10 +68,15 @@ withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
         <template v-else>
             <Alert>
                 <Lock class="size-4" />
-                <AlertTitle>Password confirmation is disabled</AlertTitle>
+                <AlertTitle>{{
+                    __('Password confirmation is disabled')
+                }}</AlertTitle>
                 <AlertDescription>
-                    Password confirmation is not available on this application.
-                    Contact your administrator for more information.
+                    {{
+                        __(
+                            'Password confirmation is not available on this application. Contact your administrator for more information.',
+                        )
+                    }}
                 </AlertDescription>
             </Alert>
         </template>

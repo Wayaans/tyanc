@@ -28,7 +28,7 @@ final readonly class UserProfileController
             'status' => $request->session()->get('status'),
             'mustVerifyEmail' => Features::enabled(Features::emailVerification()) && $user instanceof MustVerifyEmail,
             'canManageStatus' => $this->canManageStatus($user),
-            'locales' => ['en'],
+            'locales' => array_keys((array) config('tyanc.supported_locales', [])),
             'statuses' => UserStatus::values(),
             'timezones' => DateTimeZone::listIdentifiers(),
         ];

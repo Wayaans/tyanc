@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { useTranslations } from '@/lib/translations';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 
@@ -16,28 +17,35 @@ defineProps<{
     status?: string;
     enabled?: boolean;
 }>();
+
+const { __ } = useTranslations();
 </script>
 
 <template>
     <AuthLayout
-        title="Forgot your password?"
-        description="Enter your email address and we'll send you a reset link"
+        :title="__('Forgot your password?')"
+        :description="
+            __('Enter your email address and we\'ll send you a reset link')
+        "
     >
-        <Head title="Forgot password" />
+        <Head :title="__('Forgot password')" />
 
         <!-- Feature disabled notice -->
         <template v-if="enabled === false">
             <Alert>
                 <Ban class="size-4" />
-                <AlertTitle>Password reset unavailable</AlertTitle>
+                <AlertTitle>{{ __('Password reset unavailable') }}</AlertTitle>
                 <AlertDescription>
-                    Password reset is not enabled on this application. Please
-                    contact support if you need help accessing your account.
+                    {{
+                        __(
+                            'Password reset is not enabled on this application. Please contact support if you need help accessing your account.',
+                        )
+                    }}
                 </AlertDescription>
             </Alert>
 
             <div class="mt-6 text-center text-sm text-muted-foreground">
-                <TextLink :href="login()">Back to sign in</TextLink>
+                <TextLink :href="login()">{{ __('Back to sign in') }}</TextLink>
             </div>
         </template>
 
@@ -53,7 +61,7 @@ defineProps<{
             <div class="space-y-6">
                 <Form v-bind="email.form()" v-slot="{ errors, processing }">
                     <div class="grid gap-2">
-                        <Label for="email">Email address</Label>
+                        <Label for="email">{{ __('Email address') }}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -72,7 +80,7 @@ defineProps<{
                             data-test="email-password-reset-link-button"
                         >
                             <Spinner v-if="processing" />
-                            Send reset link
+                            {{ __('Send reset link') }}
                         </Button>
                     </div>
                 </Form>
@@ -80,8 +88,8 @@ defineProps<{
                 <div
                     class="space-x-1 text-center text-sm text-muted-foreground"
                 >
-                    <span>Remembered your password?</span>
-                    <TextLink :href="login()">Sign in</TextLink>
+                    <span>{{ __('Remembered your password?') }}</span>
+                    <TextLink :href="login()">{{ __('Sign in') }}</TextLink>
                 </div>
             </div>
         </template>

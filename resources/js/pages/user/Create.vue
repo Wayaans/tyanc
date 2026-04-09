@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import { useTranslations } from '@/lib/translations';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
@@ -27,6 +28,8 @@ const props = defineProps<{
     locales: string[];
     timezones: string[];
 }>();
+
+const { __ } = useTranslations();
 
 const selectedLocale = ref<string>(props.locales[0] ?? 'en');
 const selectedTimezone = ref<string>('UTC');
@@ -60,10 +63,10 @@ onUnmounted(() => {
 
 <template>
     <AuthBase
-        title="Create an account"
-        description="Enter your details below to create your account"
+        :title="__('Create an account')"
+        :description="__('Enter your details below to create your account')"
     >
-        <Head title="Register" />
+        <Head :title="__('Register')" />
 
         <Form
             v-bind="store.form()"
@@ -84,7 +87,7 @@ onUnmounted(() => {
                             <AvatarFallback
                                 class="text-xs text-muted-foreground"
                             >
-                                Photo
+                                {{ __('Photo') }}
                             </AvatarFallback>
                         </Avatar>
                         <button
@@ -113,28 +116,28 @@ onUnmounted(() => {
                 <!-- Name row -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="grid gap-2">
-                        <Label for="first_name">First name</Label>
+                        <Label for="first_name">{{ __('First name') }}</Label>
                         <Input
                             id="first_name"
                             type="text"
                             name="first_name"
                             :tabindex="1"
                             autocomplete="given-name"
-                            placeholder="Jane"
+                            :placeholder="__('Jane')"
                             autofocus
                         />
                         <InputError :message="errors.first_name" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="last_name">Last name</Label>
+                        <Label for="last_name">{{ __('Last name') }}</Label>
                         <Input
                             id="last_name"
                             type="text"
                             name="last_name"
                             :tabindex="2"
                             autocomplete="family-name"
-                            placeholder="Smith"
+                            :placeholder="__('Smith')"
                         />
                         <InputError :message="errors.last_name" />
                     </div>
@@ -143,9 +146,9 @@ onUnmounted(() => {
                 <!-- Username -->
                 <div class="grid gap-2">
                     <Label for="username">
-                        Username
+                        {{ __('Username') }}
                         <span class="ml-1 text-xs text-muted-foreground"
-                            >(optional)</span
+                            >({{ __('optional') }})</span
                         >
                     </Label>
                     <Input
@@ -161,7 +164,7 @@ onUnmounted(() => {
 
                 <!-- Email -->
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <Label for="email">{{ __('Email address') }}</Label>
                     <Input
                         id="email"
                         type="email"
@@ -176,28 +179,30 @@ onUnmounted(() => {
 
                 <!-- Password -->
                 <div class="grid gap-2">
-                    <Label for="password">Password</Label>
+                    <Label for="password">{{ __('Password') }}</Label>
                     <PasswordInput
                         id="password"
                         name="password"
                         required
                         :tabindex="5"
                         autocomplete="new-password"
-                        placeholder="Choose a strong password"
+                        :placeholder="__('Choose a strong password')"
                     />
                     <InputError :message="errors.password" />
                 </div>
 
                 <!-- Confirm password -->
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirm password</Label>
+                    <Label for="password_confirmation">{{
+                        __('Confirm password')
+                    }}</Label>
                     <PasswordInput
                         id="password_confirmation"
                         name="password_confirmation"
                         required
                         :tabindex="6"
                         autocomplete="new-password"
-                        placeholder="Repeat your password"
+                        :placeholder="__('Repeat your password')"
                     />
                     <InputError :message="errors.password_confirmation" />
                 </div>
@@ -205,14 +210,16 @@ onUnmounted(() => {
                 <!-- Locale + Timezone row -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="grid gap-2">
-                        <Label for="locale">Language</Label>
+                        <Label for="locale">{{ __('Language') }}</Label>
                         <Select v-model="selectedLocale">
                             <SelectTrigger
                                 id="locale"
                                 class="w-full"
                                 :tabindex="7"
                             >
-                                <SelectValue placeholder="Select language" />
+                                <SelectValue
+                                    :placeholder="__('Select language')"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
@@ -233,7 +240,7 @@ onUnmounted(() => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="timezone">Timezone</Label>
+                        <Label for="timezone">{{ __('Timezone') }}</Label>
                         <TimezoneCombobox
                             id="timezone"
                             v-model="selectedTimezone"
@@ -252,18 +259,18 @@ onUnmounted(() => {
                     data-test="register-user-button"
                 >
                     <Spinner v-if="processing" />
-                    Create account
+                    {{ __('Create account') }}
                 </Button>
             </div>
 
             <div class="text-center text-sm text-muted-foreground">
-                Already have an account?
+                {{ __('Already have an account?') }}
                 <TextLink
                     :href="login()"
                     class="underline underline-offset-4"
                     :tabindex="10"
                 >
-                    Log in
+                    {{ __('Log in') }}
                 </TextLink>
             </div>
         </Form>

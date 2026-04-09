@@ -23,6 +23,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { useTranslations } from '@/lib/translations';
 
 type Option = { value: string; label: string };
 type FontFamily = { value: string; label: string; stack: string };
@@ -119,12 +120,16 @@ watch(
         sidebarVariant.value = settings.sidebar_variant;
     },
 );
+
+const { __ } = useTranslations();
 </script>
 
 <template>
     <Sheet v-model:open="isOpen">
         <SheetTrigger as-child>
-            <Button variant="outline" size="sm">Edit appearance</Button>
+            <Button variant="outline" size="sm">{{
+                __('Edit appearance')
+            }}</Button>
         </SheetTrigger>
 
         <SheetContent
@@ -132,10 +137,13 @@ watch(
             class="flex flex-col overflow-y-auto sm:max-w-md"
         >
             <SheetHeader class="px-6 pt-6">
-                <SheetTitle>Edit appearance</SheetTitle>
+                <SheetTitle>{{ __('Edit appearance') }}</SheetTitle>
                 <SheetDescription>
-                    Changes apply globally. Users can override via personal
-                    preferences.
+                    {{
+                        __(
+                            'Changes apply globally. Users can override via personal preferences.',
+                        )
+                    }}
                 </SheetDescription>
             </SheetHeader>
 
@@ -161,10 +169,14 @@ watch(
             >
                 <!-- Colors -->
                 <fieldset class="space-y-3">
-                    <legend class="text-sm font-medium">Colors</legend>
+                    <legend class="text-sm font-medium">
+                        {{ __('Colors') }}
+                    </legend>
                     <div class="grid grid-cols-1 gap-4">
                         <div class="grid gap-2">
-                            <Label for="primary_color">Primary</Label>
+                            <Label for="primary_color">{{
+                                __('Primary')
+                            }}</Label>
                             <div class="flex items-center gap-2">
                                 <span
                                     class="inline-flex size-9 shrink-0 rounded-md border"
@@ -183,7 +195,9 @@ watch(
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="secondary_color">Secondary</Label>
+                            <Label for="secondary_color">{{
+                                __('Secondary')
+                            }}</Label>
                             <div class="flex items-center gap-2">
                                 <span
                                     class="inline-flex size-9 shrink-0 rounded-md border"
@@ -205,10 +219,10 @@ watch(
 
                 <!-- Border radius -->
                 <div class="grid gap-2">
-                    <Label for="border_radius">Border radius</Label>
+                    <Label for="border_radius">{{ __('Border radius') }}</Label>
                     <Select v-model="borderRadius">
                         <SelectTrigger id="border_radius" class="w-full">
-                            <SelectValue placeholder="Select radius" />
+                            <SelectValue :placeholder="__('Select radius')" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
@@ -230,10 +244,10 @@ watch(
 
                 <!-- Font family -->
                 <div class="grid gap-2">
-                    <Label for="font_family">Font family</Label>
+                    <Label for="font_family">{{ __('Font family') }}</Label>
                     <Select v-model="fontFamily">
                         <SelectTrigger id="font_family" class="w-full">
-                            <SelectValue placeholder="Select font" />
+                            <SelectValue :placeholder="__('Select font')" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
@@ -255,10 +269,12 @@ watch(
 
                 <!-- Spacing density -->
                 <div class="grid gap-2">
-                    <Label for="spacing_density">Spacing density</Label>
+                    <Label for="spacing_density">{{
+                        __('Spacing density')
+                    }}</Label>
                     <Select v-model="spacingDensity">
                         <SelectTrigger id="spacing_density" class="w-full">
-                            <SelectValue placeholder="Select density" />
+                            <SelectValue :placeholder="__('Select density')" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
@@ -280,10 +296,12 @@ watch(
 
                 <!-- Sidebar variant -->
                 <div class="grid gap-2">
-                    <Label for="sidebar_variant">Sidebar style</Label>
+                    <Label for="sidebar_variant">{{
+                        __('Sidebar style')
+                    }}</Label>
                     <Select v-model="sidebarVariant">
                         <SelectTrigger id="sidebar_variant" class="w-full">
-                            <SelectValue placeholder="Select style" />
+                            <SelectValue :placeholder="__('Select style')" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem

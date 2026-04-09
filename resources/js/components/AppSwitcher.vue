@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/sidebar';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import { useBranding } from '@/composables/useBranding';
+import { useTranslations } from '@/lib/translations';
 
 const { activeApp, activeAppId, apps, switchApp } = useAppNavigation();
 const { appLogo, appName } = useBranding();
 const { isMobile, state } = useSidebar();
+const { __ } = useTranslations();
 </script>
 
 <template>
@@ -78,7 +80,7 @@ const { isMobile, state } = useSidebar();
                     :side-offset="4"
                 >
                     <DropdownMenuLabel class="text-xs text-muted-foreground">
-                        Apps
+                        {{ __('Apps') }}
                     </DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                         :model-value="activeAppId"

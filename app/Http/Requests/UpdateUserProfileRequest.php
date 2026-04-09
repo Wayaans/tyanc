@@ -51,7 +51,7 @@ final class UpdateUserProfileRequest extends FormRequest
                 'nullable',
                 Rule::in(UserStatus::values()),
             ],
-            'locale' => ['nullable', 'string', 'max:12'],
+            'locale' => ['nullable', Rule::in(array_keys((array) config('tyanc.supported_locales', [])))],
             'timezone' => ['nullable', 'timezone'],
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],

@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TyancSettingsLayout from '@/layouts/tyanc/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/tyanc/settings/application';
 
 type Settings = {
@@ -36,13 +37,14 @@ const { tyancSettingsBreadcrumbs } = useAppNavigation();
 const breadcrumbItems = computed(() =>
     tyancSettingsBreadcrumbs('Application', edit()),
 );
+const { __ } = useTranslations();
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Application settings" />
+        <Head :title="__('Application settings')" />
 
-        <h1 class="sr-only">Application settings</h1>
+        <h1 class="sr-only">{{ __('Application settings') }}</h1>
 
         <TyancSettingsLayout>
             <Form
@@ -55,13 +57,15 @@ const breadcrumbItems = computed(() =>
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Identity"
-                        description="Application name and legal information"
+                        :title="__('Identity')"
+                        :description="
+                            __('Application name and legal information')
+                        "
                     />
 
                     <div class="grid gap-4">
                         <div class="grid gap-2">
-                            <Label for="app_name">App name</Label>
+                            <Label for="app_name">{{ __('App name') }}</Label>
                             <Input
                                 id="app_name"
                                 type="text"
@@ -80,7 +84,7 @@ const breadcrumbItems = computed(() =>
                                 <span
                                     class="ml-1 text-xs text-muted-foreground"
                                 >
-                                    (optional)
+                                    ({{ __('optional') }})
                                 </span>
                             </Label>
                             <Input
@@ -108,8 +112,10 @@ const breadcrumbItems = computed(() =>
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Assets"
-                        description="Logos and images used across the application"
+                        :title="__('Assets')"
+                        :description="
+                            __('Logos and images used across the application')
+                        "
                     />
 
                     <div class="grid gap-6 sm:grid-cols-3">

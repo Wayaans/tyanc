@@ -15,6 +15,9 @@ it('shares resolved appearance and css variables from the cookie with views', fu
     $request = Request::create('/', 'GET');
     $request->cookies->set('appearance', 'dark');
 
+    app()->setLocale('en');
+    $request->setLocale('en');
+
     $response = $middleware->handle($request, fn ($req): Response => response('OK'));
 
     expect(View::shared('appearance'))->toBe('dark')
@@ -28,7 +31,7 @@ it('shares resolved appearance and css variables from the cookie with views', fu
         ->and($response->getContent())->toBe('OK');
 });
 
-it('prefers persisted display preferences while keeping locale and timezone from the user profile', function (): void {
+it('prefers persisted display preferences and locale and timezone overrides', function (): void {
     $originalTimezone = date_default_timezone_get();
     $originalAppTimezone = config('app.timezone');
 
@@ -51,13 +54,16 @@ it('prefers persisted display preferences while keeping locale and timezone from
     $request->cookies->set('appearance', 'light');
     $request->setUserResolver(fn (): User => $user);
 
+    app()->setLocale('id');
+    $request->setLocale('id');
+
     $middleware->handle($request, fn ($req): Response => response('OK'));
 
     expect(View::shared('appearance'))->toBe('dark')
-        ->and(View::shared('appLocale'))->toBe('en')
-        ->and(View::shared('appTimezone'))->toBe('Asia/Makassar')
-        ->and(config('app.timezone'))->toBe('Asia/Makassar')
-        ->and(date_default_timezone_get())->toBe('Asia/Makassar')
+        ->and(View::shared('appLocale'))->toBe('id')
+        ->and(View::shared('appTimezone'))->toBe('UTC')
+        ->and(config('app.timezone'))->toBe('UTC')
+        ->and(date_default_timezone_get())->toBe('UTC')
         ->and(View::shared('themeCssVariables')['--sidebar-variant'])->toBe('floating')
         ->and(View::shared('themeCssVariables')['--spacing-density'])->toBe('1.25');
 

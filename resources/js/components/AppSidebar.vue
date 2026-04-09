@@ -11,9 +11,11 @@ import {
     SidebarHeader,
 } from '@/components/ui/sidebar';
 import { useAppNavigation } from '@/composables/useAppNavigation';
+import { useTranslations } from '@/lib/translations';
 
 const page = usePage();
 const { mainNavItems } = useAppNavigation();
+const { __ } = useTranslations();
 
 const sidebarVariant = computed(() => {
     const variant = page.props.theme?.sidebar_variant;
@@ -33,7 +35,7 @@ const sidebarVariant = computed(() => {
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" label="Main menu" />
+            <NavMain :items="mainNavItems" :label="__('Main menu')" />
         </SidebarContent>
 
         <SidebarFooter>

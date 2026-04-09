@@ -23,7 +23,7 @@ final readonly class UserController
     public function create(): Response
     {
         return Inertia::render('user/Create', [
-            'locales' => ['en'],
+            'locales' => array_keys((array) config('tyanc.supported_locales', [])),
             'timezones' => DateTimeZone::listIdentifiers(),
         ]);
     }

@@ -3,12 +3,15 @@ import { Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/tyanc/settings/appearance';
 import { edit as editApplication } from '@/routes/tyanc/settings/application';
 import { edit as editSecurity } from '@/routes/tyanc/settings/security';
 import { edit as editUserDefaults } from '@/routes/tyanc/settings/user-defaults';
 import type { NavLinkItem } from '@/types';
+
+const { __ } = useTranslations();
 
 const navItems: NavLinkItem[] = [
     { title: 'Application', href: editApplication() },
@@ -32,8 +35,10 @@ const activeTab = (): string => {
 <template>
     <div class="px-4 py-6">
         <Heading
-            title="App Settings"
-            description="Configure global application settings and defaults"
+            :title="__('App Settings')"
+            :description="
+                __('Configure global application settings and defaults')
+            "
         />
 
         <!-- Top tabs navigation -->
@@ -46,7 +51,7 @@ const activeTab = (): string => {
                     as-child
                 >
                     <Link :href="toUrl(item.href)">
-                        {{ item.title }}
+                        {{ __(item.title) }}
                     </Link>
                 </TabsTrigger>
             </TabsList>

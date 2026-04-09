@@ -81,7 +81,7 @@ final readonly class UserDefaultsSettingsController
         return Collection::make($options)
             ->map(fn (string $label, string $value): array => [
                 'value' => $value,
-                'label' => $label,
+                'label' => __($label),
             ])
             ->values()
             ->all();

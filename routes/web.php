@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Tyanc\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Tyanc\Settings\AppSettingsController;
@@ -22,6 +23,7 @@ $adminPath = mb_trim((string) config('tyanc.admin_path', 'tyanc'), '/');
 $demoPath = mb_trim((string) config('tyanc.demo_path', 'demo'), '/');
 
 Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
+Route::patch('locale', [LocaleController::class, 'update'])->name('locale.update');
 
 Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $demoPath): void {
     Route::redirect('dashboard', sprintf('/%s/dashboard', $adminPath));

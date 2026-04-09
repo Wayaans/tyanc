@@ -4,6 +4,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
+import { registerTranslations } from '@/lib/translations';
 
 const appName = 'Tyanc';
 
@@ -18,8 +19,14 @@ createServer(
                     `./pages/${name}.vue`,
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
                 ),
-            setup: ({ App, props, plugin }) =>
-                createSSRApp({ render: () => h(App, props) }).use(plugin),
+            setup: ({ App, props, plugin }) => {
+                const vueApp = createSSRApp({ render: () => h(App, props) });
+                registerTranslations(
+                    vueApp,
+                    props.initialPage.props as Record<string, unknown>,
+                );
+                return vueApp.use(plugin);
+            },
         }),
     { cluster: true },
 );

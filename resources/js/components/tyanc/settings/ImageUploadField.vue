@@ -3,6 +3,7 @@ import { X } from 'lucide-vue-next';
 import { computed, onUnmounted, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/lib/translations';
 
 const props = defineProps<{
     name: string;
@@ -15,6 +16,7 @@ const props = defineProps<{
     accept?: string;
 }>();
 
+const { __ } = useTranslations();
 const fileRef = ref<HTMLInputElement | null>(null);
 const preview = ref<string | null>(null);
 const pendingRemove = ref(false);
@@ -78,7 +80,7 @@ onUnmounted(() => {
                 class="max-h-16 max-w-full object-contain"
             />
             <span v-else class="text-xs text-muted-foreground">
-                No image set
+                {{ __('No image set') }}
             </span>
 
             <button
@@ -99,7 +101,7 @@ onUnmounted(() => {
                 size="sm"
                 @click="openPicker"
             >
-                {{ displayUrl ? 'Replace' : 'Upload' }}
+                {{ displayUrl ? __('Replace') : __('Upload') }}
             </Button>
             <span class="text-xs text-muted-foreground">
                 {{ hint ?? 'PNG, JPG, WebP · Max 2 MB' }}

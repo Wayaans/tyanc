@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TyancSettingsLayout from '@/layouts/tyanc/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/tyanc/settings/security';
 
 type Settings = {
@@ -30,15 +31,16 @@ const { tyancSettingsBreadcrumbs } = useAppNavigation();
 const breadcrumbItems = computed(() =>
     tyancSettingsBreadcrumbs('Security', edit()),
 );
+const { __ } = useTranslations();
 
 const enforce2fa = ref(props.settings.enforce_2fa);
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Security settings" />
+        <Head :title="__('Security settings')" />
 
-        <h1 class="sr-only">Security settings</h1>
+        <h1 class="sr-only">{{ __('Security settings') }}</h1>
 
         <TyancSettingsLayout>
             <Form
@@ -51,8 +53,12 @@ const enforce2fa = ref(props.settings.enforce_2fa);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Authentication"
-                        description="Two-factor authentication enforcement for all users"
+                        :title="__('Authentication')"
+                        :description="
+                            __(
+                                'Two-factor authentication enforcement for all users',
+                            )
+                        "
                     />
 
                     <div class="space-y-3">
@@ -70,12 +76,16 @@ const enforce2fa = ref(props.settings.enforce_2fa);
                             />
                             <div class="grid gap-1">
                                 <Label for="enforce_2fa" class="font-medium">
-                                    Require two-factor authentication
+                                    {{
+                                        __('Require two-factor authentication')
+                                    }}
                                 </Label>
                                 <p class="text-sm text-muted-foreground">
-                                    All users must set up 2FA before accessing
-                                    the application. Users without 2FA will be
-                                    redirected to the setup screen on login.
+                                    {{
+                                        __(
+                                            'All users must set up 2FA before accessing the application. Users without 2FA will be redirected to the setup screen on login.',
+                                        )
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -89,13 +99,13 @@ const enforce2fa = ref(props.settings.enforce_2fa);
                 <div class="space-y-4">
                     <Heading
                         variant="small"
-                        title="Sessions"
-                        description="Idle session timeout configuration"
+                        :title="__('Sessions')"
+                        :description="__('Idle session timeout configuration')"
                     />
 
                     <div class="grid max-w-xs gap-2">
                         <Label for="session_timeout">
-                            Session timeout (minutes)
+                            {{ __('Session timeout (minutes)') }}
                         </Label>
                         <Input
                             id="session_timeout"
@@ -108,7 +118,11 @@ const enforce2fa = ref(props.settings.enforce_2fa);
                             placeholder="120"
                         />
                         <FormFieldSupport
-                            hint="Users are logged out after this many minutes of inactivity. Min 5, max 10080 (1 week)."
+                            :hint="
+                                __(
+                                    'Users are logged out after this many minutes of inactivity. Min 5, max 10080 (1 week).',
+                                )
+                            "
                             :error="errors.session_timeout"
                         />
                     </div>

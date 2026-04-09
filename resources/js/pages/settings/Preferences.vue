@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import UserPreferencesController from '@/actions/App/Http/Controllers/UserPreferencesController';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import Heading from '@/components/Heading.vue';
+import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -18,6 +19,7 @@ import { updateTheme } from '@/composables/useAppearance';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/settings/preferences';
 import type { Appearance } from '@/types';
 
@@ -43,13 +45,16 @@ type Props = {
     appearances: Option[];
     sidebarVariants: Option[];
     spacingDensities: SpacingDensity[];
+    locales: string[];
+    timezones: string[];
 };
 
 const props = defineProps<Props>();
 
+const { __ } = useTranslations();
 const { settingsBreadcrumbs } = useAppNavigation();
 const breadcrumbItems = computed(() =>
-    settingsBreadcrumbs('Preferences', edit()),
+    settingsBreadcrumbs(__('Preferences'), edit()),
 );
 
 /**
@@ -66,6 +71,10 @@ const selectedSidebarVariant = ref<string>(
 const selectedSpacingDensity = ref<string>(
     props.preferences.spacing_density ?? SYSTEM_DEFAULT,
 );
+const selectedLocale = ref<string>(props.preferences.locale ?? SYSTEM_DEFAULT);
+const selectedTimezone = ref<string>(
+    props.preferences.timezone ?? SYSTEM_DEFAULT,
+);
 
 watch(
     () => props.preferences,
@@ -75,6 +84,8 @@ watch(
             preferences.sidebar_variant ?? SYSTEM_DEFAULT;
         selectedSpacingDensity.value =
             preferences.spacing_density ?? SYSTEM_DEFAULT;
+        selectedLocale.value = preferences.locale ?? SYSTEM_DEFAULT;
+        selectedTimezone.value = preferences.timezone ?? SYSTEM_DEFAULT;
     },
 );
 
@@ -87,7 +98,12 @@ watch(selectedAppearance, (val) => {
 });
 
 function clearField(
-    field: 'appearance' | 'sidebar_variant' | 'spacing_density',
+    field:
+        | 'appearance'
+        | 'sidebar_variant'
+        | 'spacing_density'
+        | 'locale'
+        | 'timezone',
 ) {
     switch (field) {
         case 'appearance':
@@ -98,6 +114,12 @@ function clearField(
             break;
         case 'spacing_density':
             selectedSpacingDensity.value = SYSTEM_DEFAULT;
+            break;
+        case 'locale':
+            selectedLocale.value = SYSTEM_DEFAULT;
+            break;
+        case 'timezone':
+            selectedTimezone.value = SYSTEM_DEFAULT;
             break;
     }
 }
@@ -124,15 +146,19 @@ const resolvedSpacingLabel = computed(
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Preferences" />
+        <Head :title="__('Preferences')" />
 
-        <h1 class="sr-only">Preferences</h1>
+        <h1 class="sr-only">{{ __('Preferences') }}</h1>
 
         <SettingsLayout>
             <div class="space-y-6">
                 <Heading
-                    title="Preferences"
-                    description="Personalise your display — these settings override application defaults"
+                    :title="__('Preferences')"
+                    :description="
+                        __(
+                            'Personalise your display — these settings override application defaults',
+                        )
+                    "
                 />
 
                 <Form
@@ -145,15 +171,21 @@ const resolvedSpacingLabel = computed(
                     <div class="space-y-4">
                         <Heading
                             variant="small"
-                            title="Display"
-                            description="Theme, sidebar style, and spacing — overrides system defaults"
+                            :title="__('Display')"
+                            :description="
+                                __(
+                                    'Theme, sidebar style, and spacing — overrides system defaults',
+                                )
+                            "
                         />
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <!-- Appearance -->
                             <div class="grid gap-2">
                                 <div class="flex items-center justify-between">
-                                    <Label for="appearance">Theme</Label>
+                                    <Label for="appearance">{{
+                                        __('Theme')
+                                    }}</Label>
                                     <button
                                         v-if="
                                             selectedAppearance !==
@@ -163,7 +195,7 @@ const resolvedSpacingLabel = computed(
                                         class="text-xs text-muted-foreground underline-offset-2 hover:underline"
                                         @click="clearField('appearance')"
                                     >
-                                        Use system default
+                                        {{ __('Use system default') }}
                                     </button>
                                 </div>
                                 <Select v-model="selectedAppearance">
@@ -172,7 +204,7 @@ const resolvedSpacingLabel = computed(
                                         class="w-full"
                                     >
                                         <SelectValue
-                                            :placeholder="`System default (${resolvedAppearanceLabel})`"
+                                            :placeholder="`${__('System default')} (${resolvedAppearanceLabel})`"
                                         />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -194,7 +226,7 @@ const resolvedSpacingLabel = computed(
                                 <FormFieldSupport
                                     :hint="
                                         selectedAppearance === SYSTEM_DEFAULT
-                                            ? `Using system default: ${resolvedAppearanceLabel}`
+                                            ? `${__('Using system default')}: ${resolvedAppearanceLabel}`
                                             : undefined
                                     "
                                     :error="errors.appearance"
@@ -204,9 +236,9 @@ const resolvedSpacingLabel = computed(
                             <!-- Sidebar variant -->
                             <div class="grid gap-2">
                                 <div class="flex items-center justify-between">
-                                    <Label for="sidebar_variant"
-                                        >Sidebar style</Label
-                                    >
+                                    <Label for="sidebar_variant">{{
+                                        __('Sidebar style')
+                                    }}</Label>
                                     <button
                                         v-if="
                                             selectedSidebarVariant !==
@@ -216,7 +248,7 @@ const resolvedSpacingLabel = computed(
                                         class="text-xs text-muted-foreground underline-offset-2 hover:underline"
                                         @click="clearField('sidebar_variant')"
                                     >
-                                        Use system default
+                                        {{ __('Use system default') }}
                                     </button>
                                 </div>
                                 <Select v-model="selectedSidebarVariant">
@@ -225,7 +257,7 @@ const resolvedSpacingLabel = computed(
                                         class="w-full"
                                     >
                                         <SelectValue
-                                            :placeholder="`System default (${resolvedSidebarLabel})`"
+                                            :placeholder="`${__('System default')} (${resolvedSidebarLabel})`"
                                         />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -251,7 +283,7 @@ const resolvedSpacingLabel = computed(
                                     :hint="
                                         selectedSidebarVariant ===
                                         SYSTEM_DEFAULT
-                                            ? `Using system default: ${resolvedSidebarLabel}`
+                                            ? `${__('Using system default')}: ${resolvedSidebarLabel}`
                                             : undefined
                                     "
                                     :error="errors.sidebar_variant"
@@ -261,9 +293,9 @@ const resolvedSpacingLabel = computed(
                             <!-- Spacing density -->
                             <div class="grid gap-2">
                                 <div class="flex items-center justify-between">
-                                    <Label for="spacing_density"
-                                        >Spacing density</Label
-                                    >
+                                    <Label for="spacing_density">{{
+                                        __('Spacing density')
+                                    }}</Label>
                                     <button
                                         v-if="
                                             selectedSpacingDensity !==
@@ -273,7 +305,7 @@ const resolvedSpacingLabel = computed(
                                         class="text-xs text-muted-foreground underline-offset-2 hover:underline"
                                         @click="clearField('spacing_density')"
                                     >
-                                        Use system default
+                                        {{ __('Use system default') }}
                                     </button>
                                 </div>
                                 <Select v-model="selectedSpacingDensity">
@@ -282,7 +314,7 @@ const resolvedSpacingLabel = computed(
                                         class="w-full"
                                     >
                                         <SelectValue
-                                            :placeholder="`System default (${resolvedSpacingLabel})`"
+                                            :placeholder="`${__('System default')} (${resolvedSpacingLabel})`"
                                         />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -308,7 +340,7 @@ const resolvedSpacingLabel = computed(
                                     :hint="
                                         selectedSpacingDensity ===
                                         SYSTEM_DEFAULT
-                                            ? `Using system default: ${resolvedSpacingLabel} (×${props.preferences.resolved_spacing_density_value})`
+                                            ? `${__('Using system default')}: ${resolvedSpacingLabel} (×${props.preferences.resolved_spacing_density_value})`
                                             : undefined
                                     "
                                     :error="errors.spacing_density"
@@ -319,9 +351,117 @@ const resolvedSpacingLabel = computed(
 
                     <Separator />
 
+                    <!-- Locale & timezone preferences -->
+                    <div class="space-y-4">
+                        <Heading
+                            variant="small"
+                            :title="__('Language & time')"
+                            :description="
+                                __(
+                                    'Override your locale and timezone preferences',
+                                )
+                            "
+                        />
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <!-- Locale -->
+                            <div class="grid gap-2">
+                                <div class="flex items-center justify-between">
+                                    <Label for="pref_locale">{{
+                                        __('Language')
+                                    }}</Label>
+                                    <button
+                                        v-if="selectedLocale !== SYSTEM_DEFAULT"
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('locale')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </div>
+                                <Select v-model="selectedLocale">
+                                    <SelectTrigger
+                                        id="pref_locale"
+                                        class="w-full"
+                                    >
+                                        <SelectValue
+                                            :placeholder="`${__('System default')} (${props.preferences.resolved_locale})`"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="loc in props.locales"
+                                            :key="loc"
+                                            :value="loc"
+                                        >
+                                            {{ loc.toUpperCase() }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <input
+                                    v-if="selectedLocale !== SYSTEM_DEFAULT"
+                                    type="hidden"
+                                    name="locale"
+                                    :value="selectedLocale"
+                                />
+                                <FormFieldSupport
+                                    :hint="
+                                        selectedLocale === SYSTEM_DEFAULT
+                                            ? `${__('Using system default')}: ${props.preferences.resolved_locale}`
+                                            : undefined
+                                    "
+                                />
+                            </div>
+
+                            <!-- Timezone -->
+                            <div class="grid gap-2">
+                                <div class="flex items-center justify-between">
+                                    <Label for="pref_timezone">{{
+                                        __('Timezone')
+                                    }}</Label>
+                                    <button
+                                        v-if="
+                                            selectedTimezone !== SYSTEM_DEFAULT
+                                        "
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('timezone')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </div>
+                                <TimezoneCombobox
+                                    id="pref_timezone"
+                                    v-model="selectedTimezone"
+                                    name="timezone"
+                                    :timezones="props.timezones"
+                                />
+                                <input
+                                    v-if="selectedTimezone !== SYSTEM_DEFAULT"
+                                    type="hidden"
+                                    name="timezone"
+                                    :value="selectedTimezone"
+                                />
+                                <FormFieldSupport
+                                    :hint="
+                                        selectedTimezone === SYSTEM_DEFAULT
+                                            ? `${__('Using system default')}: ${props.preferences.resolved_timezone}`
+                                            : undefined
+                                    "
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator />
+
                     <div class="flex items-center gap-4">
                         <Button type="submit" :disabled="processing">
-                            {{ processing ? 'Saving…' : 'Save preferences' }}
+                            {{
+                                processing
+                                    ? __('Saving…')
+                                    : __('Save preferences')
+                            }}
                         </Button>
 
                         <Transition
@@ -334,7 +474,7 @@ const resolvedSpacingLabel = computed(
                                 v-show="recentlySuccessful"
                                 class="text-sm text-neutral-600"
                             >
-                                Saved.
+                                {{ __('Saved.') }}
                             </p>
                         </Transition>
                     </div>

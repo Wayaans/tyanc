@@ -12,26 +12,31 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { useTranslations } from '@/lib/translations';
 import { store } from '@/routes/two-factor/login';
 import type { TwoFactorConfigContent } from '@/types';
 
 withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
 
+const { __ } = useTranslations();
+
 const authConfigContent = computed<TwoFactorConfigContent>(() => {
     if (showRecoveryInput.value) {
         return {
-            title: 'Use a recovery code',
-            description:
+            title: __('Use a recovery code'),
+            description: __(
                 'Enter one of your emergency recovery codes to regain access to your account.',
-            buttonText: 'use an authenticator code instead',
+            ),
+            buttonText: __('use an authenticator code instead'),
         };
     }
 
     return {
-        title: 'Two-factor verification',
-        description:
+        title: __('Two-factor verification'),
+        description: __(
             'Open your authenticator app and enter the 6-digit code for your account.',
-        buttonText: 'use a recovery code instead',
+        ),
+        buttonText: __('use a recovery code instead'),
     };
 });
 
@@ -51,7 +56,7 @@ const code = ref<string>('');
         :title="authConfigContent.title"
         :description="authConfigContent.description"
     >
-        <Head title="Two-factor authentication" />
+        <Head :title="__('Two-factor authentication')" />
 
         <template v-if="enabled">
             <div class="space-y-6">
@@ -92,7 +97,7 @@ const code = ref<string>('');
                             type="submit"
                             class="w-full"
                             :disabled="processing"
-                            >Verify and sign in</Button
+                            >{{ __('Verify and sign in') }}</Button
                         >
                         <div class="text-center text-sm text-muted-foreground">
                             <button
@@ -126,7 +131,7 @@ const code = ref<string>('');
                             class="w-full"
                             :disabled="processing"
                         >
-                            Verify and sign in
+                            {{ __('Verify and sign in') }}
                         </Button>
 
                         <div class="text-center text-sm text-muted-foreground">
@@ -146,11 +151,15 @@ const code = ref<string>('');
         <template v-else>
             <Alert>
                 <ShieldOff class="size-4" />
-                <AlertTitle>Two-factor authentication is disabled</AlertTitle>
+                <AlertTitle>{{
+                    __('Two-factor authentication is disabled')
+                }}</AlertTitle>
                 <AlertDescription>
-                    Two-factor authentication (2FA) is not available on this
-                    application. Contact your administrator for more
-                    information.
+                    {{
+                        __(
+                            'Two-factor authentication (2FA) is not available on this application. Contact your administrator for more information.',
+                        )
+                    }}
                 </AlertDescription>
             </Alert>
         </template>

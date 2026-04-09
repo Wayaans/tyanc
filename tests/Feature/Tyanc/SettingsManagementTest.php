@@ -171,15 +171,17 @@ it('renders and updates personal user preferences', function (): void {
 
     $this->actingAs($user)
         ->patchJson(route('settings.preferences.update'), [
+            'locale' => 'id',
+            'timezone' => 'Asia/Makassar',
             'appearance' => 'dark',
             'sidebar_variant' => 'floating',
             'spacing_density' => 'compact',
         ])
         ->assertOk()
-        ->assertJsonPath('preferences.locale', null)
-        ->assertJsonPath('preferences.timezone', null)
-        ->assertJsonPath('preferences.resolved_locale', 'en')
-        ->assertJsonPath('preferences.resolved_timezone', 'UTC')
+        ->assertJsonPath('preferences.locale', 'id')
+        ->assertJsonPath('preferences.timezone', 'Asia/Makassar')
+        ->assertJsonPath('preferences.resolved_locale', 'id')
+        ->assertJsonPath('preferences.resolved_timezone', 'Asia/Makassar')
         ->assertJsonPath('preferences.resolved_appearance', 'dark')
         ->assertJsonPath('preferences.resolved_sidebar_variant', 'floating')
         ->assertJsonPath('preferences.resolved_spacing_density', 'compact');
@@ -187,8 +189,8 @@ it('renders and updates personal user preferences', function (): void {
     $preference = UserPreference::query()->where('user_id', $user->id)->first();
 
     expect($preference)->not->toBeNull()
-        ->and($preference->locale)->toBeNull()
-        ->and($preference->timezone)->toBeNull()
+        ->and($preference->locale)->toBe('id')
+        ->and($preference->timezone)->toBe('Asia/Makassar')
         ->and($preference->appearance)->toBe('dark')
         ->and($preference->sidebar_variant)->toBe('floating')
         ->and($preference->spacing_density)->toBe('compact');

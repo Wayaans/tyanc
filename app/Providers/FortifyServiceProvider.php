@@ -35,7 +35,7 @@ final class FortifyServiceProvider extends ServiceProvider
             'status' => session('status'),
         ]));
         Fortify::registerView(fn () => Inertia::render('user/Create', [
-            'locales' => ['en'],
+            'locales' => array_keys((array) config('tyanc.supported_locales', [])),
             'timezones' => DateTimeZone::listIdentifiers(),
         ]));
         Fortify::requestPasswordResetLinkView(fn () => Inertia::render('user-email-reset-notification/Create', [

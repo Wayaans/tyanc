@@ -10,24 +10,30 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/password';
 
 const { settingsBreadcrumbs } = useAppNavigation();
 const breadcrumbs = settingsBreadcrumbs('Password', edit());
+const { __ } = useTranslations();
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Password settings" />
+        <Head :title="__('Password settings')" />
 
-        <h1 class="sr-only">Password settings</h1>
+        <h1 class="sr-only">{{ __('Password settings') }}</h1>
 
         <SettingsLayout>
             <div class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
+                    :title="__('Update password')"
+                    :description="
+                        __(
+                            'Ensure your account is using a long, random password to stay secure',
+                        )
+                    "
                 />
 
                 <Form
@@ -45,39 +51,41 @@ const breadcrumbs = settingsBreadcrumbs('Password', edit());
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
-                        <Label for="current_password">Current password</Label>
+                        <Label for="current_password">{{
+                            __('Current password')
+                        }}</Label>
                         <PasswordInput
                             id="current_password"
                             name="current_password"
                             class="mt-1 block w-full"
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            :placeholder="__('Current password')"
                         />
                         <InputError :message="errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
+                        <Label for="password">{{ __('New password') }}</Label>
                         <PasswordInput
                             id="password"
                             name="password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
-                            placeholder="New password"
+                            :placeholder="__('New password')"
                         />
                         <InputError :message="errors.password" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password_confirmation"
-                            >Confirm password</Label
-                        >
+                        <Label for="password_confirmation">{{
+                            __('Confirm password')
+                        }}</Label>
                         <PasswordInput
                             id="password_confirmation"
                             name="password_confirmation"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
-                            placeholder="Confirm password"
+                            :placeholder="__('Confirm password')"
                         />
                         <InputError :message="errors.password_confirmation" />
                     </div>
@@ -88,7 +96,7 @@ const breadcrumbs = settingsBreadcrumbs('Password', edit());
                             data-test="update-password-button"
                         >
                             <Spinner v-if="processing" />
-                            Save password
+                            {{ __('Save password') }}
                         </Button>
 
                         <Transition
@@ -101,7 +109,7 @@ const breadcrumbs = settingsBreadcrumbs('Password', edit());
                                 v-show="recentlySuccessful"
                                 class="text-sm text-neutral-600"
                             >
-                                Saved.
+                                {{ __('Saved.') }}
                             </p>
                         </Transition>
                     </div>

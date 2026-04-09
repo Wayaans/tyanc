@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { useTranslations } from '@/lib/translations';
 import { login } from '@/routes';
 import { update } from '@/routes/password';
 
@@ -20,29 +21,34 @@ const props = defineProps<{
     enabled?: boolean;
 }>();
 
+const { __ } = useTranslations();
+
 const inputEmail = ref(props.email);
 </script>
 
 <template>
     <AuthLayout
-        title="Reset your password"
-        description="Enter and confirm your new password below"
+        :title="__('Reset your password')"
+        :description="__('Enter and confirm your new password below')"
     >
-        <Head title="Reset password" />
+        <Head :title="__('Reset password')" />
 
         <!-- Feature disabled notice -->
         <template v-if="enabled === false">
             <Alert>
                 <Ban class="size-4" />
-                <AlertTitle>Password reset unavailable</AlertTitle>
+                <AlertTitle>{{ __('Password reset unavailable') }}</AlertTitle>
                 <AlertDescription>
-                    Password reset is not enabled on this application. Please
-                    contact support if you need help accessing your account.
+                    {{
+                        __(
+                            'Password reset is not enabled on this application. Please contact support if you need help accessing your account.',
+                        )
+                    }}
                 </AlertDescription>
             </Alert>
 
             <div class="mt-6 text-center text-sm text-muted-foreground">
-                <TextLink :href="login()">Back to sign in</TextLink>
+                <TextLink :href="login()">{{ __('Back to sign in') }}</TextLink>
             </div>
         </template>
 
@@ -56,7 +62,7 @@ const inputEmail = ref(props.email);
             >
                 <div class="grid gap-6">
                     <div class="grid gap-2">
-                        <Label for="email">Email</Label>
+                        <Label for="email">{{ __('Email') }}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -70,28 +76,28 @@ const inputEmail = ref(props.email);
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
+                        <Label for="password">{{ __('New password') }}</Label>
                         <PasswordInput
                             id="password"
                             name="password"
                             autocomplete="new-password"
                             class="mt-1 block w-full"
                             autofocus
-                            placeholder="Choose a strong password"
+                            :placeholder="__('Choose a strong password')"
                         />
                         <InputError :message="errors.password" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="password_confirmation">
-                            Confirm new password
+                            {{ __('Confirm new password') }}
                         </Label>
                         <PasswordInput
                             id="password_confirmation"
                             name="password_confirmation"
                             autocomplete="new-password"
                             class="mt-1 block w-full"
-                            placeholder="Repeat your new password"
+                            :placeholder="__('Repeat your new password')"
                         />
                         <InputError :message="errors.password_confirmation" />
                     </div>
@@ -103,7 +109,7 @@ const inputEmail = ref(props.email);
                         data-test="reset-password-button"
                     >
                         <Spinner v-if="processing" />
-                        Set new password
+                        {{ __('Set new password') }}
                     </Button>
                 </div>
             </Form>

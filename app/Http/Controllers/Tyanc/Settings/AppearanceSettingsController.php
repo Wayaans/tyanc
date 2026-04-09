@@ -70,7 +70,7 @@ final readonly class AppearanceSettingsController
         return collect((array) config('tyanc.font_families', []))
             ->map(fn (array $font, string $value): array => [
                 'value' => $value,
-                'label' => (string) ($font['label'] ?? $value),
+                'label' => __((string) ($font['label'] ?? $value)),
                 'stack' => (string) ($font['stack'] ?? ''),
             ])
             ->values()
@@ -93,7 +93,7 @@ final readonly class AppearanceSettingsController
         return collect((array) config('tyanc.spacing_densities', []))
             ->map(fn (array $density, string $value): array => [
                 'value' => $value,
-                'label' => (string) ($density['label'] ?? $value),
+                'label' => __((string) ($density['label'] ?? $value)),
                 'density' => (float) ($density['value'] ?? 1.0),
             ])
             ->values()
@@ -109,7 +109,7 @@ final readonly class AppearanceSettingsController
         return Collection::make($options)
             ->map(fn (string $label, string $value): array => [
                 'value' => $value,
-                'label' => $label,
+                'label' => __($label),
             ])
             ->values()
             ->all();

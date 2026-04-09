@@ -25,10 +25,9 @@ final readonly class HandleAppearance
         View::share('appearance', $runtimeSettings['theme']['appearance']);
         View::share('themeCssVariables', $runtimeSettings['theme']['css_variables']);
         View::share('brand', $runtimeSettings['brand']);
-        View::share('appLocale', $runtimeSettings['preferences']->resolved_locale);
+        View::share('appLocale', $request->getLocale());
         View::share('appTimezone', $runtimeSettings['preferences']->resolved_timezone);
 
-        app()->setLocale($runtimeSettings['preferences']->resolved_locale);
         config(['app.timezone' => $runtimeSettings['preferences']->resolved_timezone]);
         date_default_timezone_set($runtimeSettings['preferences']->resolved_timezone);
 
