@@ -97,14 +97,24 @@ final readonly class ResolveTranslations
 
         if (str_starts_with($routeName, 'tyanc.users.')) {
             $groups[] = 'users';
+            $groups[] = 'imports';
+            $groups[] = 'exports';
+            $groups[] = 'approvals';
             $groups[] = 'statuses';
             $groups[] = 'profile';
             $groups[] = 'auth';
             $groups[] = 'datatable';
         }
 
+        if (str_starts_with($routeName, 'tyanc.files.')) {
+            $groups[] = 'files';
+            $groups[] = 'datatable';
+        }
+
         if (str_starts_with($routeName, 'tyanc.activity-log.')) {
             $groups[] = 'activity';
+            $groups[] = 'exports';
+            $groups[] = 'approvals';
             $groups[] = 'datatable';
         }
 
@@ -169,6 +179,7 @@ final readonly class ResolveTranslations
                 'Dashboard',
                 'User',
                 'Users',
+                'Files',
                 'Role & Permission',
                 'Role',
                 'Permissions',
@@ -584,6 +595,86 @@ final readonly class ResolveTranslations
                 'suspended',
                 'banned',
                 'pending_verification',
+            ],
+            'files' => [
+                'Files',
+                'Search files',
+                'Type',
+                'All files',
+                'Images',
+                'Documents',
+                'Text',
+                'Audio',
+                'Video',
+                'Other',
+                'Upload files',
+                'Drag and drop files here, or browse from your device.',
+                'Manage uploaded assets and shared documents from one library.',
+                'No files found.',
+                'Upload your first file to start the shared library.',
+                'Preview file',
+                'Delete file',
+                'Uploaded by',
+                'File type',
+                'File size',
+                'Created at',
+                'Thumbnail view',
+                'List view',
+                'Grid view',
+                'File details',
+                'File name',
+                'Collection',
+                'No preview available',
+                'Open in new tab',
+                'File actions',
+                'Drop files here to upload',
+                'Supports images, documents, spreadsheets, and more up to 10 MB each.',
+            ],
+            'imports' => [
+                'Import',
+                'Import users',
+                'Upload a spreadsheet to create or update managed users after approval.',
+                'Import file',
+                'Request note',
+                'Recent imports',
+                'Pending approval',
+                'Queued',
+                'Processing',
+                'Completed',
+                'Failed',
+                'Processed rows',
+                'Submit import request',
+                'Import request submitted.',
+                'The import will start after an approver reviews it.',
+                'No imports yet.',
+            ],
+            'exports' => [
+                'Export',
+                'Export users',
+                'Export activity log',
+                'Download spreadsheet',
+                'Download PDF',
+                'Generated at',
+                'Export menu',
+            ],
+            'approvals' => [
+                'Approvals',
+                'Approval queue',
+                'Open approvals',
+                'Approval request',
+                'A new approval request requires your review.',
+                'Approval required for :subject.',
+                'Approve',
+                'Reject',
+                'Approve request',
+                'Reject request',
+                'Requested by',
+                'Reviewed by',
+                'Requested at',
+                'Reviewed at',
+                'Review note',
+                'No approval requests yet.',
+                'Import request was rejected.',
             ],
             'activity' => [
                 'Activity log',

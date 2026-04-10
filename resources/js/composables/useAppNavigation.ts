@@ -12,6 +12,7 @@ import {
     edit as appsEdit,
     index as appsRoute,
 } from '@/routes/tyanc/apps';
+import { index as filesRoute } from '@/routes/tyanc/files';
 import { index as permissionsRoute } from '@/routes/tyanc/permissions';
 import { index as rolesRoute } from '@/routes/tyanc/roles';
 import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
@@ -55,6 +56,12 @@ const resolveFallbackSidebarNavigation = (
             title: translate('Users'),
             href: usersRoute(),
             icon: 'user',
+            permission: null,
+        },
+        {
+            title: translate('Files'),
+            href: filesRoute(),
+            icon: 'folder',
             permission: null,
         },
         {
@@ -207,6 +214,11 @@ export function useAppNavigation() {
         },
     ];
 
+    const filesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Files'), href: filesRoute() },
+    ]);
+
     const usersBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         { title: __('Users'), href: usersRoute() },
@@ -278,6 +290,7 @@ export function useAppNavigation() {
         appsEditBreadcrumbs,
         accessMatrixBreadcrumbs,
         dashboardBreadcrumbs,
+        filesBreadcrumbs,
         mainNavItems,
         permissionsBreadcrumbs,
         rolesBreadcrumbs,

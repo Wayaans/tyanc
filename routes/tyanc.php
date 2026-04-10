@@ -5,7 +5,11 @@ declare(strict_types=1);
 use App\Http\Controllers\Tyanc\AccessMatrixController;
 use App\Http\Controllers\Tyanc\ActivityLogController;
 use App\Http\Controllers\Tyanc\AppController;
+use App\Http\Controllers\Tyanc\ApprovalController;
 use App\Http\Controllers\Tyanc\DashboardController;
+use App\Http\Controllers\Tyanc\ExportController;
+use App\Http\Controllers\Tyanc\FileController;
+use App\Http\Controllers\Tyanc\ImportController;
 use App\Http\Controllers\Tyanc\NotificationController;
 use App\Http\Controllers\Tyanc\PermissionController;
 use App\Http\Controllers\Tyanc\RoleController;
@@ -72,6 +76,29 @@ Route::controller(AccessMatrixController::class)
         Route::get('/', 'index')->name('index');
         Route::patch('/', 'update')->name('update');
     });
+
+Route::controller(FileController::class)
+    ->prefix('files')
+    ->name('tyanc.files.')
+    ->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::delete('{media}', 'destroy')->name('destroy');
+    });
+
+Route::controller(ExportController::class)->group(function (): void {
+    Route::get('exports/users', 'users')->name('tyanc.users.export');
+    Route::get('exports/users/pdf', 'usersPdf')->name('tyanc.users.export.pdf');
+    Route::get('exports/activity-log', 'activityLog')->name('tyanc.activity-log.export');
+    Route::get('exports/activity-log/pdf', 'activitySummaryPdf')->name('tyanc.activity-log.export.pdf');
+});
+
+Route::post('imports/users', [ImportController::class, 'store'])->name('tyanc.users.import.store');
+
+Route::controller(ApprovalController::class)->group(function (): void {
+    Route::patch('approvals/{approvalRequest}/approve', 'approve')->name('tyanc.users.approvals.approve');
+    Route::patch('approvals/{approvalRequest}/reject', 'reject')->name('tyanc.users.approvals.reject');
+});
 
 Route::get('activity-log', [ActivityLogController::class, 'index'])->name('tyanc.activity-log.index');
 

@@ -25,6 +25,12 @@ return [
                     'permission' => PermissionKey::tyanc('users', 'manage'),
                 ],
                 [
+                    'title' => 'Files',
+                    'icon' => 'folder',
+                    'route' => 'tyanc.files.index',
+                    'permission' => PermissionKey::tyanc('files', 'viewany'),
+                ],
+                [
                     'title' => 'Role & Permission',
                     'icon' => 'key-round',
                     'permission' => null,

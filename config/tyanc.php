@@ -30,6 +30,10 @@ return [
     'reserved_apps' => [
         'tyanc',
     ],
+    'features' => [
+        'imports_enabled' => (bool) env('TYANC_IMPORTS_ENABLED', false),
+        'exports_enabled' => (bool) env('TYANC_EXPORTS_ENABLED', false),
+    ],
     'theme' => [
         'appearance' => 'system',
         'primary_color' => 'oklch(0.5 0.17 200)',

@@ -1,0 +1,22 @@
+export type MediaFileRow = {
+    id: number;
+    uuid: string;
+    name: string;
+    file_name: string;
+    extension: string | null;
+    mime_type: string;
+    mime_group: string;
+    size_bytes: number;
+    size_human: string;
+    is_image: boolean;
+    is_previewable: boolean;
+    preview_url: string | null;
+    url: string;
+    download_url: string;
+    collection_name: string;
+    uploaded_by_id: string | null;
+    uploaded_by_name: string | null;
+    custom_properties: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+};
