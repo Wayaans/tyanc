@@ -26,6 +26,12 @@ final class AuthorizeAppPageAccess
             return $next($request);
         }
 
+        $routeName = $request->route()?->getName() ?? '';
+
+        if (str_starts_with($routeName, 'tyanc.notifications.')) {
+            return $next($request);
+        }
+
         resolve(EnsureAppRegistrySeeded::class)->handle();
 
         $registeredApp = $this->resolveAppByPrefix($request);
@@ -35,6 +41,14 @@ final class AuthorizeAppPageAccess
         }
 
         abort_if(! $registeredApp->enabled, 404);
+
+        $routePermission = $this->routePermission($routeName);
+
+        if ($routePermission !== null) {
+            abort_unless(resolve(PermissionResourceAccess::class)->handle($user, $routePermission), 403);
+
+            return $next($request);
+        }
 
         $page = $this->resolvePage($request, $registeredApp);
 
@@ -51,6 +65,18 @@ final class AuthorizeAppPageAccess
         abort_unless(resolve(PermissionResourceAccess::class)->handle($user, $page->permission_name), 403);
 
         return $next($request);
+    }
+
+    private function routePermission(string $routeName): ?string
+    {
+        return match (true) {
+            str_starts_with($routeName, 'tyanc.users.import.') => 'tyanc.users.import',
+            str_starts_with($routeName, 'tyanc.users.export.') || $routeName === 'tyanc.users.export' => 'tyanc.users.export',
+            str_starts_with($routeName, 'tyanc.activity-log.export.') || $routeName === 'tyanc.activity-log.export' => 'tyanc.activity_log.export',
+            $routeName === 'tyanc.users.approvals.approve' => 'tyanc.approvals.approve',
+            $routeName === 'tyanc.users.approvals.reject' => 'tyanc.approvals.reject',
+            default => null,
+        };
     }
 
     private function resolveAppByPrefix(Request $request): ?App

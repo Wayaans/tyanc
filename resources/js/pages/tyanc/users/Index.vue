@@ -3,18 +3,39 @@ import { router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
 import { PlusCircle } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import ApprovalDecisionDialog from '@/components/tyanc/approvals/ApprovalDecisionDialog.vue';
+import ApprovalTimeline from '@/components/tyanc/approvals/ApprovalTimeline.vue';
+import ExportMenu from '@/components/tyanc/exports/ExportMenu.vue';
+import ImportSheet from '@/components/tyanc/imports/ImportSheet.vue';
 import { createUserTableColumns } from '@/components/tyanc/users/UserTableColumns';
 import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
-import { create, index } from '@/routes/tyanc/users';
-import type { DataTablePayload, UserRow } from '@/types';
+import { create, exportMethod, index } from '@/routes/tyanc/users';
+import { pdf } from '@/routes/tyanc/users/export';
+import type {
+    ApprovalRequestRow,
+    DataTablePayload,
+    ImportRunRow,
+    UserRow,
+} from '@/types';
 
 const props = defineProps<{
     usersTable: DataTablePayload<UserRow>;
+    recentImports: ImportRunRow[];
+    approvalRequests: ApprovalRequestRow[];
+    abilities: {
+        import: boolean;
+        export: boolean;
+        reviewApprovals: boolean;
+    };
+    features: {
+        imports_enabled: boolean;
+        exports_enabled: boolean;
+    };
 }>();
 
 const { __, locale } = useTranslations();
@@ -34,8 +55,29 @@ const columns = computed<ColumnDef<UserRow>[]>(() =>
     createUserTableColumns(dateFormatter.value),
 );
 
+const decisionDialogOpen = ref(false);
+const selectedApproval = ref<ApprovalRequestRow | null>(null);
+
+const exportOptions = computed(() => [
+    {
+        label: __('Download spreadsheet'),
+        url: exportMethod.url(),
+        description: __('Export users'),
+    },
+    {
+        label: __('Download PDF'),
+        url: pdf.url(),
+        description: __('Export users'),
+    },
+]);
+
 function goToCreate() {
     router.visit(create.url());
+}
+
+function openDecisionDialog(request: ApprovalRequestRow) {
+    selectedApproval.value = request;
+    decisionDialogOpen.value = true;
 }
 </script>
 
@@ -45,7 +87,7 @@ function goToCreate() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-5 p-4 md:gap-6">
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="space-y-1">
                     <h1
                         class="text-xl font-semibold tracking-tight text-foreground"
@@ -57,11 +99,39 @@ function goToCreate() {
                     </p>
                 </div>
 
-                <Button size="sm" class="gap-2" @click="goToCreate">
-                    <PlusCircle class="size-4" />
-                    {{ __('New user') }}
-                </Button>
+                <div class="flex items-center gap-2">
+                    <ExportMenu
+                        :options="exportOptions"
+                        :disabled="
+                            !props.features.exports_enabled ||
+                            !props.abilities.export
+                        "
+                    />
+
+                    <ImportSheet
+                        :recent-imports="props.recentImports"
+                        :disabled="
+                            !props.features.imports_enabled ||
+                            !props.abilities.import
+                        "
+                    />
+
+                    <Button size="sm" class="gap-2" @click="goToCreate">
+                        <PlusCircle class="size-4" />
+                        {{ __('New user') }}
+                    </Button>
+                </div>
             </div>
+
+            <!-- Approval timeline (reviewers only) -->
+            <ApprovalTimeline
+                v-if="
+                    props.abilities.reviewApprovals &&
+                    props.approvalRequests.length > 0
+                "
+                :approval-requests="props.approvalRequests"
+                @decide="openDecisionDialog"
+            />
 
             <!-- Table -->
             <DataTable
@@ -79,4 +149,10 @@ function goToCreate() {
             />
         </div>
     </AppLayout>
+
+    <!-- Approval decision dialog -->
+    <ApprovalDecisionDialog
+        v-model:open="decisionDialogOpen"
+        :request="selectedApproval"
+    />
 </template>

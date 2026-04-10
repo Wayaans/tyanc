@@ -1,5 +1,6 @@
 import {
     FlaskConical,
+    Folder,
     KeyRound,
     LayoutGrid,
     Palette,
@@ -27,6 +28,7 @@ export type SidebarApp = {
 const iconMap: Record<SidebarIconName, Component> = {
     'app-logo': AppLogoIcon,
     'flask-conical': FlaskConical,
+    folder: Folder,
     'key-round': KeyRound,
     'layout-grid': LayoutGrid,
     palette: Palette,

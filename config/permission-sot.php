@@ -17,6 +17,8 @@ return [
         'export' => ['label' => 'Export'],
         'upload' => ['label' => 'Upload'],
         'download' => ['label' => 'Download'],
+        'approve' => ['label' => 'Approve'],
+        'reject' => ['label' => 'Reject'],
     ],
     'policy_abilities' => [
         'viewAny' => 'viewany',
@@ -31,7 +33,7 @@ return [
         'assignPermissions' => 'manage',
         'sync' => 'sync',
     ],
-    'manage_implies' => ['viewany', 'view', 'create', 'update', 'delete', 'suspend', 'toggle', 'sync'],
+    'manage_implies' => ['viewany', 'view', 'create', 'update', 'delete', 'suspend', 'toggle', 'sync', 'import', 'export', 'upload', 'download', 'approve', 'reject'],
     'apps' => [
         'tyanc' => [
             'label' => 'Tyanc',
@@ -46,7 +48,11 @@ return [
                 ],
                 'users' => [
                     'label' => 'Users',
-                    'actions' => ['viewany', 'view', 'create', 'update', 'delete', 'suspend', 'manage'],
+                    'actions' => ['viewany', 'view', 'create', 'update', 'delete', 'suspend', 'import', 'export', 'manage'],
+                ],
+                'files' => [
+                    'label' => 'Files',
+                    'actions' => ['viewany', 'view', 'upload', 'download', 'delete', 'manage'],
                 ],
                 'roles' => [
                     'label' => 'Roles',
@@ -66,7 +72,11 @@ return [
                 ],
                 'activity_log' => [
                     'label' => 'Activity log',
-                    'actions' => ['viewany', 'view', 'manage'],
+                    'actions' => ['viewany', 'view', 'export', 'manage'],
+                ],
+                'approvals' => [
+                    'label' => 'Approvals',
+                    'actions' => ['viewany', 'view', 'approve', 'reject', 'manage'],
                 ],
                 'notifications' => [
                     'label' => 'Notifications',

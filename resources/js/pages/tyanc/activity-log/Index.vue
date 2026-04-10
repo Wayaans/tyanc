@@ -1,17 +1,33 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import { createActivityTableColumns } from '@/components/tyanc/activity/ActivityTableColumns';
+import ApprovalDecisionDialog from '@/components/tyanc/approvals/ApprovalDecisionDialog.vue';
+import ApprovalTimeline from '@/components/tyanc/approvals/ApprovalTimeline.vue';
+import ExportMenu from '@/components/tyanc/exports/ExportMenu.vue';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
-import { index } from '@/routes/tyanc/activity-log';
-import type { ActivityRow, DataTablePayload } from '@/types';
+import { exportMethod, index } from '@/routes/tyanc/activity-log';
+import { pdf } from '@/routes/tyanc/activity-log/export';
+import type {
+    ActivityRow,
+    ApprovalRequestRow,
+    DataTablePayload,
+} from '@/types';
 
 const props = defineProps<{
     activitiesTable: DataTablePayload<ActivityRow>;
+    approvalRequests: ApprovalRequestRow[];
+    abilities: {
+        export: boolean;
+        reviewApprovals: boolean;
+    };
+    features: {
+        exports_enabled: boolean;
+    };
 }>();
 
 const { __, locale } = useTranslations();
@@ -30,6 +46,27 @@ const dateFormatter = computed(
 const columns = computed<ColumnDef<ActivityRow>[]>(() =>
     createActivityTableColumns(dateFormatter.value),
 );
+
+const decisionDialogOpen = ref(false);
+const selectedApproval = ref<ApprovalRequestRow | null>(null);
+
+const exportOptions = computed(() => [
+    {
+        label: __('Download spreadsheet'),
+        url: exportMethod.url(),
+        description: __('Export activity log'),
+    },
+    {
+        label: __('Download PDF'),
+        url: pdf.url(),
+        description: __('Export activity log'),
+    },
+]);
+
+function openDecisionDialog(request: ApprovalRequestRow) {
+    selectedApproval.value = request;
+    decisionDialogOpen.value = true;
+}
 </script>
 
 <template>
@@ -38,20 +75,40 @@ const columns = computed<ColumnDef<ActivityRow>[]>(() =>
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-5 p-4 md:gap-6">
             <!-- Header -->
-            <div class="space-y-1">
-                <h1
-                    class="text-xl font-semibold tracking-tight text-foreground"
-                >
-                    {{ __('Activity log') }}
-                </h1>
-                <p class="text-sm text-muted-foreground">
-                    {{
-                        __(
-                            'Review all system and user activity across the application.',
-                        )
-                    }}
-                </p>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="space-y-1">
+                    <h1
+                        class="text-xl font-semibold tracking-tight text-foreground"
+                    >
+                        {{ __('Activity log') }}
+                    </h1>
+                    <p class="text-sm text-muted-foreground">
+                        {{
+                            __(
+                                'Review all system and user activity across the application.',
+                            )
+                        }}
+                    </p>
+                </div>
+
+                <ExportMenu
+                    :options="exportOptions"
+                    :disabled="
+                        !props.features.exports_enabled ||
+                        !props.abilities.export
+                    "
+                />
             </div>
+
+            <!-- Approval timeline (reviewers only) -->
+            <ApprovalTimeline
+                v-if="
+                    props.abilities.reviewApprovals &&
+                    props.approvalRequests.length > 0
+                "
+                :approval-requests="props.approvalRequests"
+                @decide="openDecisionDialog"
+            />
 
             <!-- Table -->
             <DataTable
@@ -71,4 +128,10 @@ const columns = computed<ColumnDef<ActivityRow>[]>(() =>
             />
         </div>
     </AppLayout>
+
+    <!-- Approval decision dialog -->
+    <ApprovalDecisionDialog
+        v-model:open="decisionDialogOpen"
+        :request="selectedApproval"
+    />
 </template>

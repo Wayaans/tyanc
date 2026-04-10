@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\ApprovalRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 final class NewApprovalRequestedNotification extends Notification
 {
     use Queueable;
+
+    public function __construct(private readonly ?ApprovalRequest $approvalRequest = null) {}
 
     /**
      * @return list<string>
@@ -24,12 +27,20 @@ final class NewApprovalRequestedNotification extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $subjectLabel = is_string(data_get($this->approvalRequest?->payload, 'subject_label'))
+            ? data_get($this->approvalRequest?->payload, 'subject_label')
+            : null;
+
         return [
             'kind' => 'approval-request',
             'title' => __('New approval requested'),
-            'body' => __('A new approval request requires your review.'),
+            'body' => $subjectLabel !== null
+                ? __('Approval required for :subject.', ['subject' => $subjectLabel])
+                : __('A new approval request requires your review.'),
             'action_label' => __('Open approvals'),
-            'action_url' => null,
+            'action_url' => is_string(data_get($this->approvalRequest?->payload, 'action_url'))
+                ? data_get($this->approvalRequest?->payload, 'action_url')
+                : route('tyanc.users.index', absolute: false),
         ];
     }
 }

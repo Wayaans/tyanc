@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Users\DeleteUser;
 use App\Actions\Tyanc\Users\ListUsers;
 use App\Actions\Tyanc\Users\StoreUser;
 use App\Actions\Tyanc\Users\SuspendUser;
 use App\Actions\Tyanc\Users\UpdateUser;
+use App\Data\Tyanc\Approvals\ApprovalRequestData;
+use App\Data\Tyanc\Imports\ImportRunData;
 use App\Data\Tyanc\Rbac\PermissionData;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Data\Tyanc\Users\UserFormData;
@@ -17,6 +20,8 @@ use App\Enums\UserStatus;
 use App\Http\Requests\Tyanc\StoreUserRequest;
 use App\Http\Requests\Tyanc\UpdateUserRequest;
 use App\Http\Requests\Tyanc\UserIndexRequest;
+use App\Models\ApprovalRequest;
+use App\Models\ImportRun;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -37,6 +42,17 @@ final readonly class UserController
     {
         $payload = [
             'usersTable' => $action->handle($user, $request),
+            'recentImports' => $this->recentImports(),
+            'approvalRequests' => $this->approvalRequests($user),
+            'abilities' => [
+                'import' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'import')),
+                'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'export')),
+                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('approvals', 'viewany')),
+            ],
+            'features' => [
+                'imports_enabled' => (bool) config('tyanc.features.imports_enabled', false),
+                'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
+            ],
         ];
 
         if ($request->wantsJson()) {
@@ -146,6 +162,45 @@ final readonly class UserController
         }
 
         return to_route('tyanc.users.index');
+    }
+
+    /**
+     * @return list<ImportRunData>
+     */
+    private function recentImports(): array
+    {
+        return ImportRun::query()
+            ->with(['creator', 'approvalRequests'])
+            ->where('type', ImportRun::TypeUsers)
+            ->latest('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (ImportRun $importRun): ImportRunData => ImportRunData::fromModel($importRun))
+            ->all();
+    }
+
+    /**
+     * @return list<ApprovalRequestData>
+     */
+    private function approvalRequests(User $actor): array
+    {
+        if (! $this->permissionAccess()->handle($actor, PermissionKey::tyanc('approvals', 'viewany'))) {
+            return [];
+        }
+
+        return ApprovalRequest::query()
+            ->with(['requester', 'reviewer', 'subject'])
+            ->where('action', PermissionKey::tyanc('users', 'import'))
+            ->latest('requested_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $actor))
+            ->all();
+    }
+
+    private function permissionAccess(): PermissionResourceAccess
+    {
+        return resolve(PermissionResourceAccess::class);
     }
 
     /**

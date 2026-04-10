@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Activity\ActivityLogEntryData;
+use App\Data\Tyanc\Approvals\ApprovalRequestData;
+use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -66,6 +69,14 @@ final readonly class ActivityLogController
                 'query' => $tableQuery->withPage($activities->currentPage()),
                 'filters' => $this->filters(),
             ],
+            'approvalRequests' => $this->approvalRequests($user),
+            'abilities' => [
+                'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('activity_log', 'export')),
+                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('approvals', 'viewany')),
+            ],
+            'features' => [
+                'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
+            ],
         ];
 
         if ($request->wantsJson()) {
@@ -73,6 +84,29 @@ final readonly class ActivityLogController
         }
 
         return Inertia::render('tyanc/activity-log/Index', $payload);
+    }
+
+    /**
+     * @return list<ApprovalRequestData>
+     */
+    private function approvalRequests(User $actor): array
+    {
+        if (! $this->permissionAccess()->handle($actor, PermissionKey::tyanc('approvals', 'viewany'))) {
+            return [];
+        }
+
+        return ApprovalRequest::query()
+            ->with(['requester', 'reviewer', 'subject'])
+            ->latest('requested_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $actor))
+            ->all();
+    }
+
+    private function permissionAccess(): PermissionResourceAccess
+    {
+        return resolve(PermissionResourceAccess::class);
     }
 
     private function applySearch(Builder $query, mixed $value): void
