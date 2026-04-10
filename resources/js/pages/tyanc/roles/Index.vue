@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
 import { PlusCircle } from 'lucide-vue-next';
@@ -12,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
-import { destroy, index } from '@/routes/tyanc/roles';
+import { index } from '@/routes/tyanc/roles';
 import type { DataTablePayload, PermissionOptions, RoleRow } from '@/types';
 
 const props = defineProps<{
@@ -27,7 +26,6 @@ const breadcrumbs = rolesBreadcrumbs;
 
 const dialogOpen = ref(false);
 const editingRole = ref<RoleRow | null>(null);
-const deletingId = ref<number | null>(null);
 
 const assignDialogOpen = ref(false);
 const assigningRole = ref<RoleRow | null>(null);
@@ -47,21 +45,8 @@ function openAssignPermissions(role: RoleRow) {
     assignDialogOpen.value = true;
 }
 
-function handleDelete(role: RoleRow) {
-    if (deletingId.value === role.id) {
-        router.delete(destroy.url({ role: role.id }), {
-            preserveScroll: true,
-            onFinish: () => {
-                deletingId.value = null;
-            },
-        });
-    } else {
-        deletingId.value = role.id;
-    }
-}
-
 const columns = computed<ColumnDef<RoleRow>[]>(() =>
-    createRoleTableColumns(openEdit, openAssignPermissions, handleDelete),
+    createRoleTableColumns(openEdit, openAssignPermissions),
 );
 </script>
 

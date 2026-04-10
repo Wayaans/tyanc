@@ -17,8 +17,8 @@ it('binds the checklist checkboxes with the shared checkbox model contract', fun
 
     expect($component)
         ->toContain('@update:model-value="(v) => toggleAll(Boolean(v))"')
-        ->toContain('@update:model-value="(v) => toggle(action.permission, Boolean(v))"')
-        ->toContain(':model-value="allSelected ? true : someSelected ? \'indeterminate\' : false"')
+        ->toContain('(v) => toggle(action.permission, Boolean(v))')
+        ->toContain("allSelected ? true : someSelected ? 'indeterminate' : false")
         ->toContain(':model-value="props.modelValue.includes(action.permission)"');
 });
 

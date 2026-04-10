@@ -3,19 +3,17 @@ import { router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
 import { PlusCircle } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
-import AppFormDialog from '@/components/tyanc/apps/AppFormDialog.vue';
 import { createAppTableColumns } from '@/components/tyanc/apps/AppTableColumns';
 import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
-import { destroy, index } from '@/routes/tyanc/apps';
-import type { AppData, AppRow, DataTablePayload } from '@/types';
+import { create, index } from '@/routes/tyanc/apps';
+import type { AppRow, DataTablePayload } from '@/types';
 
 const props = defineProps<{
-    apps: AppData[];
     appsTable: DataTablePayload<AppRow>;
 }>();
 
@@ -24,37 +22,11 @@ const { appsBreadcrumbs } = useAppNavigation();
 
 const breadcrumbs = appsBreadcrumbs;
 
-const dialogOpen = ref(false);
-const editingApp = ref<AppRow | null>(null);
-const deletingAppKey = ref<string | null>(null);
+const columns = computed<ColumnDef<AppRow>[]>(() => createAppTableColumns());
 
-function openCreate() {
-    editingApp.value = null;
-    dialogOpen.value = true;
+function goToCreate() {
+    router.visit(create.url());
 }
-
-function openEdit(app: AppRow) {
-    editingApp.value = app;
-    dialogOpen.value = true;
-}
-
-function handleDelete(app: AppRow) {
-    if (deletingAppKey.value !== app.key) {
-        deletingAppKey.value = app.key;
-        return;
-    }
-
-    router.delete(destroy.url({ app: app.key }), {
-        preserveScroll: true,
-        onFinish: () => {
-            deletingAppKey.value = null;
-        },
-    });
-}
-
-const columns = computed<ColumnDef<AppRow>[]>(() =>
-    createAppTableColumns(openEdit, handleDelete),
-);
 </script>
 
 <template>
@@ -79,7 +51,7 @@ const columns = computed<ColumnDef<AppRow>[]>(() =>
                     </p>
                 </div>
 
-                <Button size="sm" class="gap-2" @click="openCreate">
+                <Button size="sm" class="gap-2" @click="goToCreate">
                     <PlusCircle class="size-4" />
                     {{ __('New app') }}
                 </Button>
@@ -101,10 +73,4 @@ const columns = computed<ColumnDef<AppRow>[]>(() =>
             />
         </div>
     </AppLayout>
-
-    <AppFormDialog
-        v-model:open="dialogOpen"
-        :editing-app="editingApp"
-        :apps="props.apps"
-    />
 </template>

@@ -24,7 +24,9 @@ Route::controller(AppController::class)
     ->name('tyanc.apps.')
     ->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::get('{app}/edit', 'edit')->name('edit');
         Route::patch('{app}', 'update')->name('update');
         Route::patch('{app}/toggle', 'toggle')->name('toggle');
         Route::delete('{app}', 'destroy')->name('destroy');

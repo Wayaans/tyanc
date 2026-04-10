@@ -4,6 +4,7 @@ import {
     type Table as TanStackTable,
 } from '@tanstack/vue-table';
 import { h } from 'vue';
+import AppActionsDropdown from '@/components/tyanc/apps/AppActionsDropdown.vue';
 import AppStatusBadge from '@/components/tyanc/apps/AppStatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,10 +13,7 @@ import type { AppRow } from '@/types';
 
 const columnHelper = createColumnHelper<AppRow>();
 
-export function createAppTableColumns(
-    onEdit: (app: AppRow) => void,
-    onDelete: (app: AppRow) => void,
-): ColumnDef<AppRow>[] {
+export function createAppTableColumns(): ColumnDef<AppRow>[] {
     return [
         columnHelper.display({
             id: 'select',
@@ -28,17 +26,15 @@ export function createAppTableColumns(
                         : table.getIsSomePageRowsSelected()
                           ? 'indeterminate'
                           : false,
-                    'onUpdate:modelValue': (
-                        value: boolean | 'indeterminate',
-                    ) => table.toggleAllPageRowsSelected(Boolean(value)),
+                    'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
+                        table.toggleAllPageRowsSelected(Boolean(value)),
                     'aria-label': __('Select all rows'),
                 }),
             cell: ({ row }) =>
                 h(Checkbox, {
                     modelValue: row.getIsSelected(),
-                    'onUpdate:modelValue': (
-                        value: boolean | 'indeterminate',
-                    ) => row.toggleSelected(Boolean(value)),
+                    'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
+                        row.toggleSelected(Boolean(value)),
                     'aria-label': __('Select row'),
                 }),
             meta: { label: 'Selection' },
@@ -116,35 +112,15 @@ export function createAppTableColumns(
             enableHiding: false,
             header: '',
             cell: ({ row }) =>
-                h('div', { class: 'flex justify-end items-center gap-1' }, [
-                    row.original.is_system
-                        ? h(
-                              'span',
-                              {
-                                  class: 'px-2 text-xs text-muted-foreground/50',
-                              },
-                              __('Protected'),
-                          )
-                        : null,
-                    h(
-                        'button',
-                        {
-                            class: 'rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground',
-                            onClick: () => onEdit(row.original),
-                        },
-                        __('Edit'),
-                    ),
-                    !row.original.is_system
-                        ? h(
-                              'button',
-                              {
-                                  class: 'rounded px-2 py-1 text-xs text-destructive/70 transition-colors hover:text-destructive',
-                                  onClick: () => onDelete(row.original),
-                              },
-                              __('Delete'),
-                          )
-                        : null,
-                ]),
+                h(
+                    'div',
+                    { class: 'flex justify-end' },
+                    h(AppActionsDropdown, {
+                        appKey: row.original.key,
+                        appLabel: row.original.label,
+                        isSystem: Boolean(row.original.is_system),
+                    }),
+                ),
             meta: { label: 'Actions' },
         }),
     ] as ColumnDef<AppRow>[];

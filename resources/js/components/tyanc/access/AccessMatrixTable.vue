@@ -19,37 +19,46 @@ const emit = defineEmits<{
 
 const { __ } = useTranslations();
 
-type GroupedResource = {
+type ResourceGroup = {
     resource: string | null;
     rows: AccessMatrixRow[];
 };
 
-type GroupedApp = {
+type AppGroup = {
     app: string;
-    resources: GroupedResource[];
+    appLabel: string | null;
+    resources: ResourceGroup[];
     totalRows: number;
 };
 
-const groupedByApp = computed<GroupedApp[]>(() => {
-    // Build app → resource → rows hierarchy
+const groupedByApp = computed<AppGroup[]>(() => {
     const appMap = new Map<string, Map<string, AccessMatrixRow[]>>();
+    const appLabelMap = new Map<string, string | null>();
 
     for (const row of props.rows) {
         const appKey = row.app ?? __('Global');
         const resourceKey = row.resource ?? '';
 
+        if (!appLabelMap.has(appKey)) {
+            appLabelMap.set(appKey, row.app_label ?? null);
+        }
+
         if (!appMap.has(appKey)) {
             appMap.set(appKey, new Map());
         }
+
         const resourceMap = appMap.get(appKey)!;
+
         if (!resourceMap.has(resourceKey)) {
             resourceMap.set(resourceKey, []);
         }
+
         resourceMap.get(resourceKey)!.push(row);
     }
 
     return Array.from(appMap.entries()).map(([app, resourceMap]) => ({
         app,
+        appLabel: appLabelMap.get(app) ?? null,
         resources: Array.from(resourceMap.entries()).map(
             ([resource, rows]) => ({
                 resource: resource || null,
@@ -94,8 +103,8 @@ function handleToggle(
     });
 }
 
-/** Count granted permissions across all roles for an app group. */
-function appGrantCount(group: GroupedApp): number {
+/** Count total grants in an app group. */
+function appGrantCount(group: AppGroup): number {
     let count = 0;
     for (const rg of group.resources) {
         for (const row of rg.rows) {
@@ -106,6 +115,22 @@ function appGrantCount(group: GroupedApp): number {
     }
     return count;
 }
+
+/** Derive a short action label from the full permission string. */
+function actionLabel(row: AccessMatrixRow): string {
+    if (row.action_label) {
+        return row.action_label;
+    }
+
+    if (row.action) {
+        return row.action;
+    }
+
+    // Fall back to last segment of the dotted permission name
+    const parts = row.permission.split('.');
+
+    return parts[parts.length - 1] ?? row.permission;
+}
 </script>
 
 <template>
@@ -113,21 +138,27 @@ function appGrantCount(group: GroupedApp): number {
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-sidebar-border/70 bg-muted/30">
+                    <!-- Sticky resource/permission column -->
                     <th
-                        class="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                        class="sticky left-0 z-10 bg-muted/30 px-4 py-3 text-left text-xs font-medium text-muted-foreground"
                     >
-                        {{ __('Permission') }}
+                        {{ __('Resource / Permission') }}
                     </th>
                     <th
                         v-for="role in props.roles"
                         :key="role.id"
-                        class="px-3 py-3 text-center text-xs font-medium text-muted-foreground"
+                        class="min-w-[80px] px-3 py-3 text-center text-xs font-medium text-muted-foreground"
                     >
                         <div class="flex flex-col items-center gap-0.5">
-                            <span>{{ role.name }}</span>
-                            <span class="text-muted-foreground/60">
-                                {{ __('L:n', { n: String(role.level) }) }}
-                            </span>
+                            <span class="max-w-[96px] truncate">{{
+                                role.name
+                            }}</span>
+                            <Badge
+                                variant="secondary"
+                                class="rounded-full px-1.5 py-0 text-[10px] font-normal"
+                            >
+                                L{{ role.level }}
+                            </Badge>
                         </div>
                     </th>
                 </tr>
@@ -137,19 +168,16 @@ function appGrantCount(group: GroupedApp): number {
                 <template v-for="group in groupedByApp" :key="group.app">
                     <!-- App group header (collapsible) -->
                     <tr
-                        class="cursor-pointer bg-sidebar/20 transition-colors hover:bg-sidebar/30"
+                        class="cursor-pointer bg-sidebar/30 transition-colors hover:bg-sidebar/50"
                         @click="toggleApp(group.app)"
                     >
-                        <td
-                            :colspan="props.roles.length + 1"
-                            class="px-4 py-2.5"
-                        >
+                        <td :colspan="props.roles.length + 1" class="px-4 py-2">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="text-xs text-muted-foreground/60 transition-transform select-none"
+                                        class="text-xs text-muted-foreground/50 transition-transform duration-150 select-none"
                                         :class="{
-                                            'rotate-[-90deg]': isCollapsed(
+                                            '-rotate-90': isCollapsed(
                                                 group.app,
                                             ),
                                         }"
@@ -163,19 +191,23 @@ function appGrantCount(group: GroupedApp): number {
                                         {{ group.app }}
                                     </Badge>
                                     <span
-                                        class="text-xs text-muted-foreground/60 tabular-nums"
+                                        v-if="
+                                            group.appLabel &&
+                                            group.appLabel !== group.app
+                                        "
+                                        class="text-xs font-medium text-foreground/70"
                                     >
-                                        {{ group.totalRows }}
-                                        {{
-                                            group.totalRows === 1
-                                                ? __('permission')
-                                                : __('permissions')
-                                        }}
+                                        {{ group.appLabel }}
+                                    </span>
+                                    <span
+                                        class="text-xs text-muted-foreground/50 tabular-nums"
+                                    >
+                                        ({{ group.totalRows }})
                                     </span>
                                 </div>
                                 <span
                                     v-if="appGrantCount(group) > 0"
-                                    class="pr-1 text-xs text-muted-foreground/60 tabular-nums"
+                                    class="pr-1 text-xs text-muted-foreground/50 tabular-nums"
                                 >
                                     {{ appGrantCount(group) }}
                                     {{ __('grants') }}
@@ -189,20 +221,34 @@ function appGrantCount(group: GroupedApp): number {
                             v-for="resourceGroup in group.resources"
                             :key="resourceGroup.resource ?? '_global_'"
                         >
-                            <!-- Resource sub-header (when resource is named) -->
+                            <!-- Resource sub-header -->
                             <tr
-                                v-if="resourceGroup.resource"
-                                class="border-t border-sidebar-border/30 bg-muted/10"
+                                class="border-t border-sidebar-border/40 bg-muted/5"
                             >
                                 <td
                                     :colspan="props.roles.length + 1"
-                                    class="px-6 py-1.5"
+                                    class="px-4 py-2 pl-8"
                                 >
-                                    <span
-                                        class="text-xs font-medium tracking-wide text-muted-foreground/70 uppercase"
-                                    >
-                                        {{ resourceGroup.resource }}
-                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span
+                                            class="h-3 w-0.5 rounded-full bg-border"
+                                        />
+                                        <span
+                                            class="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
+                                        >
+                                            {{
+                                                resourceGroup.rows[0]
+                                                    ?.resource_label ??
+                                                resourceGroup.resource ??
+                                                __('General')
+                                            }}
+                                        </span>
+                                        <span
+                                            class="text-[10px] text-muted-foreground/50 tabular-nums"
+                                        >
+                                            ({{ resourceGroup.rows.length }})
+                                        </span>
+                                    </div>
                                 </td>
                             </tr>
 
@@ -210,41 +256,34 @@ function appGrantCount(group: GroupedApp): number {
                             <tr
                                 v-for="row in resourceGroup.rows"
                                 :key="row.id"
-                                class="border-t border-sidebar-border/30 transition-colors hover:bg-muted/20"
+                                class="border-t border-sidebar-border/20 transition-colors hover:bg-muted/20"
                             >
-                                <td class="px-4 py-2.5 pl-6">
-                                    <div class="space-y-1">
-                                        <div
-                                            class="flex flex-wrap items-center gap-1.5"
+                                <!-- Sticky permission name cell -->
+                                <td
+                                    class="sticky left-0 z-10 bg-background px-4 py-2.5 pl-10"
+                                >
+                                    <div
+                                        class="flex flex-wrap items-center gap-1.5"
+                                    >
+                                        <!-- Action as primary label -->
+                                        <span
+                                            class="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs font-semibold text-secondary-foreground"
                                         >
-                                            <span
-                                                class="font-mono text-xs text-foreground"
-                                            >
-                                                {{ row.permission }}
-                                            </span>
-                                            <span
-                                                v-if="row.action"
-                                                class="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground"
-                                            >
-                                                {{ row.action }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                                            {{ actionLabel(row) }}
+                                        </span>
+                                        <!-- Page context if present -->
+                                        <span
+                                            v-if="row.page"
+                                            class="text-[10px] text-muted-foreground/60"
                                         >
-                                            <span v-if="row.page">{{
-                                                __('Page: :page', {
-                                                    page: String(row.page),
-                                                })
-                                            }}</span>
-                                            <span v-if="row.resource">{{
-                                                __('Resource: :resource', {
-                                                    resource: String(
-                                                        row.resource,
-                                                    ),
-                                                })
-                                            }}</span>
-                                        </div>
+                                            {{ row.page }}
+                                        </span>
+                                        <!-- Full permission string as secondary -->
+                                        <span
+                                            class="block w-full font-mono text-[10px] leading-none text-muted-foreground/40"
+                                        >
+                                            {{ row.permission }}
+                                        </span>
                                     </div>
                                 </td>
 
@@ -255,9 +294,7 @@ function appGrantCount(group: GroupedApp): number {
                                 >
                                     <Checkbox
                                         :checked="isGranted(row, role.id)"
-                                        :disabled="
-                                            props.updating || role.is_reserved
-                                        "
+                                        :disabled="props.updating"
                                         @update:checked="
                                             handleToggle(
                                                 row,

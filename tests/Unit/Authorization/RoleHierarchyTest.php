@@ -64,7 +64,7 @@ it('lets Supa Manuse bypass gates while Manuse requires explicit permissions', f
         ->and(Gate::forUser($manuseWithPermission)->allows($permissionName))->toBeTrue();
 });
 
-it('prevents reserved roles from being renamed or deleted', function (): void {
+it('prevents immutable roles from being renamed or deleted', function (): void {
     $reservedRole = Role::query()->create([
         'name' => config('tyanc.reserved_roles.super_admin'),
         'guard_name' => 'web',
@@ -76,4 +76,22 @@ it('prevents reserved roles from being renamed or deleted', function (): void {
     $reservedRole = $reservedRole->fresh();
 
     expect(fn () => $reservedRole?->delete())->toThrow(LogicException::class);
+});
+
+it('lets the default admin role be updated while still preventing deletion', function (): void {
+    $adminRole = Role::query()->create([
+        'name' => config('tyanc.reserved_roles.admin'),
+        'guard_name' => 'web',
+        'level' => 0,
+    ]);
+
+    expect($adminRole->update([
+        'name' => config('tyanc.reserved_roles.admin'),
+        'level' => 5,
+    ]))->toBeTrue();
+
+    $adminRole = $adminRole->fresh();
+
+    expect($adminRole?->level)->toBe(5)
+        ->and(fn () => $adminRole?->delete())->toThrow(LogicException::class);
 });

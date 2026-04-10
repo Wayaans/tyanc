@@ -15,12 +15,20 @@ use Illuminate\Support\Str;
 final readonly class SyncAppPages
 {
     /**
+     * @return list<array{key: string, label: string, route_name?: string|null, path?: string|null, permission_name?: string|null, sort_order: int, enabled: bool, is_navigation: bool, is_system: bool}>
+     */
+    public function defaultsFor(App $app): array
+    {
+        return $this->configuredPages($app);
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $pages
      */
     public function handle(App $app, array $pages = []): App
     {
         if ($pages === []) {
-            $pages = $this->configuredPages($app);
+            $pages = $this->defaultsFor($app);
         }
 
         if ($pages === []) {

@@ -23,6 +23,6 @@ it('creates the development supa manuse account with a full profile and synced r
         ->and($user->preference->appearance)->toBe('dark')
         ->and($user->hasRole(config('tyanc.reserved_roles.super_admin')))->toBeTrue()
         ->and(App::query()->where('key', 'tyanc')->where('is_system', true)->exists())->toBeTrue()
-        ->and(App::query()->where('key', 'demo')->where('is_system', true)->exists())->toBeTrue()
+        ->and(App::query()->where('key', 'demo')->where('is_system', false)->exists())->toBeTrue()
         ->and(Permission::query()->whereIn('name', PermissionKey::all())->count())->toBe(count(PermissionKey::all()));
 });

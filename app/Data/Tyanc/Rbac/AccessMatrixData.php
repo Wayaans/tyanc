@@ -19,6 +19,8 @@ final class AccessMatrixData extends Data
         public array $roles,
         public array $permissions,
         public array $apps,
+        public ?int $selected_role_id,
+        public ?string $selected_app_key,
         public ?EffectiveAccessData $effective_preview,
     ) {}
 }

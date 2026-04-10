@@ -79,7 +79,9 @@ function onKeydown(handler: () => void, event: KeyboardEvent) {
             @keydown="onKeydown(handleToggleAll, $event)"
         >
             <Checkbox
-                :model-value="allSelected ? true : someSelected ? 'indeterminate' : false"
+                :model-value="
+                    allSelected ? true : someSelected ? 'indeterminate' : false
+                "
                 tabindex="-1"
                 @click.stop
                 @update:model-value="(v) => toggleAll(Boolean(v))"
@@ -121,7 +123,9 @@ function onKeydown(handler: () => void, event: KeyboardEvent) {
                 :model-value="props.modelValue.includes(action.permission)"
                 tabindex="-1"
                 @click.stop
-                @update:model-value="(v) => toggle(action.permission, Boolean(v))"
+                @update:model-value="
+                    (v) => toggle(action.permission, Boolean(v))
+                "
             />
             <div class="min-w-0 flex-1">
                 <span class="text-sm font-medium">{{ action.label }}</span>

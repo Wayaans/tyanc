@@ -6,11 +6,13 @@ export type AccessMatrixRow = {
     id: number;
     permission: string;
     app: string | null;
+    app_label?: string | null;
     resource: string | null;
+    resource_label?: string | null;
     action: string | null;
+    action_label?: string | null;
     page?: string | null;
     page_key?: string | null;
-    app_label?: string | null;
     [roleKey: string]: boolean | string | number | null | undefined;
 };
 
@@ -72,5 +74,7 @@ export type AccessMatrixPayload = {
     roles: RoleData[];
     permissions: PermissionData[];
     apps: AppData[];
+    selected_role_id: number | null;
+    selected_app_key: string | null;
     effective_preview: EffectiveAccessData | null;
 };

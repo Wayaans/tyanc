@@ -7,7 +7,11 @@ import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
 import { index as accessMatrixRoute } from '@/routes/tyanc/access-matrix';
 import { index as activityLogRoute } from '@/routes/tyanc/activity-log';
-import { index as appsRoute } from '@/routes/tyanc/apps';
+import {
+    create as appsCreate,
+    edit as appsEdit,
+    index as appsRoute,
+} from '@/routes/tyanc/apps';
 import { index as permissionsRoute } from '@/routes/tyanc/permissions';
 import { index as rolesRoute } from '@/routes/tyanc/roles';
 import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
@@ -213,6 +217,22 @@ export function useAppNavigation() {
         { title: __('Apps'), href: appsRoute() },
     ]);
 
+    const appsCreateBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Apps'), href: appsRoute() },
+        { title: __('New app'), href: appsCreate() },
+    ]);
+
+    const appsEditBreadcrumbs = (appLabel: string, appKey: string) =>
+        computed<BreadcrumbItem[]>(() => [
+            rootBreadcrumb.value,
+            { title: __('Apps'), href: appsRoute() },
+            {
+                title: appLabel,
+                href: appsEdit({ app: appKey }),
+            },
+        ]);
+
     const rolesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         { title: __('Roles'), href: rolesRoute() },
@@ -254,6 +274,8 @@ export function useAppNavigation() {
         activeAppId,
         apps,
         appsBreadcrumbs,
+        appsCreateBreadcrumbs,
+        appsEditBreadcrumbs,
         accessMatrixBreadcrumbs,
         dashboardBreadcrumbs,
         mainNavItems,

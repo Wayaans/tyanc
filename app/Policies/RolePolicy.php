@@ -32,7 +32,7 @@ final class RolePolicy extends PermissionResourcePolicy
     public function delete(User $user, Role $role): bool
     {
         return $this->authorizeAbility($user, __FUNCTION__)
-            && ! $this->isReservedRole($role)
+            && ! $this->isDeleteProtectedRole($role)
             && $this->canManageTargetRole($user, $role);
     }
 
@@ -43,7 +43,7 @@ final class RolePolicy extends PermissionResourcePolicy
 
     private function canManageTargetRole(User $user, Role $role): bool
     {
-        if ($this->isReservedRole($role)) {
+        if ($this->isImmutableRole($role)) {
             return false;
         }
 
@@ -58,8 +58,13 @@ final class RolePolicy extends PermissionResourcePolicy
         return (int) $actingLevel > (int) $role->level;
     }
 
-    private function isReservedRole(Role $role): bool
+    private function isImmutableRole(Role $role): bool
     {
-        return in_array($role->name, (array) config('tyanc.reserved_roles', []), true);
+        return in_array($role->name, (array) config('tyanc.immutable_roles', []), true);
+    }
+
+    private function isDeleteProtectedRole(Role $role): bool
+    {
+        return in_array($role->name, (array) config('tyanc.undeletable_roles', []), true);
     }
 }

@@ -6,16 +6,12 @@ defineProps<{
 </script>
 
 <template>
-    <!--
-        Always occupies at least one text line so that toggling the hint
-        (e.g. "Using system default…") never causes a layout shift.
-        Error takes priority over hint when both are present.
-    -->
+    <!-- Error takes priority over hint when both are present. -->
     <div
+        v-if="error || hint"
         data-slot="form-field-support"
-        :data-state="error ? 'error' : hint ? 'hint' : 'empty'"
+        :data-state="error ? 'error' : 'hint'"
         aria-live="polite"
-        class="min-h-4"
     >
         <p
             v-if="error"

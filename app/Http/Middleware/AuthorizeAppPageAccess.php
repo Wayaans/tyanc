@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Apps\EnsureAppRegistrySeeded;
 use App\Models\App;
 use App\Models\AppPage;
 use App\Models\User;
 use Closure;
-use Database\Seeders\AppRegistrySeeder;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -27,19 +26,19 @@ final class AuthorizeAppPageAccess
             return $next($request);
         }
 
-        if (App::query()->doesntExist() || AppPage::query()->doesntExist()) {
-            resolve(AppRegistrySeeder::class)->run();
-        }
+        resolve(EnsureAppRegistrySeeded::class)->handle();
 
-        $page = $this->resolvePage($request);
+        $registeredApp = $this->resolveAppByPrefix($request);
 
-        if (! $page instanceof AppPage) {
-            $registeredApp = $this->resolveAppByPrefix($request);
-
-            abort_if($registeredApp instanceof App && ! $registeredApp->enabled, 404);
-
+        if (! $registeredApp instanceof App) {
             return $next($request);
         }
+
+        abort_if(! $registeredApp->enabled, 404);
+
+        $page = $this->resolvePage($request, $registeredApp);
+
+        abort_if(! $page instanceof AppPage, 403);
 
         $page->loadMissing('app');
 
@@ -67,7 +66,7 @@ final class AuthorizeAppPageAccess
             ->first();
     }
 
-    private function resolvePage(Request $request): ?AppPage
+    private function resolvePage(Request $request, App $app): ?AppPage
     {
         $routeName = $request->route()?->getName();
         $path = '/'.mb_trim($request->path(), '/');
@@ -76,30 +75,56 @@ final class AuthorizeAppPageAccess
             return null;
         }
 
-        return AppPage::query()
-            ->with('app')
-            ->where(function (Builder $query) use ($routeName, $path): void {
-                if (is_string($routeName) && $routeName !== '' && $path !== '/') {
-                    $query->where('route_name', $routeName)
-                        ->orWhere('path', $path);
+        $app->loadMissing('pages');
 
-                    return;
-                }
+        $pages = $app->pages->values();
 
-                if (is_string($routeName) && $routeName !== '') {
-                    $query->where('route_name', $routeName);
+        $exactPage = $pages->first(fn (AppPage $page): bool => (is_string($routeName) && $routeName !== '' && $page->route_name === $routeName)
+            || ($path !== '/' && $page->path === $path));
 
-                    return;
-                }
+        if ($exactPage instanceof AppPage) {
+            return $exactPage;
+        }
 
-                if ($path !== '/') {
-                    $query->where('path', $path);
-                }
-            })
-            ->orderByRaw(
-                'case when route_name = ? then 0 when path = ? then 1 else 2 end',
-                [is_string($routeName) ? $routeName : '', $path],
-            )
+        $matchingPage = $pages
+            ->filter(fn (AppPage $page): bool => $this->matchesRouteScope($routeName, $page)
+                || $this->matchesPathScope($path, $page))
+            ->sortByDesc(fn (AppPage $page): int => max(
+                is_string($page->route_name) ? mb_strlen($page->route_name) : 0,
+                is_string($page->path) ? mb_strlen($page->path) : 0,
+            ))
             ->first();
+
+        return $matchingPage instanceof AppPage ? $matchingPage : null;
+    }
+
+    private function matchesRouteScope(?string $routeName, AppPage $page): bool
+    {
+        if (! is_string($routeName) || $routeName === '' || ! is_string($page->route_name) || $page->route_name === '') {
+            return false;
+        }
+
+        if ($page->route_name === $routeName) {
+            return true;
+        }
+
+        if (str_ends_with($page->route_name, '.index')) {
+            $routePrefix = mb_substr($page->route_name, 0, -mb_strlen('.index'));
+
+            return $routeName === $routePrefix || str_starts_with($routeName, sprintf('%s.', $routePrefix));
+        }
+
+        return str_starts_with($routeName, sprintf('%s.', $page->route_name));
+    }
+
+    private function matchesPathScope(string $path, AppPage $page): bool
+    {
+        if ($path === '/' || ! is_string($page->path) || $page->path === '') {
+            return false;
+        }
+
+        $pagePath = '/'.mb_trim($page->path, '/');
+
+        return $pagePath === $path || str_starts_with($path, sprintf('%s/', $pagePath));
     }
 }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Permission;
 use App\Models\User;
 use App\Models\UserPreference;
 use App\Notifications\NewApprovalRequestedNotification;
@@ -94,32 +95,16 @@ it('shares authenticated user data as a dto', function (): void {
         ->and($shared['auth']['user']->email)->toBe('test@example.com');
 });
 
-it('shares tyanc as the default app', function (): void {
+it('does not expose protected app navigation to guests on public pages', function (): void {
     $request = Request::create('/', 'GET');
 
     $shared = inertiaMiddleware()->share($request);
 
     expect($shared)->toHaveKey('currentApp')
         ->and($shared['currentApp'])->toBe('tyanc')
-        ->and($shared['accessibleApps'])->toBeArray()
-        ->and($shared['accessibleApps'][0]['key'])->toBe('tyanc')
-        ->and($shared['accessibleApps'][1]['key'])->toBe('demo')
-        ->and($shared['sidebarNavigation']['apps'])->toBeArray()
-        ->and($shared['sidebarNavigation']['apps'][0]['href'])->toBe('/tyanc/dashboard')
-        ->and($shared['sidebarNavigation']['menu'][0]['title'])->toBe('Dashboard')
-        ->and($shared['sidebarNavigation']['menu'][0]['href'])->toBe('/tyanc/dashboard')
-        ->and($shared['sidebarNavigation']['menu'][1]['title'])->toBe('Users')
-        ->and($shared['sidebarNavigation']['menu'][1]['href'])->toBe('/tyanc/users')
-        ->and($shared['sidebarNavigation']['menu'][2]['title'])->toBe('Role & Permission')
-        ->and($shared['sidebarNavigation']['menu'][2]['children'][0]['title'])->toBe('Apps')
-        ->and($shared['sidebarNavigation']['menu'][2]['children'][1]['title'])->toBe('Roles')
-        ->and($shared['sidebarNavigation']['menu'][2]['children'][2]['title'])->toBe('Permissions')
-        ->and($shared['sidebarNavigation']['menu'][2]['children'][3]['title'])->toBe('Access matrix')
-        ->and($shared['sidebarNavigation']['menu'][3]['title'])->toBe('Activity log')
-        ->and($shared['sidebarNavigation']['menu'][3]['href'])->toBe('/tyanc/activity-log')
-        ->and($shared['sidebarNavigation']['menu'][4]['title'])->toBe('App Settings')
-        ->and($shared['sidebarNavigation']['menu'][4]['href'])->toBe('/tyanc/settings')
-        ->and($shared['sidebarNavigation']['menu'][4])->not->toHaveKey('children')
+        ->and($shared['accessibleApps'])->toBe([])
+        ->and($shared['sidebarNavigation']['apps'])->toBe([])
+        ->and($shared['sidebarNavigation']['menu'])->toBe([])
         ->and($shared['theme'])->toMatchArray([
             'appearance' => 'system',
             'sidebar_variant' => 'inset',
@@ -128,8 +113,15 @@ it('shares tyanc as the default app', function (): void {
 });
 
 it('prefers the current app cookie on shared routes', function (): void {
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::query()->firstOrCreate([
+        'name' => 'demo.dashboard.viewany',
+        'guard_name' => 'web',
+    ]));
+
     $request = Request::create('/settings/profile', 'GET');
     $request->cookies->set('current_app', 'demo');
+    $request->setUserResolver(fn (): User => $user);
 
     $shared = inertiaMiddleware()->share($request);
 
@@ -173,8 +165,15 @@ it('sets sidebarOpen to false when cookie is false', function (): void {
 });
 
 it('shares demo as the current app for demo routes', function (): void {
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::query()->firstOrCreate([
+        'name' => 'demo.dashboard.viewany',
+        'guard_name' => 'web',
+    ]));
+
     $request = Request::create('/demo/dashboard', 'GET');
     $request->cookies->set('current_app', 'tyanc');
+    $request->setUserResolver(fn (): User => $user);
 
     $route = new Route('GET', '/demo/dashboard', fn (): null => null);
     $route->name('demo.dashboard');
@@ -188,8 +187,11 @@ it('shares demo as the current app for demo routes', function (): void {
 });
 
 it('shares tyanc as the current app for the tyanc dashboard route', function (): void {
+    $user = User::factory()->create();
+
     $request = Request::create('/tyanc/dashboard', 'GET');
     $request->cookies->set('current_app', 'demo');
+    $request->setUserResolver(fn (): User => $user);
 
     $route = new Route('GET', '/tyanc/dashboard', fn (): null => null);
     $route->name('dashboard');

@@ -1,31 +1,8 @@
 <script setup lang="ts">
-import { CheckCircle2, Circle, Lock } from 'lucide-vue-next';
+import { CheckCircle2, Circle } from 'lucide-vue-next';
 import { useTranslations } from '@/lib/translations';
 
 const { __ } = useTranslations();
-
-const items = [
-    {
-        icon: CheckCircle2,
-        iconClass: 'text-emerald-500',
-        label: '__("Granted")',
-        description:
-            '__("The role has this permission via direct assignment or inheritance.")',
-    },
-    {
-        icon: Circle,
-        iconClass: 'text-muted-foreground/30',
-        label: '__("Not granted")',
-        description: '__("The role does not have this permission.")',
-    },
-    {
-        icon: Lock,
-        iconClass: 'text-muted-foreground/40',
-        label: '__("Reserved role")',
-        description:
-            '__("Permissions for this role cannot be changed through the UI.")',
-    },
-];
 </script>
 
 <template>
@@ -62,21 +39,6 @@ const items = [
                     </p>
                     <p class="text-xs text-muted-foreground">
                         {{ __('The role does not have this permission.') }}
-                    </p>
-                </div>
-            </li>
-            <li class="flex items-start gap-2.5">
-                <Lock class="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />
-                <div>
-                    <p class="text-sm font-medium text-foreground">
-                        {{ __('Reserved role') }}
-                    </p>
-                    <p class="text-xs text-muted-foreground">
-                        {{
-                            __(
-                                'Permissions for reserved roles cannot be changed through the matrix.',
-                            )
-                        }}
                     </p>
                 </div>
             </li>

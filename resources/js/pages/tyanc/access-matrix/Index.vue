@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
-import { Eye } from 'lucide-vue-next';
+import { Eye, ShieldAlert } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import AccessMatrixEditor from '@/components/tyanc/access/AccessMatrixEditor.vue';
 import AccessMatrixFilterBar from '@/components/tyanc/access/AccessMatrixFilterBar.vue';
-import AccessMatrixTable from '@/components/tyanc/access/AccessMatrixTable.vue';
 import CmsPageVisibilityCard from '@/components/tyanc/access/CmsPageVisibilityCard.vue';
 import EffectiveAccessPreviewSheet from '@/components/tyanc/access/EffectiveAccessPreviewSheet.vue';
 import NavigationVisibilityLegend from '@/components/tyanc/access/NavigationVisibilityLegend.vue';
@@ -27,27 +27,55 @@ const breadcrumbs = accessMatrixBreadcrumbs;
 const previewSheetOpen = ref(false);
 const updating = ref(false);
 
-const filters = ref({ role: '', app: '' });
+const filters = computed(() => ({
+    role: props.accessMatrix.selected_role_id
+        ? String(props.accessMatrix.selected_role_id)
+        : '',
+    app: props.accessMatrix.selected_app_key ?? '',
+}));
 
-const visibleRoles = computed(() => {
-    if (!filters.value.role) {
-        return props.accessMatrix.roles;
-    }
+const selectedRole = computed(
+    () =>
+        props.accessMatrix.roles.find(
+            (role) => role.id === props.accessMatrix.selected_role_id,
+        ) ?? null,
+);
 
-    return props.accessMatrix.roles.filter(
-        (r) => String(r.id) === filters.value.role,
+const selectedApp = computed(
+    () =>
+        props.accessMatrix.apps.find(
+            (app) => app.key === props.accessMatrix.selected_app_key,
+        ) ?? null,
+);
+
+const editorReady = computed(
+    () => selectedRole.value !== null && selectedApp.value !== null,
+);
+
+const selectionQuery = computed(() => ({
+    role_id: selectedRole.value?.id,
+    app: selectedApp.value?.key,
+}));
+
+// ─── Toggle handler ───────────────────────────────────────────────────────────
+
+function updateFilters(next: { role: string; app: string }) {
+    router.get(
+        index.url({
+            query: {
+                role_id: next.role || undefined,
+                app: next.app || undefined,
+            },
+        }),
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            only: ['accessMatrix'],
+        },
     );
-});
-
-const visibleRows = computed(() => {
-    let rows = props.accessMatrix.matrix.rows;
-
-    if (filters.value.app) {
-        rows = rows.filter((r) => r.app === filters.value.app);
-    }
-
-    return rows;
-});
+}
 
 function handleToggle(payload: {
     permissionId: number;
@@ -57,11 +85,12 @@ function handleToggle(payload: {
     updating.value = true;
 
     router.patch(
-        updateMatrix.url(),
+        updateMatrix.url({ query: selectionQuery.value }),
         {
             permission_id: payload.permissionId,
             role_id: payload.roleId,
             granted: payload.granted,
+            app: selectedApp.value?.key,
         },
         {
             preserveScroll: true,
@@ -94,7 +123,7 @@ function openPreview() {
                     <p class="text-sm text-muted-foreground">
                         {{
                             __(
-                                'Visualise and manage permission grants across roles.',
+                                'Assign permissions to a role, scoped to a single app.',
                             )
                         }}
                     </p>
@@ -104,6 +133,7 @@ function openPreview() {
                     variant="outline"
                     size="sm"
                     class="gap-2"
+                    :disabled="selectedRole === null"
                     @click="openPreview"
                 >
                     <Eye class="size-4" />
@@ -111,20 +141,42 @@ function openPreview() {
                 </Button>
             </div>
 
-            <!-- Filter bar -->
+            <!-- Filter bar — single-select role + single-select app -->
             <AccessMatrixFilterBar
-                v-model="filters"
+                :model-value="filters"
                 :roles="props.accessMatrix.roles"
                 :apps="props.accessMatrix.apps"
+                @update:model-value="updateFilters"
             />
 
-            <!-- Matrix table -->
-            <AccessMatrixTable
-                :rows="visibleRows"
-                :roles="visibleRoles"
+            <!-- Role-scoped permission editor -->
+            <AccessMatrixEditor
+                v-if="editorReady"
+                :rows="props.accessMatrix.matrix.rows"
+                :role="selectedRole || props.accessMatrix.roles[0]"
                 :updating="updating"
                 @toggle="handleToggle"
             />
+
+            <!-- Prompt shown before both selections are made -->
+            <div
+                v-else
+                class="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-sidebar-border/70 bg-muted/10 p-10 text-center"
+            >
+                <ShieldAlert class="size-8 text-muted-foreground/40" />
+                <div class="space-y-1">
+                    <p class="text-sm font-medium text-foreground/70">
+                        {{ __('No selection yet') }}
+                    </p>
+                    <p class="text-xs text-muted-foreground">
+                        {{
+                            __(
+                                'Choose a role and an app above to start editing permissions.',
+                            )
+                        }}
+                    </p>
+                </div>
+            </div>
 
             <!-- Side info cards -->
             <div class="grid gap-4 lg:grid-cols-2">

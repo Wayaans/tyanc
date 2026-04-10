@@ -22,6 +22,7 @@
 - Use designer for creating, changing, polishing, or implementing UI/UX/frontend code.
 - Do not use designer as the default review agent.
 - When a task needs both implementation and review, use designer first and reviewer second
+- ALWAYS run reviewer subagent every complete implementation except light implementations
 
 <!-- Example action class -->
 ```php

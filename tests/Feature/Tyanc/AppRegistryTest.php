@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 function appRegistryManager(): User
 {
@@ -44,6 +45,56 @@ it('lists the app registry for authorized managers', function (): void {
         ->assertJsonPath('apps.0.key', 'tyanc')
         ->assertJsonPath('apps.0.pages.0.key', 'dashboard')
         ->assertJsonPath('apps.1.key', 'demo');
+});
+
+it('does not mutate app state when listing the registry', function (): void {
+    $manager = appRegistryManager();
+
+    $this->seed(AppRegistrySeeder::class);
+
+    DB::table('apps')
+        ->where('key', 'tyanc')
+        ->update([
+            'is_system' => false,
+            'updated_at' => now(),
+        ]);
+
+    $this->actingAs($manager)
+        ->getJson(route('tyanc.apps.index'))
+        ->assertOk();
+
+    expect(App::query()->where('key', 'tyanc')->value('is_system'))->toBeFalse();
+});
+
+it('renders full-page app create and edit screens for authorized managers', function (): void {
+    $manager = appRegistryManager();
+
+    $app = App::factory()->create([
+        'key' => 'tasks',
+        'label' => 'Tasks',
+        'route_prefix' => 'tasks',
+        'permission_namespace' => 'tasks',
+    ]);
+
+    AppPage::factory()->for($app, 'app')->create([
+        'key' => 'dashboard',
+        'label' => 'Dashboard',
+        'path' => '/tasks/dashboard',
+        'permission_name' => 'tasks.dashboard.viewany',
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('tyanc.apps.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('tyanc/apps/Create'));
+
+    $this->actingAs($manager)
+        ->get(route('tyanc.apps.edit', $app))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tyanc/apps/Edit')
+            ->where('app.key', 'tasks')
+            ->where('app.pages.0.key', 'dashboard'));
 });
 
 it('registers an app with managed pages', function (): void {
@@ -143,6 +194,40 @@ it('updates custom apps and replaces managed pages', function (): void {
         ->and($app->pages()->where('key', 'board')->exists())->toBeTrue();
 });
 
+it('keeps existing pages when app metadata updates omit pages', function (): void {
+    $manager = appRegistryManager();
+
+    $app = App::factory()->create([
+        'key' => 'tasks',
+        'label' => 'Tasks',
+        'route_prefix' => 'tasks',
+        'permission_namespace' => 'tasks',
+    ]);
+
+    AppPage::factory()->for($app, 'app')->create([
+        'key' => 'backlog',
+        'label' => 'Backlog',
+        'path' => '/tasks/backlog',
+        'permission_name' => 'tasks.backlog.viewany',
+    ]);
+
+    $this->actingAs($manager)
+        ->patchJson(route('tyanc.apps.update', $app), [
+            'key' => 'tasks',
+            'label' => 'Task Workspace',
+            'route_prefix' => 'tasks',
+            'icon' => 'settings',
+            'permission_namespace' => 'tasks',
+            'enabled' => true,
+            'sort_order' => 60,
+        ])
+        ->assertOk()
+        ->assertJsonPath('app.label', 'Task Workspace')
+        ->assertJsonPath('app.pages.0.key', 'backlog');
+
+    expect($app->fresh()->pages()->where('key', 'backlog')->exists())->toBeTrue();
+});
+
 it('forbids app registry management without the namespaced app permission', function (): void {
     $user = User::factory()->create();
 
@@ -151,7 +236,7 @@ it('forbids app registry management without the namespaced app permission', func
         ->assertForbidden();
 });
 
-it('protects reserved apps from being disabled or deleted', function (): void {
+it('keeps tyanc protected while allowing demo to be replaced', function (): void {
     $manager = appRegistryManager();
 
     $this->seed(AppRegistrySeeder::class);
@@ -165,15 +250,14 @@ it('protects reserved apps from being disabled or deleted', function (): void {
 
     $this->actingAs($manager)
         ->patchJson(route('tyanc.apps.toggle', $demo), ['enabled' => false])
-        ->assertForbidden();
+        ->assertOk();
 
     $this->actingAs($manager)
         ->deleteJson(route('tyanc.apps.destroy', $demo))
-        ->assertForbidden();
+        ->assertNoContent();
 
     expect($tyanc->fresh()->enabled)->toBeTrue()
-        ->and($demo->fresh()->enabled)->toBeTrue()
-        ->and(App::query()->where('key', 'demo')->exists())->toBeTrue();
+        ->and(App::query()->where('key', 'demo')->exists())->toBeFalse();
 });
 
 it('shares only enabled and accessible apps on shared routes and falls back when cookie access is revoked', function (): void {
@@ -255,6 +339,23 @@ it('shares only enabled and accessible apps on shared routes and falls back when
             ->where('sidebarNavigation.apps.1.id', 'erp'));
 });
 
+it('does not fall back to configured apps when all registry apps are disabled', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    DB::table('apps')->update([
+        'enabled' => false,
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('user-profile.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->component('user-profile/Edit')
+            ->where('accessibleApps', [])
+            ->where('sidebarNavigation.apps', [])
+            ->where('sidebarNavigation.menu', []));
+});
+
 it('seeds the app registry before sharing accessible apps so protected demo pages stay hidden', function (): void {
     $user = User::factory()->create();
 
@@ -271,6 +372,17 @@ it('seeds the app registry before sharing accessible apps so protected demo page
 
     expect(App::query()->where('key', 'demo')->exists())->toBeTrue()
         ->and(AppPage::query()->where('route_name', 'demo.dashboard')->where('permission_name', 'demo.dashboard.viewany')->exists())->toBeTrue();
+});
+
+it('does not expose protected apps to guests through shared navigation props', function (): void {
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Welcome')
+            ->where('currentApp', 'tyanc')
+            ->where('accessibleApps', [])
+            ->where('sidebarNavigation.apps', [])
+            ->where('sidebarNavigation.menu', []));
 });
 
 it('shows manage-gated sidebar items for authenticated users with the matching permission', function (): void {
@@ -304,4 +416,84 @@ it('blocks disabled app routes even when the user has the page permission', func
     $this->actingAs($user)
         ->get(route('demo.dashboard'))
         ->assertNotFound();
+});
+
+it('denies direct access to registered app routes that are missing an app-page record', function (): void {
+    $app = App::factory()->create([
+        'key' => 'tasks',
+        'label' => 'Tasks',
+        'route_prefix' => 'tasks',
+        'permission_namespace' => 'tasks',
+    ]);
+
+    AppPage::factory()->for($app, 'app')->create([
+        'key' => 'dashboard',
+        'label' => 'Dashboard',
+        'path' => '/tasks/dashboard',
+        'permission_name' => null,
+    ]);
+
+    Route::middleware(['web', 'auth'])
+        ->get('/tasks/hidden-report', fn (): string => 'secret')
+        ->name('tasks.hidden-report');
+
+    $this->actingAs(User::factory()->create())
+        ->get('/tasks/hidden-report')
+        ->assertForbidden();
+});
+
+it('preserves customized app state when the registry seeder is re-run', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $demo = App::query()->where('key', 'demo')->firstOrFail();
+
+    $demo->forceFill([
+        'label' => 'Sandbox Workspace',
+        'route_prefix' => 'sandbox',
+        'icon' => 'settings',
+        'permission_namespace' => 'sandbox',
+        'enabled' => false,
+        'sort_order' => 90,
+        'is_system' => false,
+    ])->save();
+
+    $demo->pages()->delete();
+
+    AppPage::factory()->for($demo, 'app')->create([
+        'key' => 'home',
+        'label' => 'Home',
+        'route_name' => null,
+        'path' => '/sandbox/home',
+        'permission_name' => null,
+        'is_system' => false,
+    ]);
+
+    $this->seed(AppRegistrySeeder::class);
+
+    $demo->refresh();
+
+    expect($demo->label)->toBe('Sandbox Workspace')
+        ->and($demo->route_prefix)->toBe('sandbox')
+        ->and($demo->icon)->toBe('settings')
+        ->and($demo->permission_namespace)->toBe('sandbox')
+        ->and($demo->enabled)->toBeFalse()
+        ->and($demo->sort_order)->toBe(90)
+        ->and($demo->is_system)->toBeFalse()
+        ->and($demo->pages()->count())->toBe(1)
+        ->and($demo->pages()->where('key', 'home')->exists())->toBeTrue()
+        ->and($demo->pages()->where('route_name', 'demo.dashboard')->exists())->toBeFalse();
+});
+
+it('restores missing default registry pages when the default app identity is still managed', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $tyanc = App::query()->where('key', 'tyanc')->firstOrFail();
+
+    $tyanc->pages()->where('route_name', 'tyanc.users.index')->delete();
+
+    expect($tyanc->pages()->where('route_name', 'tyanc.users.index')->exists())->toBeFalse();
+
+    $this->seed(AppRegistrySeeder::class);
+
+    expect($tyanc->fresh()->pages()->where('route_name', 'tyanc.users.index')->exists())->toBeTrue();
 });

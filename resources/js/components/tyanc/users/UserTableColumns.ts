@@ -30,17 +30,15 @@ export function createUserTableColumns(
                         : table.getIsSomePageRowsSelected()
                           ? 'indeterminate'
                           : false,
-                    'onUpdate:modelValue': (
-                        value: boolean | 'indeterminate',
-                    ) => table.toggleAllPageRowsSelected(Boolean(value)),
+                    'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
+                        table.toggleAllPageRowsSelected(Boolean(value)),
                     'aria-label': __('Select all rows'),
                 }),
             cell: ({ row }) =>
                 h(Checkbox, {
                     modelValue: row.getIsSelected(),
-                    'onUpdate:modelValue': (
-                        value: boolean | 'indeterminate',
-                    ) => row.toggleSelected(Boolean(value)),
+                    'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
+                        row.toggleSelected(Boolean(value)),
                     'aria-label': __('Select row'),
                 }),
             meta: { label: 'Selection' },

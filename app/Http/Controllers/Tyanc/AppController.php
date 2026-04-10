@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,6 +66,22 @@ final readonly class AppController
         }
 
         return Inertia::render('tyanc/apps/Index', $payload);
+    }
+
+    public function create(#[CurrentUser] User $user): Response
+    {
+        Gate::forUser($user)->authorize('create', App::class);
+
+        return Inertia::render('tyanc/apps/Create');
+    }
+
+    public function edit(#[CurrentUser] User $user, App $app): Response
+    {
+        Gate::forUser($user)->authorize('update', $app);
+
+        return Inertia::render('tyanc/apps/Edit', [
+            'app' => AppData::fromModel($app),
+        ]);
     }
 
     public function store(Request $request, #[CurrentUser] User $user, RegisterApp $action): RedirectResponse|JsonResponse
@@ -201,7 +218,7 @@ final readonly class AppController
      */
     private function payload(Request $request): array
     {
-        return [
+        $payload = [
             'key' => $request->string('key')->toString(),
             'label' => $request->string('label')->toString(),
             'route_prefix' => $request->string('route_prefix')->toString(),
@@ -209,7 +226,12 @@ final readonly class AppController
             'permission_namespace' => $request->string('permission_namespace')->toString(),
             'enabled' => $request->boolean('enabled', true),
             'sort_order' => $request->integer('sort_order'),
-            'pages' => $request->input('pages', []),
         ];
+
+        if ($request->has('pages')) {
+            $payload['pages'] = $request->input('pages', []);
+        }
+
+        return $payload;
     }
 }

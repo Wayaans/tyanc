@@ -46,6 +46,12 @@ final readonly class ResolveEffectivePermissions
 
         $accessibleApps = $apps
             ->filter(function (App $app) use ($permissionNames): bool {
+                $enabledPages = $app->pages->where('enabled', true);
+
+                if ($enabledPages->contains(fn (AppPage $page): bool => ! $this->pageRequiresPermission($page))) {
+                    return true;
+                }
+
                 if ($permissionNames->isEmpty()) {
                     return false;
                 }
@@ -58,9 +64,8 @@ final readonly class ResolveEffectivePermissions
 
                 $access = resolve(PermissionResourceAccess::class);
 
-                return $app->pages->contains(
-                    fn ($page): bool => is_string($page->permission_name)
-                        && $page->permission_name !== ''
+                return $enabledPages->contains(
+                    fn (AppPage $page): bool => $this->pageRequiresPermission($page)
                         && $access->matchesGrantedPermissions($permissionNames, $page->permission_name),
                 );
             })
@@ -71,14 +76,12 @@ final readonly class ResolveEffectivePermissions
         $accessiblePages = $apps
             ->flatMap(fn (App $app): Collection => $app->pages
                 ->filter(fn ($page): bool => $page->enabled)
-                ->filter(function ($page) use ($app, $permissionNames): bool {
-                    if (is_string($page->permission_name) && $page->permission_name !== '') {
-                        return resolve(PermissionResourceAccess::class)->matchesGrantedPermissions($permissionNames, $page->permission_name);
+                ->filter(function (AppPage $page) use ($permissionNames): bool {
+                    if (! $this->pageRequiresPermission($page)) {
+                        return true;
                     }
 
-                    return $permissionNames->contains(
-                        fn (string $permission): bool => str_starts_with($permission, sprintf('%s.', $app->permission_namespace)),
-                    );
+                    return resolve(PermissionResourceAccess::class)->matchesGrantedPermissions($permissionNames, $page->permission_name);
                 })
                 ->map(fn ($page): array => [
                     'app_key' => $app->key,
@@ -113,11 +116,15 @@ final readonly class ResolveEffectivePermissions
         $access = resolve(PermissionResourceAccess::class);
 
         $preferredPage = $pages->first(
-            fn (AppPage $page): bool => ! is_string($page->permission_name)
-                || $page->permission_name === ''
+            fn (AppPage $page): bool => ! $this->pageRequiresPermission($page)
                 || $access->matchesGrantedPermissions($permissionNames, $page->permission_name),
         );
 
         return $preferredPage instanceof AppPage ? $preferredPage : $pages->first();
+    }
+
+    private function pageRequiresPermission(AppPage $page): bool
+    {
+        return is_string($page->permission_name) && mb_trim($page->permission_name) !== '';
     }
 }

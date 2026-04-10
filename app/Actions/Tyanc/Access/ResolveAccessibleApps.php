@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Access;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Apps\EnsureAppRegistrySeeded;
 use App\Data\Navigation\AccessibleAppData;
 use App\Models\App;
 use App\Models\AppPage;
 use App\Models\Permission;
 use App\Models\User;
-use Database\Seeders\AppRegistrySeeder;
+use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 
 final readonly class ResolveAccessibleApps
 {
@@ -20,18 +22,15 @@ final readonly class ResolveAccessibleApps
      */
     public function handle(?User $user): array
     {
-        if (App::query()->doesntExist() || AppPage::query()->doesntExist()) {
-            resolve(AppRegistrySeeder::class)->run();
-        }
+        resolve(EnsureAppRegistrySeeded::class)->handle();
 
         $registeredApps = App::query()
             ->with('pages')
-            ->enabled()
             ->ordered()
             ->get();
 
         if ($registeredApps->isEmpty()) {
-            return $this->fallbackAccessibleApps();
+            return $user instanceof User ? $this->fallbackAccessibleApps() : [];
         }
 
         return $registeredApps
@@ -47,17 +46,17 @@ final readonly class ResolveAccessibleApps
             return false;
         }
 
-        if (! $user instanceof User) {
-            return true;
-        }
-
         $app->loadMissing('pages');
 
         $enabledPages = $app->pages->where('enabled', true);
         $protectedPages = $enabledPages
-            ->filter(fn ($page): bool => is_string($page->permission_name) && $page->permission_name !== '');
+            ->filter(fn (AppPage $page): bool => $this->pageRequiresPermission($page));
         $openPages = $enabledPages
-            ->reject(fn ($page): bool => is_string($page->permission_name) && $page->permission_name !== '');
+            ->reject(fn (AppPage $page): bool => $this->pageRequiresPermission($page));
+
+        if (! $user instanceof User) {
+            return $openPages->contains(fn (AppPage $page): bool => $this->pageAllowsGuestAccess($page));
+        }
 
         if ($openPages->isNotEmpty()) {
             return true;
@@ -109,7 +108,12 @@ final readonly class ResolveAccessibleApps
             ->values();
 
         if (! $user instanceof User) {
-            return $pages->first();
+            $preferredPublicPage = $pages->first(
+                fn (AppPage $page): bool => ! $this->pageRequiresPermission($page)
+                    && $this->pageAllowsGuestAccess($page),
+            );
+
+            return $preferredPublicPage instanceof AppPage ? $preferredPublicPage : null;
         }
 
         $access = resolve(PermissionResourceAccess::class);
@@ -121,6 +125,34 @@ final readonly class ResolveAccessibleApps
         );
 
         return $preferredPage instanceof AppPage ? $preferredPage : $pages->first();
+    }
+
+    private function pageRequiresPermission(AppPage $page): bool
+    {
+        return is_string($page->permission_name) && mb_trim($page->permission_name) !== '';
+    }
+
+    private function pageAllowsGuestAccess(AppPage $page): bool
+    {
+        if ($this->pageRequiresPermission($page)) {
+            return false;
+        }
+
+        if (! is_string($page->route_name) || $page->route_name === '' || ! Route::has($page->route_name)) {
+            return false;
+        }
+
+        $route = Route::getRoutes()->getByName($page->route_name);
+
+        if (! $route instanceof LaravelRoute) {
+            return false;
+        }
+
+        return Collection::make($route->gatherMiddleware())
+            ->filter(fn (mixed $middleware): bool => is_string($middleware) && $middleware !== '')
+            ->doesntContain(fn (string $middleware): bool => $middleware === 'auth'
+                || str_starts_with($middleware, 'auth:')
+                || $middleware === 'verified');
     }
 
     /**

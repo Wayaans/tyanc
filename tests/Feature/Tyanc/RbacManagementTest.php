@@ -154,6 +154,27 @@ it('keeps the permissions page catalog-only and syncs from the source of truth',
         ->assertNotFound();
 });
 
+it('filters the access matrix to the selected role and app without truncating larger app permission sets', function (): void {
+    $manager = rbacManager();
+
+    $role = Role::query()->where('name', 'RBAC Manager')->firstOrFail();
+    $expectedTyancPermissionCount = collect(PermissionKey::all())
+        ->filter(fn (string $permission): bool => str_starts_with($permission, 'tyanc.'))
+        ->count();
+
+    $this->actingAs($manager)
+        ->getJson(route('tyanc.access-matrix.index', [
+            'role_id' => $role->id,
+            'app' => 'tyanc',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('accessMatrix.selected_role_id', $role->id)
+        ->assertJsonPath('accessMatrix.selected_app_key', 'tyanc')
+        ->assertJsonPath('accessMatrix.matrix.rows.0.app', 'tyanc')
+        ->assertJsonPath('accessMatrix.effective_preview.roles.0', 'RBAC Manager')
+        ->assertJsonCount($expectedTyancPermissionCount, 'accessMatrix.matrix.rows');
+});
+
 it('syncs the access matrix and records an audit entry', function (): void {
     $manager = rbacManager();
 
@@ -182,6 +203,26 @@ it('syncs the access matrix and records an audit entry', function (): void {
     expect($role->hasPermissionTo('demo.orders.view'))->toBeTrue()
         ->and($role->hasPermissionTo('demo.reports.view'))->toBeTrue()
         ->and(Activity::query()->where('log_name', 'rbac')->where('description', 'Access matrix synced')->exists())->toBeTrue();
+});
+
+it('keeps open pages in the effective-access preview for roles without explicit permissions', function (): void {
+    $manager = rbacManager();
+
+    $role = Role::query()->create([
+        'name' => 'Observer',
+        'guard_name' => 'web',
+        'level' => 5,
+    ]);
+
+    $this->actingAs($manager)
+        ->getJson(route('tyanc.access-matrix.index', [
+            'preview_role' => $role->name,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('accessMatrix.effective_preview.roles.0', 'Observer')
+        ->assertJsonPath('accessMatrix.effective_preview.permissions', [])
+        ->assertJsonPath('accessMatrix.effective_preview.accessible_apps.0.key', 'tyanc')
+        ->assertJsonPath('accessMatrix.effective_preview.accessible_pages.0.page_key', 'dashboard');
 });
 
 it('grants demo dashboard access through an access-matrix-synced role', function (): void {
@@ -260,16 +301,26 @@ it('denies role creation above the acting user hierarchy level', function (): vo
         ->assertForbidden();
 });
 
-it('protects reserved roles and denies direct governance-route access without permission', function (): void {
+it('keeps the default admin role manageable but not deletable and still protects immutable roles', function (): void {
     $manager = rbacManager();
 
-    $reservedRole = Role::query()->updateOrCreate(
+    $adminRole = Role::query()->updateOrCreate(
         [
             'name' => (string) config('tyanc.reserved_roles.admin'),
             'guard_name' => 'web',
         ],
         [
             'level' => 0,
+        ],
+    );
+
+    $immutableRole = Role::query()->updateOrCreate(
+        [
+            'name' => (string) config('tyanc.reserved_roles.super_admin'),
+            'guard_name' => 'web',
+        ],
+        [
+            'level' => 100,
         ],
     );
 
@@ -288,13 +339,32 @@ it('protects reserved roles and denies direct governance-route access without pe
         ->assertForbidden();
 
     $this->actingAs($manager)
-        ->patchJson(route('tyanc.roles.update', $reservedRole), [
-            'name' => 'Renamed Manuse',
-            'level' => 0,
+        ->patchJson(route('tyanc.roles.update', $adminRole), [
+            'name' => (string) config('tyanc.reserved_roles.admin'),
+            'level' => 5,
+        ])
+        ->assertOk()
+        ->assertJsonPath('role.level', 5);
+
+    $this->actingAs($manager)
+        ->patchJson(route('tyanc.roles.permissions.update', $adminRole), [
+            'permissions' => [PermissionKey::tyanc('users', 'manage')],
+        ])
+        ->assertOk()
+        ->assertJsonPath('role.permissions.0', PermissionKey::tyanc('users', 'manage'));
+
+    $this->actingAs($manager)
+        ->deleteJson(route('tyanc.roles.destroy', $adminRole))
+        ->assertForbidden();
+
+    $this->actingAs($manager)
+        ->patchJson(route('tyanc.roles.update', $immutableRole), [
+            'name' => 'Renamed Supa Manuse',
+            'level' => 100,
         ])
         ->assertForbidden();
 
     $this->actingAs($manager)
-        ->deleteJson(route('tyanc.roles.destroy', $reservedRole))
+        ->deleteJson(route('tyanc.roles.destroy', $immutableRole))
         ->assertForbidden();
 });

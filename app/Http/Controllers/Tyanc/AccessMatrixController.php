@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Tyanc;
 
 use App\Actions\Tyanc\Access\ResolveEffectivePermissions;
 use App\Actions\Tyanc\Access\SyncAccessMatrix;
-use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Apps\AppData;
 use App\Data\Tyanc\Rbac\AccessMatrixData;
 use App\Data\Tyanc\Rbac\PermissionData;
@@ -17,7 +16,6 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
-use App\Support\Tables\AppliesTableQuery;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,10 +27,7 @@ use Inertia\Response;
 
 final readonly class AccessMatrixController
 {
-    public function __construct(
-        private AppliesTableQuery $tableQuery,
-        private ResolveEffectivePermissions $effectivePermissions,
-    ) {}
+    public function __construct(private ResolveEffectivePermissions $effectivePermissions) {}
 
     public function index(Request $request, #[CurrentUser] User $user): Response|JsonResponse
     {
@@ -82,7 +77,11 @@ final readonly class AccessMatrixController
             return response()->json($payload);
         }
 
-        return to_route('tyanc.access-matrix.index');
+        return to_route('tyanc.access-matrix.index', array_filter([
+            'role_id' => $request->input('role_id'),
+            'app' => $request->input('app'),
+            'preview_role' => $request->input('preview_role'),
+        ], fn (mixed $value): bool => is_string($value) ? $value !== '' : $value !== null));
     }
 
     private function payload(Request $request): AccessMatrixData
@@ -105,13 +104,8 @@ final readonly class AccessMatrixController
             ->ordered()
             ->get();
 
-        $query = DataTableQueryData::fromRequest(
-            request: $request,
-            allowedSorts: ['permission', 'app', 'resource', 'action'],
-            allowedFilters: ['search', 'app'],
-            defaultSort: ['app', 'resource', 'action'],
-            allowedColumns: ['permission', 'app', 'resource', 'action'],
-        );
+        $selectedRoleId = $this->resolveSelectedRoleId($request, $roles);
+        $selectedAppKey = $this->resolveSelectedAppKey($request, $apps);
 
         $matrixRows = $permissions
             ->map(function (Permission $permission) use ($roles, $apps): array {
@@ -127,11 +121,13 @@ final readonly class AccessMatrixController
                     'id' => (int) $permission->id,
                     'permission' => $permission->name,
                     'app' => $permissionData->app,
+                    'app_label' => $app?->label ?? $permissionData->app_label,
                     'resource' => $permissionData->resource,
+                    'resource_label' => $permissionData->resource_label,
                     'action' => $permissionData->action,
+                    'action_label' => $permissionData->action_label,
                     'page' => $page?->label,
                     'page_key' => $page?->key,
-                    'app_label' => $app?->label,
                 ];
 
                 foreach ($roles as $role) {
@@ -140,27 +136,44 @@ final readonly class AccessMatrixController
 
                 return $row;
             })
+            ->when(
+                is_string($selectedAppKey) && $selectedAppKey !== '',
+                fn (Collection $rows): Collection => $rows->filter(
+                    fn (array $row): bool => ($row['app'] ?? null) === $selectedAppKey,
+                ),
+                fn (Collection $rows): Collection => collect(),
+            )
+            ->sortBy([
+                ['resource_label', 'asc'],
+                ['action_label', 'asc'],
+                ['permission', 'asc'],
+            ])
             ->values();
 
+        $rowCount = $matrixRows->count();
+
         $matrix = [
-            ...$this->tableQuery->handle(
-                items: $matrixRows,
-                query: $query,
-                sorts: [
-                    'permission' => 'permission',
-                    'app' => 'app',
-                    'resource' => 'resource',
-                    'action' => 'action',
-                ],
-                filters: [
-                    'search' => fn (array $row, mixed $value): bool => $this->matchesSearch($row, $value),
-                    'app' => 'app',
-                ],
-            ),
-            'filters' => $this->filters($permissions),
+            'rows' => $matrixRows->all(),
+            'meta' => [
+                'total' => $rowCount,
+                'from' => $rowCount > 0 ? 1 : null,
+                'to' => $rowCount > 0 ? $rowCount : null,
+                'page' => 1,
+                'per_page' => $rowCount,
+                'last_page' => 1,
+                'has_pages' => false,
+            ],
+            'query' => [
+                'page' => 1,
+                'per_page' => $rowCount,
+                'sort' => [],
+                'filter' => [],
+                'columns' => [],
+            ],
+            'filters' => $this->filters($apps),
         ];
 
-        $previewRoleName = $this->resolvePreviewRoleName($request, $roles);
+        $previewRoleName = $this->resolvePreviewRoleName($request, $roles, $selectedRoleId);
 
         $effectivePreview = is_string($previewRoleName) && $previewRoleName !== ''
             ? $this->effectivePermissions->handle(roleNames: [$previewRoleName])
@@ -171,47 +184,59 @@ final readonly class AccessMatrixController
             roles: $roles->map(fn (Role $role): RoleData => RoleData::fromModel($role))->all(),
             permissions: $permissions->map(fn (Permission $permission): PermissionData => PermissionData::fromModel($permission))->all(),
             apps: $apps->map(fn (App $app): AppData => AppData::fromModel($app))->all(),
+            selected_role_id: $selectedRoleId,
+            selected_app_key: $selectedAppKey,
             effective_preview: $effectivePreview,
         );
     }
 
-    private function resolvePreviewRoleName(Request $request, Collection $roles): ?string
+    private function resolvePreviewRoleName(Request $request, Collection $roles, ?int $selectedRoleId): ?string
     {
         if (is_string($request->input('preview_role')) && $request->string('preview_role')->toString() !== '') {
             return $request->string('preview_role')->toString();
         }
 
-        if ($request->filled('role_id')) {
-            return $roles->firstWhere('id', (int) $request->integer('role_id'))?->name;
+        if ($selectedRoleId !== null) {
+            return $roles->firstWhere('id', $selectedRoleId)?->name;
         }
 
         if (is_string($request->input('role')) && $request->string('role')->toString() !== '') {
             return $request->string('role')->toString();
         }
 
-        return $roles->first()?->name;
+        return null;
     }
 
-    private function matchesSearch(array $row, mixed $value): bool
+    private function resolveSelectedRoleId(Request $request, Collection $roles): ?int
     {
-        if (! is_scalar($value)) {
-            return true;
+        if (! $request->filled('role_id')) {
+            return null;
         }
 
-        $search = mb_strtolower(mb_trim((string) $value));
+        $roleId = (int) $request->integer('role_id');
 
-        if ($search === '') {
-            return true;
+        return $roles->contains('id', $roleId) ? $roleId : null;
+    }
+
+    private function resolveSelectedAppKey(Request $request, Collection $apps): ?string
+    {
+        if (! is_string($request->input('app'))) {
+            return null;
         }
 
-        return collect(['app', 'resource', 'action', 'permission', 'page'])
-            ->contains(fn (string $key): bool => str_contains(mb_strtolower((string) ($row[$key] ?? '')), $search));
+        $appKey = $request->string('app')->toString();
+
+        if ($appKey === '') {
+            return null;
+        }
+
+        return $apps->contains('key', $appKey) ? $appKey : null;
     }
 
     /**
      * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
      */
-    private function filters(Collection $permissions): array
+    private function filters(Collection $apps): array
     {
         return [
             [
@@ -224,12 +249,9 @@ final readonly class AccessMatrixController
                 'id' => 'app',
                 'label' => 'App',
                 'type' => 'select',
-                'options' => $permissions
-                    ->map(fn (Permission $permission): string => explode('.', $permission->name)[0])
-                    ->unique()
-                    ->sort()
+                'options' => $apps
+                    ->map(fn (App $app): array => ['label' => $app->label, 'value' => $app->key])
                     ->values()
-                    ->map(fn (string $app): array => ['label' => $app, 'value' => $app])
                     ->all(),
             ],
         ];

@@ -11,19 +11,24 @@ if ($supportedLocales === []) {
     $supportedLocales = ['en', 'id'];
 }
 
+$roleNames = [
+    'super_admin' => 'Supa Manuse',
+    'admin' => 'Manuse',
+];
+
 return [
     'admin_path' => env('TYANC_ADMIN_PATH', 'tyanc'),
     'demo_path' => env('TYANC_DEMO_PATH', 'demo'),
     'default_app' => env('TYANC_DEFAULT_APP', 'tyanc'),
     'api_domain' => env('TYANC_API_DOMAIN', 'api.tyanc.test'),
     'api_prefix' => env('TYANC_API_PREFIX', 'api/v1'),
-    'reserved_roles' => [
-        'super_admin' => 'Supa Manuse',
-        'admin' => 'Manuse',
+    'reserved_roles' => $roleNames,
+    'immutable_roles' => [
+        $roleNames['super_admin'],
     ],
+    'undeletable_roles' => array_values($roleNames),
     'reserved_apps' => [
         'tyanc',
-        'demo',
     ],
     'theme' => [
         'appearance' => 'system',

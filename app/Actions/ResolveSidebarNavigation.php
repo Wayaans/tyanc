@@ -25,33 +25,17 @@ final readonly class ResolveSidebarNavigation
             $currentApp = 'tyanc';
         }
 
-        return [
-            'apps' => $accessibleApps === []
-                ? $this->resolveConfiguredApps($configuredApps)
-                : $this->resolveAccessibleApps($accessibleApps),
-            'menu' => $this->resolveMenu($configuredApps[$currentApp]['menu'] ?? [], $user),
-        ];
-    }
-
-    /**
-     * @param  array<string, array<string, mixed>>  $apps
-     * @return list<array{id: string, title: string, subtitle: string, icon: string, href: string}>
-     */
-    private function resolveConfiguredApps(array $apps): array
-    {
-        $resolvedApps = [];
-
-        foreach ($apps as $id => $app) {
-            $resolvedApps[] = [
-                'id' => $id,
-                'title' => __((string) ($app['title'] ?? '')),
-                'subtitle' => __((string) ($app['subtitle'] ?? '')),
-                'icon' => (string) ($app['icon'] ?? 'layout-grid'),
-                'href' => $this->resolveHref($app),
+        if ($accessibleApps === []) {
+            return [
+                'apps' => [],
+                'menu' => [],
             ];
         }
 
-        return $resolvedApps;
+        return [
+            'apps' => $this->resolveAccessibleApps($accessibleApps),
+            'menu' => $this->resolveMenu($configuredApps[$currentApp]['menu'] ?? [], $user),
+        ];
     }
 
     /**
@@ -124,7 +108,7 @@ final readonly class ResolveSidebarNavigation
     private function canAccessPermission(?User $user, string $permission): bool
     {
         if (! $user instanceof User) {
-            return true;
+            return false;
         }
 
         return resolve(PermissionResourceAccess::class)->handle($user, $permission);

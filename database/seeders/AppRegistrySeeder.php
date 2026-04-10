@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Actions\Tyanc\Apps\SyncAppPages;
 use App\Models\App;
+use App\Models\AppPage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 
@@ -15,7 +16,7 @@ final class AppRegistrySeeder extends Seeder
     {
         Collection::make((array) config('sidebar-menu.apps', []))
             ->each(function (array $config, string $key): void {
-                $app = App::query()->updateOrCreate(
+                $app = App::query()->firstOrCreate(
                     ['key' => $key],
                     [
                         'label' => (string) ($config['title'] ?? mb_strtoupper($key)),
@@ -28,7 +29,12 @@ final class AppRegistrySeeder extends Seeder
                     ],
                 );
 
-                resolve(SyncAppPages::class)->handle($app);
+                $syncAppPages = resolve(SyncAppPages::class);
+                $expectedPages = $syncAppPages->defaultsFor($app);
+
+                if ($app->wasRecentlyCreated || $this->shouldSeedPages($app, $key, $expectedPages)) {
+                    $syncAppPages->handle($app, $expectedPages);
+                }
             });
     }
 
@@ -48,5 +54,38 @@ final class AppRegistrySeeder extends Seeder
             'demo' => 10,
             default => 100,
         };
+    }
+
+    /**
+     * @param  list<array{key: string, label: string, route_name?: string|null, path?: string|null, permission_name?: string|null, sort_order: int, enabled: bool, is_navigation: bool, is_system: bool}>  $expectedPages
+     */
+    private function shouldSeedPages(App $app, string $key, array $expectedPages): bool
+    {
+        if ($app->route_prefix !== $this->routePrefix($key) || $app->permission_namespace !== $key) {
+            return false;
+        }
+
+        if ($expectedPages === []) {
+            return $app->pages()->doesntExist();
+        }
+
+        $existingPages = $app->pages()->get()->keyBy('key');
+
+        return Collection::make($expectedPages)->contains(function (array $page) use ($app, $existingPages): bool {
+            $existingPage = $existingPages->get($page['key']);
+
+            if (! $existingPage instanceof AppPage) {
+                return true;
+            }
+
+            return $existingPage->label !== $page['label']
+                || $existingPage->route_name !== ($page['route_name'] ?? null)
+                || $existingPage->path !== ($page['path'] ?? null)
+                || $existingPage->permission_name !== ($page['permission_name'] ?? null)
+                || $existingPage->sort_order !== $page['sort_order']
+                || $existingPage->enabled !== $page['enabled']
+                || $existingPage->is_navigation !== $page['is_navigation']
+                || $existingPage->is_system !== ($page['is_system'] ?? $app->is_system);
+        });
     }
 }

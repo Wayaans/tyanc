@@ -6,6 +6,7 @@ export type RoleData = {
     permission_count: number;
     user_count: number;
     is_reserved: boolean;
+    is_delete_protected: boolean;
     permissions: string[];
     created_at: string;
     updated_at: string;
