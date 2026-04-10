@@ -8,6 +8,7 @@ use App\Actions\Tyanc\Settings\UpdateAppearanceSettings;
 use App\Data\Settings\AppearanceSettingsData;
 use App\Models\User;
 use App\Settings\AppearanceSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,7 @@ final readonly class AppearanceSettingsController
 {
     public function edit(Request $request, AppearanceSettings $settings): Response|JsonResponse
     {
-        Gate::authorize('manage-settings');
+        Gate::authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $payload = [
             'settings' => AppearanceSettingsData::fromSettings($settings),

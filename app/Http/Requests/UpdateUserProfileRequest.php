@@ -8,6 +8,7 @@ use App\Enums\UserStatus;
 use App\Models\Permission;
 use App\Models\User;
 use App\Rules\ValidEmail;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -86,7 +87,9 @@ final class UpdateUserProfileRequest extends FormRequest
             return true;
         }
 
-        return Permission::query()->where('name', 'manage-users')->where('guard_name', 'web')->exists()
-            && $user->hasPermissionTo('manage-users');
+        $permissionName = PermissionKey::tyanc('users', 'manage');
+
+        return Permission::query()->where('name', $permissionName)->where('guard_name', 'web')->exists()
+            && $user->hasPermissionTo($permissionName);
     }
 }

@@ -8,6 +8,7 @@ use App\Actions\Tyanc\Settings\UpdateUserDefaultsSettings;
 use App\Data\Settings\UserDefaultsSettingsData;
 use App\Models\User;
 use App\Settings\UserDefaultsSettings;
+use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +23,7 @@ final readonly class UserDefaultsSettingsController
 {
     public function edit(Request $request, UserDefaultsSettings $settings): Response|JsonResponse
     {
-        Gate::authorize('manage-settings');
+        Gate::authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $payload = [
             'settings' => UserDefaultsSettingsData::fromSettings($settings),

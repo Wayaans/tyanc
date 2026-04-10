@@ -4,52 +4,47 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Permission;
 use App\Models\User;
 
-final class UserPolicy
+final class UserPolicy extends PermissionResourcePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $this->canManageUsers($user);
+        return $this->authorizeAbility($user, __FUNCTION__);
     }
 
     public function view(User $user, User $model): bool
     {
-        return $this->canManageUsers($user) && $this->canManageTarget($user, $model);
+        return $this->authorizeAbility($user, __FUNCTION__) && $this->canManageTarget($user, $model);
     }
 
     public function create(User $user): bool
     {
-        return $this->canManageUsers($user);
+        return $this->authorizeAbility($user, __FUNCTION__);
     }
 
     public function update(User $user, User $model): bool
     {
-        return $this->canManageUsers($user) && $this->canManageTarget($user, $model);
+        return $this->authorizeAbility($user, __FUNCTION__) && $this->canManageTarget($user, $model);
     }
 
     public function suspend(User $user, User $model): bool
     {
-        return $this->canManageUsers($user)
+        return $this->authorizeAbility($user, __FUNCTION__)
             && $user->isNot($model)
             && $this->canManageTarget($user, $model);
     }
 
     public function delete(User $user, User $model): bool
     {
-        return $this->canManageUsers($user)
+        return $this->authorizeAbility($user, __FUNCTION__)
             && $user->isNot($model)
             && $this->canManageTarget($user, $model);
     }
 
-    private function canManageUsers(User $user): bool
+    protected function permissionResource(): string
     {
-        return Permission::query()
-            ->where('name', 'manage-users')
-            ->where('guard_name', 'web')
-            ->exists()
-            && $user->hasPermissionTo('manage-users');
+        return 'tyanc.users';
     }
 
     private function canManageTarget(User $user, User $model): bool

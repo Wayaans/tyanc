@@ -9,6 +9,8 @@ use App\Actions\Tyanc\Users\ListUsers;
 use App\Actions\Tyanc\Users\StoreUser;
 use App\Actions\Tyanc\Users\SuspendUser;
 use App\Actions\Tyanc\Users\UpdateUser;
+use App\Data\Tyanc\Rbac\PermissionData;
+use App\Data\Tyanc\Rbac\RoleData;
 use App\Data\Tyanc\Users\UserFormData;
 use App\Data\Tyanc\Users\UserIndexData;
 use App\Enums\UserStatus;
@@ -18,6 +20,7 @@ use App\Http\Requests\Tyanc\UserIndexRequest;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
@@ -153,23 +156,43 @@ final readonly class UserController
         return [
             'form' => UserFormData::defaults(),
             'roles' => Role::query()
+                ->with('permissions')
+                ->withCount(['permissions', 'users'])
                 ->orderByDesc('level')
                 ->orderBy('name')
-                ->get(['name', 'level'])
-                ->map(fn (Role $role): array => [
-                    'value' => $role->name,
-                    'label' => $role->name,
-                    'level' => $role->level,
-                ])
+                ->get()
+                ->map(function (Role $role): array {
+                    $data = RoleData::fromModel($role)->toArray();
+
+                    return [
+                        'value' => $role->name,
+                        'label' => $role->name,
+                        'level' => $role->level,
+                        'permissions' => $data['permissions'],
+                        'permission_count' => $data['permission_count'],
+                        'is_reserved' => $data['is_reserved'],
+                    ];
+                })
                 ->values()
                 ->all(),
             'permissions' => Permission::query()
+                ->with('roles')
+                ->withCount('roles')
                 ->orderBy('name')
-                ->get(['name'])
-                ->map(fn (Permission $permission): array => [
-                    'value' => $permission->name,
-                    'label' => $permission->name,
-                ])
+                ->get()
+                ->filter(fn (Permission $permission): bool => PermissionKey::existsInSource($permission->name))
+                ->map(function (Permission $permission): array {
+                    $data = PermissionData::fromModel($permission)->toArray();
+
+                    return [
+                        'value' => $permission->name,
+                        'label' => $permission->name,
+                        'app' => $data['app'],
+                        'resource' => $data['resource'],
+                        'action' => $data['action'],
+                        'is_reserved' => $data['is_reserved'],
+                    ];
+                })
                 ->values()
                 ->all(),
             'locales' => Collection::make((array) config('tyanc.supported_locales', []))

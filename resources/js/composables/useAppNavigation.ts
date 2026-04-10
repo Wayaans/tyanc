@@ -5,7 +5,11 @@ import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
+import { index as accessMatrixRoute } from '@/routes/tyanc/access-matrix';
 import { index as activityLogRoute } from '@/routes/tyanc/activity-log';
+import { index as appsRoute } from '@/routes/tyanc/apps';
+import { index as permissionsRoute } from '@/routes/tyanc/permissions';
+import { index as rolesRoute } from '@/routes/tyanc/roles';
 import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
 import {
     create as usersCreate,
@@ -14,12 +18,7 @@ import {
     show as usersShow,
 } from '@/routes/tyanc/users';
 import { edit as editProfile } from '@/routes/user-profile';
-import type {
-    AppId,
-    BreadcrumbItem,
-    NavItem,
-    SidebarNavigationData,
-} from '@/types';
+import type { BreadcrumbItem, NavItem, SidebarNavigationData } from '@/types';
 
 const resolveFallbackSidebarNavigation = (
     appName: string,
@@ -61,28 +60,32 @@ const resolveFallbackSidebarNavigation = (
             permission: null,
         },
         {
-            title: translate('Role & Permission'),
+            title: translate('Governance'),
             icon: 'key-round',
             permission: null,
             children: [
                 {
-                    title: translate('Role'),
-                    icon: 'key-round',
+                    title: translate('Apps'),
+                    href: appsRoute(),
+                    icon: 'layout-grid',
+                    permission: null,
+                },
+                {
+                    title: translate('Roles'),
+                    href: rolesRoute(),
+                    icon: 'shield-check',
                     permission: null,
                 },
                 {
                     title: translate('Permissions'),
+                    href: permissionsRoute(),
                     icon: 'key-round',
                     permission: null,
                 },
                 {
-                    title: translate('Level'),
-                    icon: 'key-round',
-                    permission: null,
-                },
-                {
-                    title: translate('Group'),
-                    icon: 'key-round',
+                    title: translate('Access matrix'),
+                    href: accessMatrixRoute(),
+                    icon: 'shield-check',
                     permission: null,
                 },
             ],
@@ -96,7 +99,7 @@ const resolveFallbackSidebarNavigation = (
     ],
 });
 
-const persistCurrentApp = (appId: AppId) => {
+const persistCurrentApp = (appId: string) => {
     if (typeof document === 'undefined') {
         return;
     }
@@ -110,8 +113,8 @@ export function useAppNavigation() {
     const page = usePage();
     const { __ } = useTranslations();
 
-    const activeAppId = computed<AppId>(() =>
-        page.props.currentApp === 'demo' ? 'demo' : 'tyanc',
+    const activeAppId = computed<string>(
+        () => page.props.currentApp ?? 'tyanc',
     );
 
     const sidebarNavigation = computed<SidebarNavigationData>(() => {
@@ -157,10 +160,6 @@ export function useAppNavigation() {
     watch(activeAppId, persistCurrentApp, { immediate: true });
 
     const switchApp = (appId: string) => {
-        if (appId !== 'tyanc' && appId !== 'demo') {
-            return;
-        }
-
         if (appId === activeAppId.value) {
             return;
         }
@@ -209,6 +208,26 @@ export function useAppNavigation() {
         { title: __('Users'), href: usersRoute() },
     ]);
 
+    const appsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Apps'), href: appsRoute() },
+    ]);
+
+    const rolesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Roles'), href: rolesRoute() },
+    ]);
+
+    const permissionsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Permissions'), href: permissionsRoute() },
+    ]);
+
+    const accessMatrixBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Access matrix'), href: accessMatrixRoute() },
+    ]);
+
     const usersCreateBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         { title: __('Users'), href: usersRoute() },
@@ -234,8 +253,12 @@ export function useAppNavigation() {
         activeApp,
         activeAppId,
         apps,
+        appsBreadcrumbs,
+        accessMatrixBreadcrumbs,
         dashboardBreadcrumbs,
         mainNavItems,
+        permissionsBreadcrumbs,
+        rolesBreadcrumbs,
         rootBreadcrumb,
         settingsBreadcrumbs,
         switchApp,

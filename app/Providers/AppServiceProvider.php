@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\App;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Observers\AppObserver;
+use App\Observers\PermissionObserver;
+use App\Observers\RoleObserver;
 use App\Observers\UserObserver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
-use LogicException;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -23,7 +27,6 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootAuthorizationRules();
-        $this->bootReservedRoleRules();
         $this->bootObservers();
         $this->bootLoginTelemetry();
     }
@@ -39,23 +42,11 @@ final class AppServiceProvider extends ServiceProvider
         });
     }
 
-    private function bootReservedRoleRules(): void
-    {
-        $reservedRoles = array_values(config('tyanc.reserved_roles', []));
-
-        Role::updating(function (Role $role) use ($reservedRoles): void {
-            $originalName = $role->getOriginal('name');
-
-            throw_if(is_string($originalName) && in_array($originalName, $reservedRoles, true) && $role->name !== $originalName, LogicException::class, 'Reserved roles cannot be renamed.');
-        });
-
-        Role::deleting(function (Role $role) use ($reservedRoles): void {
-            throw_if(in_array($role->name, $reservedRoles, true), LogicException::class, 'Reserved roles cannot be deleted.');
-        });
-    }
-
     private function bootObservers(): void
     {
+        App::observe(AppObserver::class);
+        Permission::observe(PermissionObserver::class);
+        Role::observe(RoleObserver::class);
         User::observe(UserObserver::class);
     }
 

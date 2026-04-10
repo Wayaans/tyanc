@@ -7,8 +7,10 @@ namespace App\Http\Middleware;
 use App\Actions\ResolveSidebarNavigation;
 use App\Actions\ResolveTranslations;
 use App\Actions\Settings\ResolveRuntimeSettings;
+use App\Actions\Tyanc\Access\ResolveAccessibleApps;
 use App\Data\Auth\UserData;
 use App\Data\Notifications\NotificationData;
+use App\Models\App;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -26,6 +28,7 @@ final class HandleInertiaRequests extends Middleware
     public function __construct(
         private readonly ResolveRuntimeSettings $runtimeSettings,
         private readonly ResolveTranslations $translations,
+        private readonly ResolveAccessibleApps $accessibleApps,
     ) {}
 
     /**
@@ -44,20 +47,12 @@ final class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $defaultApp = (string) config('tyanc.default_app', 'tyanc');
-        $availableApps = array_keys(config('sidebar-menu.apps', []));
         $routeName = $request->route()?->getName() ?? '';
-        $currentApp = $request->cookie('current_app');
         $user = $request->user();
         $authenticatedUser = $user instanceof User ? $user->loadMissing('profile', 'preference') : null;
         $runtimeSettings = $this->resolveRuntimeSettings($request, $authenticatedUser);
-
-        if ($routeName === 'dashboard' || str_starts_with($routeName, 'tyanc.')) {
-            $currentApp = $defaultApp;
-        } elseif (str_starts_with($routeName, 'demo.')) {
-            $currentApp = 'demo';
-        } elseif (! in_array($currentApp, $availableApps, true)) {
-            $currentApp = $defaultApp;
-        }
+        $accessibleApps = $this->accessibleApps->handle($authenticatedUser);
+        $currentApp = $this->resolveCurrentApp($request, $routeName, $accessibleApps, $defaultApp);
 
         $locale = $this->resolveLocale($request, $runtimeSettings);
 
@@ -77,8 +72,9 @@ final class HandleInertiaRequests extends Middleware
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,
             ],
             'notifications' => $this->notifications($authenticatedUser),
+            'accessibleApps' => $accessibleApps,
             'currentApp' => $currentApp,
-            'sidebarNavigation' => resolve(ResolveSidebarNavigation::class)->handle($currentApp),
+            'sidebarNavigation' => resolve(ResolveSidebarNavigation::class)->handle($currentApp, $authenticatedUser, $accessibleApps),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
@@ -156,5 +152,61 @@ final class HandleInertiaRequests extends Middleware
                 ->map(fn (DatabaseNotification $notification): NotificationData => NotificationData::fromModel($notification))
                 ->all(),
         ];
+    }
+
+    /**
+     * @param  list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>  $accessibleApps
+     */
+    private function resolveCurrentApp(Request $request, string $routeName, array $accessibleApps, string $defaultApp): string
+    {
+        $routeScopedApp = $this->resolveRouteScopedApp($request, $routeName, $defaultApp);
+
+        if ($routeScopedApp !== null) {
+            return $routeScopedApp;
+        }
+
+        $availableApps = collect($accessibleApps)->pluck('key')->filter()->values()->all();
+        $currentApp = $request->cookie('current_app');
+
+        if (is_string($currentApp) && in_array($currentApp, $availableApps, true)) {
+            return $currentApp;
+        }
+
+        if (in_array($defaultApp, $availableApps, true)) {
+            return $defaultApp;
+        }
+
+        return $availableApps[0] ?? $defaultApp;
+    }
+
+    private function resolveRouteScopedApp(Request $request, string $routeName, string $defaultApp): ?string
+    {
+        if ($routeName === 'dashboard' || str_starts_with($routeName, 'tyanc.')) {
+            return $defaultApp;
+        }
+
+        if (str_starts_with($routeName, 'demo.')) {
+            return 'demo';
+        }
+
+        $firstSegment = $request->segment(1);
+
+        if (! is_string($firstSegment) || $firstSegment === '') {
+            return null;
+        }
+
+        $registeredApp = App::query()
+            ->where('route_prefix', $firstSegment)
+            ->value('key');
+
+        if (is_string($registeredApp) && $registeredApp !== '') {
+            return $registeredApp;
+        }
+
+        return match ($firstSegment) {
+            mb_trim((string) config('tyanc.admin_path', 'tyanc'), '/') => $defaultApp,
+            mb_trim((string) config('tyanc.demo_path', 'demo'), '/') => 'demo',
+            default => null,
+        };
     }
 }

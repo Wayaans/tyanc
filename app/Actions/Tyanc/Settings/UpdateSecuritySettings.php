@@ -6,6 +6,7 @@ namespace App\Actions\Tyanc\Settings;
 
 use App\Models\User;
 use App\Settings\SecuritySettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,7 +17,7 @@ final readonly class UpdateSecuritySettings
      */
     public function handle(User $user, array $attributes): SecuritySettings
     {
-        Gate::forUser($user)->authorize('manage-settings');
+        Gate::forUser($user)->authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $validated = Validator::make($attributes, [
             'enforce_2fa' => ['required', 'boolean'],

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\UserStatus;
-use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -16,6 +15,11 @@ final class DevelopmentAccessSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call([
+            AppRegistrySeeder::class,
+            PermissionsSyncSeeder::class,
+        ]);
+
         DB::transaction(function (): void {
             $superAdminRole = Role::query()->updateOrCreate(
                 [
@@ -36,13 +40,6 @@ final class DevelopmentAccessSeeder extends Seeder
                     'level' => 0,
                 ],
             );
-
-            foreach (['manage-settings', 'manage-users', 'manage-roles'] as $permissionName) {
-                Permission::query()->firstOrCreate([
-                    'name' => $permissionName,
-                    'guard_name' => 'web',
-                ]);
-            }
 
             $user = User::query()->withTrashed()->firstOrNew([
                 'email' => 'supa@app.com',

@@ -13,11 +13,11 @@ import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { index, store } from '@/routes/tyanc/users';
-import type { RoleOption, SelectOption } from '@/types';
+import type { PermissionOption, RoleOption, SelectOption } from '@/types';
 
 const props = defineProps<{
     roles: RoleOption[];
-    permissions: SelectOption[];
+    permissions: PermissionOption[];
     locales: SelectOption[];
     statuses: SelectOption[];
     timezones: string[];

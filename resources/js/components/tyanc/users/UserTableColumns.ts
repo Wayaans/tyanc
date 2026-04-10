@@ -25,16 +25,22 @@ export function createUserTableColumns(
             enableHiding: false,
             header: ({ table }: { table: TanStackTable<UserRow> }) =>
                 h(Checkbox, {
-                    checked: table.getIsAllPageRowsSelected(),
-                    'onUpdate:checked': (value: boolean | 'indeterminate') =>
-                        table.toggleAllPageRowsSelected(Boolean(value)),
+                    modelValue: table.getIsAllPageRowsSelected()
+                        ? true
+                        : table.getIsSomePageRowsSelected()
+                          ? 'indeterminate'
+                          : false,
+                    'onUpdate:modelValue': (
+                        value: boolean | 'indeterminate',
+                    ) => table.toggleAllPageRowsSelected(Boolean(value)),
                     'aria-label': __('Select all rows'),
                 }),
             cell: ({ row }) =>
                 h(Checkbox, {
-                    checked: row.getIsSelected(),
-                    'onUpdate:checked': (value: boolean | 'indeterminate') =>
-                        row.toggleSelected(Boolean(value)),
+                    modelValue: row.getIsSelected(),
+                    'onUpdate:modelValue': (
+                        value: boolean | 'indeterminate',
+                    ) => row.toggleSelected(Boolean(value)),
                     'aria-label': __('Select row'),
                 }),
             meta: { label: 'Selection' },

@@ -10,6 +10,7 @@ use App\Settings\AppearanceSettings;
 use App\Settings\AppSettings;
 use App\Settings\SecuritySettings;
 use App\Settings\UserDefaultsSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,7 +19,7 @@ function settingsManager(): User
     $user = User::factory()->create();
 
     $permission = Permission::query()->firstOrCreate([
-        'name' => 'manage-settings',
+        'name' => PermissionKey::tyanc('settings', 'manage'),
         'guard_name' => 'web',
     ]);
 
@@ -217,7 +218,7 @@ it('clears user preference overrides when all values are unset', function (): vo
     expect(UserPreference::query()->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
-it('forbids tyanc admin settings routes without the manage-settings permission', function (): void {
+it('forbids tyanc admin settings routes without the tyanc.settings.manage permission', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)

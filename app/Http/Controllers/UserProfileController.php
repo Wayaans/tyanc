@@ -10,6 +10,7 @@ use App\Enums\UserStatus;
 use App\Http\Requests\UpdateUserProfileRequest;
 use App\Models\Permission;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -66,7 +67,9 @@ final readonly class UserProfileController
             return true;
         }
 
-        return Permission::query()->where('name', 'manage-users')->where('guard_name', 'web')->exists()
-            && $user->hasPermissionTo('manage-users');
+        $permissionName = PermissionKey::tyanc('users', 'manage');
+
+        return Permission::query()->where('name', $permissionName)->where('guard_name', 'web')->exists()
+            && $user->hasPermissionTo($permissionName);
     }
 }

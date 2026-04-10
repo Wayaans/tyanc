@@ -6,18 +6,23 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\NewApprovalRequestedNotification;
+use App\Support\Permissions\PermissionKey;
 use Spatie\Activitylog\Models\Activity;
 
 function activityManager(): User
 {
     $user = User::factory()->create();
 
-    $permission = Permission::query()->firstOrCreate([
-        'name' => 'manage-users',
-        'guard_name' => 'web',
+    $user->givePermissionTo([
+        Permission::query()->firstOrCreate([
+            'name' => PermissionKey::tyanc('users', 'manage'),
+            'guard_name' => 'web',
+        ]),
+        Permission::query()->firstOrCreate([
+            'name' => PermissionKey::tyanc('activity_log', 'view'),
+            'guard_name' => 'web',
+        ]),
     ]);
-
-    $user->givePermissionTo($permission);
 
     return $user;
 }
@@ -151,7 +156,7 @@ it('shows login activity for Supa Manuse users through the activity log index', 
             ->where('activitiesTable.rows.0.description', 'User signed in'));
 });
 
-it('forbids the activity log without the manage-users permission', function (): void {
+it('forbids the activity log without the tyanc.activity_log.view permission', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)

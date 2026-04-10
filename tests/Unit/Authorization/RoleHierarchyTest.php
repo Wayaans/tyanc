@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Support\Facades\Gate;
 
 it('compares role levels correctly', function (): void {
@@ -27,10 +28,12 @@ it('compares role levels correctly', function (): void {
 });
 
 it('lets Supa Manuse bypass gates while Manuse requires explicit permissions', function (): void {
-    Gate::define('manage-users', fn (User $user): bool => $user->hasPermissionTo('manage-users'));
+    $permissionName = PermissionKey::tyanc('users', 'manage');
 
-    $permission = Permission::query()->create([
-        'name' => 'manage-users',
+    Gate::define($permissionName, fn (User $user): bool => $user->hasPermissionTo($permissionName));
+
+    $permission = Permission::query()->firstOrCreate([
+        'name' => $permissionName,
         'guard_name' => 'web',
     ]);
 
@@ -56,9 +59,9 @@ it('lets Supa Manuse bypass gates while Manuse requires explicit permissions', f
     $manuseWithPermission->assignRole($manuseRole);
     $manuseWithPermission->givePermissionTo($permission);
 
-    expect(Gate::forUser($superUser)->allows('manage-users'))->toBeTrue()
-        ->and(Gate::forUser($manuseWithoutPermission)->allows('manage-users'))->toBeFalse()
-        ->and(Gate::forUser($manuseWithPermission)->allows('manage-users'))->toBeTrue();
+    expect(Gate::forUser($superUser)->allows($permissionName))->toBeTrue()
+        ->and(Gate::forUser($manuseWithoutPermission)->allows($permissionName))->toBeFalse()
+        ->and(Gate::forUser($manuseWithPermission)->allows($permissionName))->toBeTrue();
 });
 
 it('prevents reserved roles from being renamed or deleted', function (): void {

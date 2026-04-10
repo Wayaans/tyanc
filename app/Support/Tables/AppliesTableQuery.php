@@ -112,7 +112,7 @@ final class AppliesTableQuery
      */
     private function matchesFilter(mixed $row, callable|string $resolver, mixed $filterValue): bool
     {
-        if (is_callable($resolver)) {
+        if (! is_string($resolver) && is_callable($resolver)) {
             return (bool) $resolver($row, $filterValue);
         }
 
@@ -151,7 +151,7 @@ final class AppliesTableQuery
      */
     private function resolveValue(mixed $row, callable|string $resolver): mixed
     {
-        if (is_callable($resolver)) {
+        if (! is_string($resolver) && is_callable($resolver)) {
             return $resolver($row);
         }
 

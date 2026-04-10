@@ -6,6 +6,7 @@ namespace App\Actions\Tyanc\Settings;
 
 use App\Models\User;
 use App\Settings\UserDefaultsSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ final readonly class UpdateUserDefaultsSettings
      */
     public function handle(User $user, array $attributes): UserDefaultsSettings
     {
-        Gate::forUser($user)->authorize('manage-settings');
+        Gate::forUser($user)->authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $validated = Validator::make($attributes, [
             'locale' => ['required', Rule::in(array_keys((array) config('tyanc.supported_locales', [])))],

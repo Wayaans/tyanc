@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Upload } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ChevronDown, ChevronUp, Info, Upload } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 import DatePickerField from '@/components/DatePickerField.vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import InputError from '@/components/InputError.vue';
 import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { getInitials } from '@/composables/useInitials';
 import { useTranslations } from '@/lib/translations';
-import type { RoleOption, SelectOption } from '@/types';
+import type { PermissionOption, RoleOption, SelectOption } from '@/types';
 
 export type UserEditorFields = {
     name: string;
@@ -62,7 +63,7 @@ const props = withDefaults(
         modelValue: UserEditorFields;
         errors: Partial<Record<string, string>>;
         roles: RoleOption[];
-        permissions: SelectOption[];
+        permissions: PermissionOption[];
         locales: SelectOption[];
         statuses: SelectOption[];
         timezones: string[];
@@ -153,6 +154,50 @@ const genderOptions = computed<SelectOption[]>(() => [
     { value: 'male', label: __('Male') },
     { value: 'female', label: __('Female') },
 ]);
+
+/** Toggle for the direct permissions section (collapsed by default). */
+const showDirectPermissions = ref(props.modelValue.permissions.length > 0);
+
+watch(
+    () => props.modelValue.permissions,
+    (permissions) => {
+        showDirectPermissions.value = permissions.length > 0;
+    },
+    { deep: true },
+);
+
+/**
+ * Lightweight effective-access hint:
+ * union of all permissions from selected roles + direct assignments.
+ * Excludes duplicates. Capped at display limit for brevity.
+ */
+const effectivePermissions = computed<string[]>(() => {
+    const set = new Set<string>();
+
+    for (const roleValue of props.modelValue.roles) {
+        const role = props.roles.find((r) => r.value === roleValue);
+        if (role) {
+            for (const perm of role.permissions) {
+                set.add(perm);
+            }
+        }
+    }
+
+    for (const perm of props.modelValue.permissions) {
+        set.add(perm);
+    }
+
+    return Array.from(set).sort();
+});
+
+const effectivePermissionsPreview = computed(() =>
+    effectivePermissions.value.slice(0, 6),
+);
+const effectivePermissionsOverflow = computed(
+    () =>
+        effectivePermissions.value.length -
+        effectivePermissionsPreview.value.length,
+);
 </script>
 
 <template>
@@ -603,62 +648,215 @@ const genderOptions = computed<SelectOption[]>(() => [
 
     <Separator />
 
-    <!-- Roles section -->
+    <!-- Roles section (primary) -->
     <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Roles') }}
-        </h3>
+        <div class="flex items-start justify-between gap-2">
+            <div class="space-y-0.5">
+                <h3 class="text-sm font-semibold text-foreground">
+                    {{ __('Roles') }}
+                </h3>
+                <p class="text-xs text-muted-foreground">
+                    {{
+                        __(
+                            'Access is primarily granted through roles. Assign the right role rather than individual permissions.',
+                        )
+                    }}
+                </p>
+            </div>
+            <Badge
+                v-if="props.modelValue.roles.length > 0"
+                variant="secondary"
+                class="shrink-0 rounded-full text-xs tabular-nums"
+            >
+                {{ props.modelValue.roles.length }}
+            </Badge>
+        </div>
+
         <div class="flex flex-wrap gap-3">
-            <label
+            <div
                 v-for="role in props.roles"
                 :key="role.value"
-                class="flex cursor-pointer items-center gap-2 rounded-full border border-sidebar-border/70 bg-background px-3 py-2 text-sm"
+                class="flex cursor-pointer items-start gap-2.5 rounded-xl border border-sidebar-border/70 bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted/30"
+                :class="{
+                    'border-primary/40 bg-primary/5':
+                        props.modelValue.roles.includes(role.value),
+                }"
             >
                 <Checkbox
+                    :id="`uf-role-${role.value}`"
+                    class="mt-0.5"
                     :checked="props.modelValue.roles.includes(role.value)"
                     @update:checked="updateRole(role.value, Boolean($event))"
                 />
-                <span>{{ role.label }}</span>
-                <span class="text-xs text-muted-foreground">
-                    {{ __('Level :level', { level: String(role.level) }) }}
-                </span>
-            </label>
+                <Label
+                    :for="`uf-role-${role.value}`"
+                    class="cursor-pointer space-y-0.5"
+                >
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-medium">{{ role.label }}</span>
+                        <Badge
+                            v-if="role.is_reserved"
+                            variant="outline"
+                            class="rounded-full px-1.5 py-0 text-xs"
+                        >
+                            {{ __('Reserved') }}
+                        </Badge>
+                    </div>
+                    <div
+                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                        <span>
+                            {{
+                                __('Level :level', {
+                                    level: String(role.level),
+                                })
+                            }}
+                        </span>
+                        <span>·</span>
+                        <span>
+                            {{
+                                __(':n permission(s)', {
+                                    n: String(role.permission_count),
+                                })
+                            }}
+                        </span>
+                    </div>
+                </Label>
+            </div>
         </div>
         <InputError :message="props.errors.roles" />
+
+        <!-- Effective access hint -->
+        <div
+            v-if="effectivePermissions.length > 0"
+            class="space-y-1.5 rounded-lg border border-sidebar-border/60 bg-muted/20 px-3 py-2.5"
+        >
+            <div
+                class="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+                <Info class="size-3 shrink-0" />
+                <span class="font-medium">
+                    {{
+                        __('Effective access: :n permission(s) total', {
+                            n: String(effectivePermissions.length),
+                        })
+                    }}
+                </span>
+            </div>
+            <div class="flex flex-wrap gap-1">
+                <span
+                    v-for="perm in effectivePermissionsPreview"
+                    :key="perm"
+                    class="rounded border border-sidebar-border/50 bg-background px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
+                >
+                    {{ perm }}
+                </span>
+                <span
+                    v-if="effectivePermissionsOverflow > 0"
+                    class="rounded bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground"
+                >
+                    +{{ effectivePermissionsOverflow }} {{ __('more') }}
+                </span>
+            </div>
+        </div>
     </div>
 
     <Separator />
 
-    <!-- Direct permissions section -->
-    <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Direct permissions') }}
-        </h3>
-        <div class="flex flex-wrap gap-3">
-            <label
-                v-for="permission in props.permissions"
-                :key="permission.value"
-                class="flex cursor-pointer items-center gap-2 rounded-full border border-sidebar-border/70 bg-background px-3 py-2 text-sm"
+    <!-- Direct permissions section (exception-only, collapsible) -->
+    <div class="space-y-3">
+        <button
+            type="button"
+            class="flex w-full items-center justify-between text-left"
+            @click="showDirectPermissions = !showDirectPermissions"
+        >
+            <div class="space-y-0.5">
+                <h3
+                    class="flex items-center gap-2 text-sm font-semibold text-foreground"
+                >
+                    {{ __('Direct permissions') }}
+                    <Badge
+                        v-if="props.modelValue.permissions.length > 0"
+                        variant="secondary"
+                        class="rounded-full text-xs tabular-nums"
+                    >
+                        {{ props.modelValue.permissions.length }}
+                    </Badge>
+                </h3>
+                <p class="text-xs text-muted-foreground">
+                    {{
+                        __(
+                            'Exception-only. Prefer roles for regular access control.',
+                        )
+                    }}
+                </p>
+            </div>
+            <ChevronDown
+                v-if="!showDirectPermissions"
+                class="size-4 shrink-0 text-muted-foreground"
+            />
+            <ChevronUp v-else class="size-4 shrink-0 text-muted-foreground" />
+        </button>
+
+        <template v-if="showDirectPermissions">
+            <div
+                class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
             >
-                <Checkbox
-                    :checked="
-                        props.modelValue.permissions.includes(permission.value)
-                    "
-                    @update:checked="
-                        updatePermission(permission.value, Boolean($event))
-                    "
-                />
-                <span class="font-mono text-xs">{{ permission.label }}</span>
-            </label>
-        </div>
-        <FormFieldSupport
-            :hint="
-                __(
-                    'Permissions are inherited from roles plus any direct assignments.',
-                )
-            "
-            :error="props.errors.permissions"
-        />
+                {{
+                    __(
+                        'Direct permissions bypass role hierarchy. Only use these for exceptional one-off grants.',
+                    )
+                }}
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <div
+                    v-for="permission in props.permissions"
+                    :key="permission.value"
+                    class="flex cursor-pointer items-center gap-2 rounded-lg border border-sidebar-border/70 bg-background px-3 py-2 text-sm transition-colors hover:bg-muted/30"
+                    :class="{
+                        'border-primary/40 bg-primary/5':
+                            props.modelValue.permissions.includes(
+                                permission.value,
+                            ),
+                    }"
+                >
+                    <Checkbox
+                        :id="`uf-perm-${permission.value}`"
+                        :checked="
+                            props.modelValue.permissions.includes(
+                                permission.value,
+                            )
+                        "
+                        @update:checked="
+                            updatePermission(permission.value, Boolean($event))
+                        "
+                    />
+                    <Label
+                        :for="`uf-perm-${permission.value}`"
+                        class="cursor-pointer"
+                    >
+                        <span class="font-mono text-xs">{{
+                            permission.label
+                        }}</span>
+                        <div
+                            v-if="permission.app"
+                            class="mt-0.5 text-xs text-muted-foreground"
+                        >
+                            {{ permission.app }}
+                            <template v-if="permission.resource">
+                                &rsaquo; {{ permission.resource }}
+                            </template>
+                            <template v-if="permission.action">
+                                &rsaquo; {{ permission.action }}
+                            </template>
+                        </div>
+                    </Label>
+                </div>
+            </div>
+
+            <FormFieldSupport :error="props.errors.permissions" />
+        </template>
     </div>
 
     <Separator />

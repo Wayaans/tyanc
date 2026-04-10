@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 
@@ -27,8 +28,23 @@ it('renders the tyanc dashboard', function (): void {
             ->where('sidebarNavigation.menu.0.href', '/tyanc/dashboard'));
 });
 
-it('renders the demo dashboard', function (): void {
+it('forbids the demo dashboard without the configured page permission', function (): void {
     $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('demo.dashboard'))
+        ->assertForbidden();
+});
+
+it('renders the demo dashboard when the page permission is granted directly', function (): void {
+    $user = User::factory()->create();
+
+    $permission = Permission::query()->firstOrCreate([
+        'name' => 'demo.dashboard.viewany',
+        'guard_name' => 'web',
+    ]);
+
+    $user->givePermissionTo($permission);
 
     Http::fake([
         '*__inertia_ssr*' => Http::response([
@@ -46,6 +62,21 @@ it('renders the demo dashboard', function (): void {
             ->where('examplesTable.meta.total', 5)
             ->where('sidebarNavigation.apps.1.href', '/demo/dashboard')
             ->where('sidebarNavigation.menu.0.href', '/demo/dashboard'));
+});
+
+it('treats manage as access to demo dashboard page visibility', function (): void {
+    $user = User::factory()->create();
+
+    $managePermission = Permission::query()->firstOrCreate([
+        'name' => 'demo.dashboard.manage',
+        'guard_name' => 'web',
+    ]);
+
+    $user->givePermissionTo($managePermission);
+
+    $this->actingAs($user)
+        ->get(route('demo.dashboard'))
+        ->assertOk();
 });
 
 it('applies tyanc dashboard query string filters and sorting server-side', function (): void {

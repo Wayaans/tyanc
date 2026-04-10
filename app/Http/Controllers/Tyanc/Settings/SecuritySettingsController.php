@@ -8,6 +8,7 @@ use App\Actions\Tyanc\Settings\UpdateSecuritySettings;
 use App\Data\Settings\SecuritySettingsData;
 use App\Models\User;
 use App\Settings\SecuritySettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ final readonly class SecuritySettingsController
 {
     public function edit(Request $request, SecuritySettings $settings): Response|JsonResponse
     {
-        Gate::authorize('manage-settings');
+        Gate::authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $payload = [
             'settings' => SecuritySettingsData::fromSettings($settings),

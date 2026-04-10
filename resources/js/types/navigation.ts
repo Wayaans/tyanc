@@ -24,6 +24,20 @@ export type SidebarNavigationItemData = {
     children?: SidebarNavigationItemData[];
 };
 
+export type AccessibleApp = {
+    id: string;
+    key: string;
+    label: string;
+    subtitle: string;
+    route_prefix: string;
+    icon: string;
+    permission_namespace: string;
+    enabled: boolean;
+    sort_order: number;
+    is_system: boolean;
+    href: string;
+};
+
 export type SidebarNavigationAppData = {
     id: AppId;
     title: string;
@@ -54,4 +68,5 @@ export type NavLinkItem = NavItem & {
     href: NonNullable<NavItem['href']>;
 };
 
-export type AppId = 'tyanc' | 'demo';
+/** Registry-driven app identifier. Kept as a named alias so existing usages remain valid. */
+export type AppId = string;

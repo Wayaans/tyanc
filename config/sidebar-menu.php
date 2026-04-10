@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Support\Permissions\PermissionKey;
+
 return [
     'apps' => [
         'tyanc' => [
@@ -20,7 +22,7 @@ return [
                     'title' => 'Users',
                     'icon' => 'user',
                     'route' => 'tyanc.users.index',
-                    'permission' => null,
+                    'permission' => PermissionKey::tyanc('users', 'manage'),
                 ],
                 [
                     'title' => 'Role & Permission',
@@ -28,24 +30,28 @@ return [
                     'permission' => null,
                     'children' => [
                         [
-                            'title' => 'Role',
+                            'title' => 'Apps',
+                            'icon' => 'layout-grid',
+                            'route' => 'tyanc.apps.index',
+                            'permission' => PermissionKey::tyanc('apps', 'manage'),
+                        ],
+                        [
+                            'title' => 'Roles',
                             'icon' => 'key-round',
-                            'permission' => null,
+                            'route' => 'tyanc.roles.index',
+                            'permission' => PermissionKey::tyanc('roles', 'manage'),
                         ],
                         [
                             'title' => 'Permissions',
                             'icon' => 'key-round',
-                            'permission' => null,
+                            'route' => 'tyanc.permissions.index',
+                            'permission' => PermissionKey::tyanc('permissions', 'manage'),
                         ],
                         [
-                            'title' => 'Level',
-                            'icon' => 'key-round',
-                            'permission' => null,
-                        ],
-                        [
-                            'title' => 'Group',
-                            'icon' => 'key-round',
-                            'permission' => null,
+                            'title' => 'Access matrix',
+                            'icon' => 'shield-check',
+                            'route' => 'tyanc.access-matrix.index',
+                            'permission' => PermissionKey::tyanc('access_matrix', 'manage'),
                         ],
                     ],
                 ],
@@ -53,13 +59,13 @@ return [
                     'title' => 'Activity log',
                     'icon' => 'shield-check',
                     'route' => 'tyanc.activity-log.index',
-                    'permission' => null,
+                    'permission' => PermissionKey::tyanc('activity_log', 'view'),
                 ],
                 [
                     'title' => 'App Settings',
                     'icon' => 'settings',
                     'route' => 'tyanc.settings.index',
-                    'permission' => null,
+                    'permission' => PermissionKey::tyanc('settings', 'manage'),
                 ],
             ],
         ],
@@ -73,7 +79,7 @@ return [
                     'title' => 'Dashboard',
                     'icon' => 'layout-grid',
                     'route' => 'demo.dashboard',
-                    'permission' => null,
+                    'permission' => 'demo.dashboard.viewany',
                 ],
             ],
         ],

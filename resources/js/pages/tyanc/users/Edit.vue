@@ -16,12 +16,17 @@ import { getInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { destroy, index, show, suspend, update } from '@/routes/tyanc/users';
-import type { RoleOption, SelectOption, UserFormData } from '@/types';
+import type {
+    PermissionOption,
+    RoleOption,
+    SelectOption,
+    UserFormData,
+} from '@/types';
 
 const props = defineProps<{
     user: UserFormData;
     roles: RoleOption[];
-    permissions: SelectOption[];
+    permissions: PermissionOption[];
     locales: SelectOption[];
     statuses: SelectOption[];
     timezones: string[];

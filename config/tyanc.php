@@ -21,6 +21,10 @@ return [
         'super_admin' => 'Supa Manuse',
         'admin' => 'Manuse',
     ],
+    'reserved_apps' => [
+        'tyanc',
+        'demo',
+    ],
     'theme' => [
         'appearance' => 'system',
         'primary_color' => 'oklch(0.5 0.17 200)',

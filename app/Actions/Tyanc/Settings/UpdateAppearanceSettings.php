@@ -6,6 +6,7 @@ namespace App\Actions\Tyanc\Settings;
 
 use App\Models\User;
 use App\Settings\AppearanceSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ final readonly class UpdateAppearanceSettings
      */
     public function handle(User $user, array $attributes): AppearanceSettings
     {
-        Gate::forUser($user)->authorize('manage-settings');
+        Gate::forUser($user)->authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $validated = Validator::make($attributes, [
             'primary_color' => ['required', 'string', 'max:40', 'regex:/^(#[0-9A-Fa-f]{3,8}|oklch\([^)]+\))$/'],

@@ -9,6 +9,7 @@ use App\Data\Settings\AppSettingsData;
 use App\Models\SettingsAsset;
 use App\Models\User;
 use App\Settings\AppSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,7 @@ final readonly class AppSettingsController
 {
     public function edit(Request $request, AppSettings $settings): Response|JsonResponse
     {
-        Gate::authorize('manage-settings');
+        Gate::authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $payload = [
             'settings' => AppSettingsData::fromSettings(

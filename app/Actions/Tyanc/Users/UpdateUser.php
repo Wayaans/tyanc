@@ -8,6 +8,7 @@ use App\Actions\UpdateUser as UpdateManagedUser;
 use App\Data\Tyanc\Users\UserFormData;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ final readonly class UpdateUser
             $before = UserFormData::fromModel($user->fresh(['profile', 'roles', 'permissions']))->toArray();
 
             $this->assertAssignableRoles($actor, $roles);
+            $this->assertPermissionScope($actor, $permissions);
 
             $updatedUser = $this->users->handle($user, $attributes);
 
@@ -96,6 +98,30 @@ final readonly class UpdateUser
 
         if (is_numeric($highestRequestedLevel) && (int) $highestRequestedLevel >= (int) $actingLevel) {
             throw new AuthorizationException(__('You cannot assign roles at or above your own level.'));
+        }
+    }
+
+    /**
+     * @param  list<string>  $permissions
+     */
+    private function assertPermissionScope(User $actor, array $permissions): void
+    {
+        if ($permissions === [] || $actor->hasRole(config('tyanc.reserved_roles.super_admin'))) {
+            return;
+        }
+
+        if ($actor->hasPermissionTo(PermissionKey::tyanc('users', 'manage')) || $actor->hasPermissionTo(PermissionKey::tyanc('permissions', 'manage'))) {
+            return;
+        }
+
+        $allowedPermissions = $actor->getAllPermissions()->pluck('name')->values();
+
+        $unauthorizedPermissions = Collection::make($permissions)
+            ->reject(fn (string $permission): bool => $allowedPermissions->contains($permission))
+            ->values();
+
+        if ($unauthorizedPermissions->isNotEmpty()) {
+            throw new AuthorizationException(__('You cannot grant permissions outside your own scope.'));
         }
     }
 }

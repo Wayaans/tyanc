@@ -7,6 +7,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,7 +16,7 @@ function userManager(): User
     $user = User::factory()->create();
 
     $permission = Permission::query()->firstOrCreate([
-        'name' => 'manage-users',
+        'name' => PermissionKey::tyanc('users', 'manage'),
         'guard_name' => 'web',
     ]);
 
@@ -120,6 +121,31 @@ it('applies user search, sort, and role filters server-side', function (): void 
         ->assertJsonPath('usersTable.rows.0.roles.0', 'Editor');
 });
 
+it('lets user managers assign direct permissions without already holding each target permission', function (): void {
+    $manager = userManager();
+    $targetPermission = Permission::query()->firstOrCreate([
+        'name' => 'demo.orders.approve',
+        'guard_name' => 'web',
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson(route('tyanc.users.store'), [
+            'username' => 'direct-permission-user',
+            'email' => 'direct-permission@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+            'status' => UserStatus::Active->value,
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'roles' => [],
+            'permissions' => [$targetPermission->name],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('user.permissions.0', 'demo.orders.approve');
+
+    expect(User::query()->where('email', 'direct-permission@example.com')->firstOrFail()->hasDirectPermission('demo.orders.approve'))->toBeTrue();
+});
+
 it('creates managed users with profile, avatar, roles, and permissions', function (): void {
     Storage::fake('public');
 
@@ -132,9 +158,11 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
     ]);
 
     $directPermission = Permission::query()->firstOrCreate([
-        'name' => 'manage-settings',
+        'name' => PermissionKey::tyanc('settings', 'manage'),
         'guard_name' => 'web',
     ]);
+
+    $manager->givePermissionTo($directPermission);
 
     $this->actingAs($manager)
         ->postJson(route('tyanc.users.store'), [
@@ -159,7 +187,7 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
         ->assertJsonPath('user.username', 'managed-user')
         ->assertJsonPath('user.locale', 'id')
         ->assertJsonPath('user.roles.0', 'Support')
-        ->assertJsonPath('user.permissions.0', 'manage-settings')
+        ->assertJsonPath('user.permissions.0', PermissionKey::tyanc('settings', 'manage'))
         ->assertJsonPath('user.city', 'Makassar');
 
     $managedUser = User::query()->where('email', 'managed@example.com')->first();
@@ -167,7 +195,7 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
     expect($managedUser)->not->toBeNull()
         ->and($managedUser?->avatar)->not->toBeNull()
         ->and($managedUser?->hasRole('Support'))->toBeTrue()
-        ->and($managedUser?->hasDirectPermission('manage-settings'))->toBeTrue()
+        ->and($managedUser?->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue()
         ->and($managedUser?->profile?->city)->toBe('Makassar')
         ->and($managedUser?->profile?->social_links)->toBe([
             'github' => 'https://github.com/managed-user',
@@ -189,13 +217,15 @@ it('updates managed users and syncs their access', function (): void {
     ]);
 
     $oldPermission = Permission::query()->firstOrCreate([
-        'name' => 'view-reports',
+        'name' => 'demo.reports.view',
         'guard_name' => 'web',
     ]);
     $newPermission = Permission::query()->firstOrCreate([
-        'name' => 'manage-settings',
+        'name' => PermissionKey::tyanc('settings', 'manage'),
         'guard_name' => 'web',
     ]);
+
+    $manager->givePermissionTo($newPermission);
 
     $managedUser = User::factory()->create([
         'username' => 'before-update',
@@ -230,7 +260,7 @@ it('updates managed users and syncs their access', function (): void {
         ->assertJsonPath('user.email', 'after@example.com')
         ->assertJsonPath('user.status', UserStatus::Banned->value)
         ->assertJsonPath('user.roles.0', 'Operator')
-        ->assertJsonPath('user.permissions.0', 'manage-settings')
+        ->assertJsonPath('user.permissions.0', PermissionKey::tyanc('settings', 'manage'))
         ->assertJsonPath('user.city', 'Jakarta');
 
     $managedUser->refresh()->load('profile', 'roles', 'permissions');
@@ -241,8 +271,8 @@ it('updates managed users and syncs their access', function (): void {
         ->and($managedUser->timezone)->toBe('Asia/Jakarta')
         ->and($managedUser->hasRole('Operator'))->toBeTrue()
         ->and($managedUser->hasRole('Viewer'))->toBeFalse()
-        ->and($managedUser->hasDirectPermission('manage-settings'))->toBeTrue()
-        ->and($managedUser->hasDirectPermission('view-reports'))->toBeFalse()
+        ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue()
+        ->and($managedUser->hasDirectPermission('demo.reports.view'))->toBeFalse()
         ->and($managedUser->profile?->city)->toBe('Jakarta')
         ->and($managedUser->profile?->company_name)->toBe('After Co');
 });
@@ -272,7 +302,7 @@ it('soft deletes managed users', function (): void {
     $this->assertSoftDeleted($managedUser);
 });
 
-it('forbids user management without the manage-users permission', function (): void {
+it('forbids user management without the tyanc.users.manage permission', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)

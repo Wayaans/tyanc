@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Tyanc;
 use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Activity\ActivityLogEntryData;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ final readonly class ActivityLogController
 {
     public function index(Request $request, #[CurrentUser] User $user): Response|JsonResponse
     {
-        Gate::forUser($user)->authorize('viewAny', User::class);
+        Gate::forUser($user)->authorize(PermissionKey::tyanc('activity_log', 'view'));
 
         $tableQuery = DataTableQueryData::fromRequest(
             request: $request,

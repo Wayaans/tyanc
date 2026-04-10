@@ -1,4 +1,5 @@
 import type {
+    AccessibleApp,
     AppId,
     BrandProps,
     NotificationsPayload,
@@ -43,6 +44,8 @@ declare module '@inertiajs/core' {
             translations: Record<string, string>;
             /** Notification summary shared on every authenticated page. */
             notifications: NotificationsPayload | null;
+            /** All apps the current user can access, registry-driven. */
+            accessibleApps: AccessibleApp[];
             [key: string]: unknown;
         };
     }

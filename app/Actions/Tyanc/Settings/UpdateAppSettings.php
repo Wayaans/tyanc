@@ -7,6 +7,7 @@ namespace App\Actions\Tyanc\Settings;
 use App\Models\SettingsAsset;
 use App\Models\User;
 use App\Settings\AppSettings;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -20,7 +21,7 @@ final readonly class UpdateAppSettings
      */
     public function handle(User $user, array $attributes): AppSettings
     {
-        Gate::forUser($user)->authorize('manage-settings');
+        Gate::forUser($user)->authorize(PermissionKey::tyanc('settings', 'manage'));
 
         $validated = Validator::make($attributes, [
             'app_name' => ['required', 'string', 'max:120'],
