@@ -15,7 +15,8 @@ export type SidebarIconName =
     | 'palette'
     | 'settings'
     | 'shield-check'
-    | 'user';
+    | 'user'
+    | 'message-square';
 
 export type SidebarNavigationItemData = {
     title: string;

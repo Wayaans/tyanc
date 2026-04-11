@@ -9,6 +9,7 @@ return [
         'create' => ['label' => 'Create'],
         'update' => ['label' => 'Update'],
         'delete' => ['label' => 'Delete'],
+        'archive' => ['label' => 'Archive'],
         'manage' => ['label' => 'Manage'],
         'suspend' => ['label' => 'Suspend'],
         'toggle' => ['label' => 'Toggle'],
@@ -33,7 +34,7 @@ return [
         'assignPermissions' => 'manage',
         'sync' => 'sync',
     ],
-    'manage_implies' => ['viewany', 'view', 'create', 'update', 'delete', 'suspend', 'toggle', 'sync', 'import', 'export', 'upload', 'download', 'approve', 'reject'],
+    'manage_implies' => ['viewany', 'view', 'create', 'update', 'delete', 'archive', 'suspend', 'toggle', 'sync', 'import', 'export', 'upload', 'download', 'approve', 'reject'],
     'apps' => [
         'tyanc' => [
             'label' => 'Tyanc',
@@ -53,6 +54,10 @@ return [
                 'files' => [
                     'label' => 'Files',
                     'actions' => ['viewany', 'view', 'upload', 'download', 'delete', 'manage'],
+                ],
+                'messages' => [
+                    'label' => 'Messages',
+                    'actions' => ['viewany', 'view', 'create', 'delete', 'archive', 'manage'],
                 ],
                 'roles' => [
                     'label' => 'Roles',

@@ -20,7 +20,7 @@ const { activeApp } = useAppNavigation();
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border/70 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+        class="flex h-[var(--app-sidebar-header-height)] shrink-0 items-center gap-3 border-b border-sidebar-border/70 px-4 transition-[width,height] ease-linear"
     >
         <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             <SidebarTrigger class="-ml-1" />

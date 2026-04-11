@@ -92,15 +92,25 @@ function submit() {
     processing.value = true;
     errors.value = {};
 
-    router.patch(update.url({ user: props.user.id }), form.value, {
-        preserveScroll: true,
-        onError: (responseErrors) => {
-            errors.value = responseErrors as Partial<Record<string, string>>;
+    router.post(
+        update.url({ user: props.user.id }),
+        {
+            _method: 'PATCH',
+            ...form.value,
         },
-        onFinish: () => {
-            processing.value = false;
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onError: (responseErrors) => {
+                errors.value = responseErrors as Partial<
+                    Record<string, string>
+                >;
+            },
+            onFinish: () => {
+                processing.value = false;
+            },
         },
-    });
+    );
 }
 
 function suspendUser() {

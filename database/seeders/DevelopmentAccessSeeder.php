@@ -37,7 +37,7 @@ final class DevelopmentAccessSeeder extends Seeder
                     'guard_name' => 'web',
                 ],
                 [
-                    'level' => 0,
+                    'level' => 90,
                 ],
             );
 

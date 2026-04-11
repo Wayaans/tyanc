@@ -13,8 +13,11 @@ use App\Observers\PermissionObserver;
 use App\Observers\RoleObserver;
 use App\Observers\UserObserver;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 final class AppServiceProvider extends ServiceProvider
@@ -29,6 +32,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->bootAuthorizationRules();
         $this->bootObservers();
         $this->bootLoginTelemetry();
+        $this->bootRateLimiters();
     }
 
     private function bootAuthorizationRules(): void
@@ -71,5 +75,10 @@ final class AppServiceProvider extends ServiceProvider
                 ])
                 ->log('User signed in');
         });
+    }
+
+    private function bootRateLimiters(): void
+    {
+        RateLimiter::for('tyanc-messages', fn (Request $request): Limit => Limit::perMinute(20)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 }

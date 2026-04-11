@@ -111,6 +111,10 @@ final readonly class ResolveTranslations
             $groups[] = 'datatable';
         }
 
+        if (str_starts_with($routeName, 'tyanc.messages.')) {
+            $groups[] = 'messages';
+        }
+
         if (str_starts_with($routeName, 'tyanc.activity-log.')) {
             $groups[] = 'activity';
             $groups[] = 'exports';
@@ -180,6 +184,7 @@ final readonly class ResolveTranslations
                 'User',
                 'Users',
                 'Files',
+                'Messages',
                 'Role & Permission',
                 'Role',
                 'Permissions',
@@ -212,6 +217,58 @@ final readonly class ResolveTranslations
                 'View activity log',
                 'No unread notifications.',
                 'Notification',
+            ],
+            'messages' => [
+                'Message workspace',
+                'Keep internal conversations moving without leaving Tyanc.',
+                'Search conversations',
+                'Unread',
+                'All conversations',
+                'Unread only',
+                'No conversations yet.',
+                'Start a conversation from the seed data or send the first internal message.',
+                'Use the compose button above to start your first conversation.',
+                'Your recent conversations will appear here.',
+                'Open messages',
+                'Select a conversation',
+                'Choose a conversation from the left to start reading and replying.',
+                'Type your message…',
+                'Send message',
+                'Sending…',
+                'Message sent.',
+                'Unable to send your message right now.',
+                'Unable to load the selected conversation.',
+                'Unable to start the conversation. Please try again.',
+                'Unexpected response from server. Please refresh.',
+                'Connected to realtime updates',
+                ':name is typing…',
+                ':count people are typing…',
+                'Press Enter to send, Shift+Enter for a new line.',
+                'Open conversation',
+                'New message',
+                'New conversation',
+                'Recipients',
+                'Select :name',
+                'You do not have permission to start a conversation.',
+                'Ask an administrator to grant the messages create permission to your role.',
+                'Optional',
+                'Subject',
+                'Message',
+                'Search contacts…',
+                'No contacts available.',
+                'No other users available yet.',
+                'Recipients only show other active users. Create another user first if you need someone to message.',
+                'No contacts match your search.',
+                'e.g. Q3 budget review…',
+                'Write your first message…',
+                'Start conversation',
+                'Choose one or more people to message, add an optional subject, and write your first message.',
+                ':sender sent a new message in :conversation.',
+                'No messages yet.',
+                'Say hello to start this conversation.',
+                'You',
+                'Last reply',
+                'Conversation',
             ],
             'auth' => [
                 'Welcome back',

@@ -31,6 +31,12 @@ return [
                     'permission' => PermissionKey::tyanc('files', 'viewany'),
                 ],
                 [
+                    'title' => 'Messages',
+                    'icon' => 'message-square',
+                    'route' => 'tyanc.messages.index',
+                    'permission' => PermissionKey::tyanc('messages', 'viewany'),
+                ],
+                [
                     'title' => 'Role & Permission',
                     'icon' => 'key-round',
                     'permission' => null,

@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\Permissions\PermissionKey;
+use Database\Seeders\DevelopmentAccessSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -146,6 +147,49 @@ it('lets user managers assign direct permissions without already holding each ta
     expect(User::query()->where('email', 'direct-permission@example.com')->firstOrFail()->hasDirectPermission('demo.orders.approve'))->toBeTrue();
 });
 
+it('lets the baseline admin assign lower-level roles during user management', function (): void {
+    $this->seed(DevelopmentAccessSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole((string) config('tyanc.reserved_roles.admin'));
+    $admin->givePermissionTo(Permission::query()->firstOrCreate([
+        'name' => PermissionKey::tyanc('users', 'manage'),
+        'guard_name' => 'web',
+    ]));
+
+    $assignableRole = Role::query()->create([
+        'name' => 'Support',
+        'guard_name' => 'web',
+        'level' => 10,
+    ]);
+
+    $targetPermission = Permission::query()->firstOrCreate([
+        'name' => PermissionKey::tyanc('settings', 'manage'),
+        'guard_name' => 'web',
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('tyanc.users.store'), [
+            'username' => 'managed-by-manuse',
+            'email' => 'manuse-managed@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+            'status' => UserStatus::Active->value,
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'roles' => [$assignableRole->name],
+            'permissions' => [$targetPermission->name],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('user.roles.0', 'Support')
+        ->assertJsonPath('user.permissions.0', PermissionKey::tyanc('settings', 'manage'));
+
+    $managedUser = User::query()->where('email', 'manuse-managed@example.com')->firstOrFail();
+
+    expect($managedUser->hasRole('Support'))->toBeTrue()
+        ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue();
+});
+
 it('creates managed users with profile, avatar, roles, and permissions', function (): void {
     Storage::fake('public');
 
@@ -275,6 +319,51 @@ it('updates managed users and syncs their access', function (): void {
         ->and($managedUser->hasDirectPermission('demo.reports.view'))->toBeFalse()
         ->and($managedUser->profile?->city)->toBe('Jakarta')
         ->and($managedUser->profile?->company_name)->toBe('After Co');
+});
+
+it('supports method-spoofed multipart user updates for the Inertia edit form flow', function (): void {
+    Storage::fake('public');
+
+    $manager = userManager();
+
+    $newRole = Role::query()->create([
+        'name' => 'Operator',
+        'guard_name' => 'web',
+        'level' => 2,
+    ]);
+
+    $newPermission = Permission::query()->firstOrCreate([
+        'name' => PermissionKey::tyanc('settings', 'manage'),
+        'guard_name' => 'web',
+    ]);
+
+    $managedUser = User::factory()->create([
+        'username' => 'method-spoof-target',
+        'email' => 'method-spoof-before@example.com',
+        'status' => UserStatus::Active,
+    ]);
+
+    $this->actingAs($manager)
+        ->post(route('tyanc.users.update', $managedUser), [
+            '_method' => 'PATCH',
+            'username' => 'method-spoof-updated',
+            'email' => 'method-spoof-after@example.com',
+            'status' => UserStatus::Active->value,
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'avatar' => UploadedFile::fake()->image('avatar.png', 200, 200),
+            'roles' => [$newRole->name],
+            'permissions' => [$newPermission->name],
+        ])
+        ->assertRedirect(route('tyanc.users.show', $managedUser));
+
+    $managedUser->refresh()->load('roles', 'permissions');
+
+    expect($managedUser->avatar)->not->toBeNull()
+        ->and($managedUser->username)->toBe('method-spoof-updated')
+        ->and($managedUser->email)->toBe('method-spoof-after@example.com')
+        ->and($managedUser->hasRole('Operator'))->toBeTrue()
+        ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue();
 });
 
 it('suspends managed users', function (): void {

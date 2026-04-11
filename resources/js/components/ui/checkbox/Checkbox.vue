@@ -1,27 +1,47 @@
 <script setup lang="ts">
 import type { CheckboxRootEmits, CheckboxRootProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
-import { reactiveOmit } from "@vueuse/core"
+import { computed } from "vue"
 import { Check } from "lucide-vue-next"
-import { CheckboxIndicator, CheckboxRoot, useForwardPropsEmits } from "reka-ui"
+import { CheckboxIndicator, CheckboxRoot } from "reka-ui"
 import { cn } from "@/lib/utils"
 
-const props = defineProps<CheckboxRootProps & { class?: HTMLAttributes["class"] }>()
-const emits = defineEmits<CheckboxRootEmits>()
+type CheckboxProps = CheckboxRootProps & {
+  checked?: CheckboxRootProps["modelValue"]
+  class?: HTMLAttributes["class"]
+}
 
-const delegatedProps = reactiveOmit(props, "class")
+type CheckboxEmits = CheckboxRootEmits & {
+  "update:checked": [checked: CheckboxRootProps["modelValue"]]
+}
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const props = defineProps<CheckboxProps>()
+const emit = defineEmits<CheckboxEmits>()
+
+const delegatedProps = computed(() => {
+  const { checked, class: _class, modelValue, ...rest } = props
+
+  return {
+    ...rest,
+    modelValue: modelValue ?? checked,
+  }
+})
+
+function handleUpdateModelValue(value: CheckboxRootProps["modelValue"]) {
+  emit("update:modelValue", value)
+  emit("update:checked", value)
+}
 </script>
 
 <template>
   <CheckboxRoot
     v-slot="slotProps"
     data-slot="checkbox"
-    v-bind="forwarded"
+    v-bind="delegatedProps"
     :class="
       cn('peer border-input data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
          props.class)"
+    @update:model-value="handleUpdateModelValue"
   >
     <CheckboxIndicator
       data-slot="checkbox-indicator"

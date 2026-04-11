@@ -6,10 +6,12 @@ use App\Http\Controllers\Tyanc\AccessMatrixController;
 use App\Http\Controllers\Tyanc\ActivityLogController;
 use App\Http\Controllers\Tyanc\AppController;
 use App\Http\Controllers\Tyanc\ApprovalController;
+use App\Http\Controllers\Tyanc\ConversationController;
 use App\Http\Controllers\Tyanc\DashboardController;
 use App\Http\Controllers\Tyanc\ExportController;
 use App\Http\Controllers\Tyanc\FileController;
 use App\Http\Controllers\Tyanc\ImportController;
+use App\Http\Controllers\Tyanc\MessageController;
 use App\Http\Controllers\Tyanc\NotificationController;
 use App\Http\Controllers\Tyanc\PermissionController;
 use App\Http\Controllers\Tyanc\RoleController;
@@ -85,6 +87,20 @@ Route::controller(FileController::class)
         Route::post('/', 'store')->name('store');
         Route::delete('{media}', 'destroy')->name('destroy');
     });
+
+Route::controller(ConversationController::class)
+    ->prefix('messages')
+    ->name('tyanc.messages.')
+    ->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:tyanc-messages')->name('create');
+        Route::patch('{conversation}/archive', 'archive')->name('archive');
+        Route::delete('{conversation}', 'destroy')->name('destroy');
+    });
+
+Route::post('messages/{conversation}', [MessageController::class, 'store'])
+    ->middleware('throttle:tyanc-messages')
+    ->name('tyanc.messages.store');
 
 Route::controller(ExportController::class)->group(function (): void {
     Route::get('exports/users', 'users')->name('tyanc.users.export');

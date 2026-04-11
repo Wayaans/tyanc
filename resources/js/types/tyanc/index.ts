@@ -1,4 +1,5 @@
 export * from './access-matrix';
+export * from './messages';
 export * from './activity';
 export * from './apps';
 export * from './approvals';

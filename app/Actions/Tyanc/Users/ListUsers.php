@@ -11,6 +11,7 @@ use App\Http\Requests\Tyanc\UserIndexRequest;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -28,11 +29,19 @@ final readonly class ListUsers
      *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
      * }
      */
-    public function handle(User $actor, UserIndexRequest $request): array
+    public function handle(User $actor, Request $request): array
     {
         Gate::forUser($actor)->authorize('viewAny', User::class);
 
-        $tableQuery = $request->tableQuery();
+        $tableQuery = $request instanceof UserIndexRequest
+            ? $request->tableQuery()
+            : DataTableQueryData::fromRequest(
+                request: $request,
+                allowedSorts: ['name', 'email', 'status', 'locale', 'last_login_at', 'created_at'],
+                allowedFilters: ['search', 'status', 'locale', 'role', 'trashed'],
+                defaultSort: ['-created_at'],
+                allowedColumns: ['name', 'email', 'status', 'locale', 'roles', 'last_login_at', 'created_at'],
+            );
         $queryRequest = $request->duplicate([
             ...$request->query(),
             'sort' => implode(',', $tableQuery->sort),
