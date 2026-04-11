@@ -17,7 +17,8 @@ final class DevelopmentAccessSeeder extends Seeder
     {
         $this->call([
             AppRegistrySeeder::class,
-            PermissionsSyncSeeder::class,
+            RolesAndPermissionsSeeder::class,
+            AccessMatrixSeeder::class,
         ]);
 
         DB::transaction(function (): void {
