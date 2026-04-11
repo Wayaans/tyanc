@@ -20,3 +20,13 @@ it('constrains the messages workspace with the shared sidebar header height toke
         ->not->toBeFalse()
         ->toContain('h-[calc(100svh-var(--app-sidebar-header-height,4rem))]');
 });
+
+it('always scrolls the open thread to the latest message when the message count grows', function (): void {
+    $thread = file_get_contents(resource_path('js/components/tyanc/messages/MessageThread.vue'));
+
+    expect($thread)
+        ->not->toBeFalse()
+        ->toContain('() => props.messages.length')
+        ->toContain('void scrollToBottom(true);')
+        ->not->toContain('lastMessage?.is_mine || isAtBottom.value');
+});

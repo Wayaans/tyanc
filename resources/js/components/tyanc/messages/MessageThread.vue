@@ -42,9 +42,6 @@ type MessageGroup = {
 /** Max gap (ms) between two messages before starting a new group. */
 const GROUP_THRESHOLD_MS = 5 * 60 * 1_000;
 
-/** Pixels from the bottom edge within which we consider the user "at the bottom". */
-const NEAR_BOTTOM_PX = 100;
-
 // ---------------------------------------------------------------------------
 // Props / emits
 // ---------------------------------------------------------------------------
@@ -76,12 +73,6 @@ const { __, locale } = useTranslations();
 const page = usePage();
 const threadRef = ref<HTMLElement | null>(null);
 const deleteConfirmOpen = ref(false);
-
-/**
- * Whether the scroll container is within NEAR_BOTTOM_PX of the bottom.
- * Starts true so the first batch of messages always scrolls into view.
- */
-const isAtBottom = ref(true);
 
 // ---------------------------------------------------------------------------
 // Formatting
@@ -179,16 +170,6 @@ function bubbleClasses(
 // Scroll management
 // ---------------------------------------------------------------------------
 
-function checkIfAtBottom(): void {
-    if (!threadRef.value) {
-        return;
-    }
-
-    const { scrollTop, scrollHeight, clientHeight } = threadRef.value;
-    isAtBottom.value =
-        scrollTop + clientHeight >= scrollHeight - NEAR_BOTTOM_PX;
-}
-
 async function scrollToBottom(smooth = false): Promise<void> {
     await nextTick();
 
@@ -196,19 +177,13 @@ async function scrollToBottom(smooth = false): Promise<void> {
         return;
     }
 
-    // Mark as at-bottom optimistically so any watcher that fires right after
-    // this call doesn't trigger a redundant second scroll.
-    isAtBottom.value = true;
-
     threadRef.value.scrollTo({
         top: threadRef.value.scrollHeight,
         behavior: smooth ? 'smooth' : 'auto',
     });
 }
 
-// Scroll when new messages arrive, but only when the user is already near
-// the bottom OR the new message belongs to the current user (own sends always
-// scroll so the user sees their message land).
+// Scroll to the bottom whenever a new message arrives in the open conversation.
 watch(
     () => props.messages.length,
     (newLength, oldLength) => {
@@ -217,11 +192,7 @@ watch(
             return;
         }
 
-        const lastMessage = props.messages[newLength - 1];
-
-        if (lastMessage?.is_mine || isAtBottom.value) {
-            void scrollToBottom(true);
-        }
+        void scrollToBottom(true);
     },
 );
 
@@ -319,7 +290,6 @@ function confirmDelete() {
             class="min-h-0 flex-1 overflow-y-auto px-4 py-4"
             role="log"
             aria-live="polite"
-            @scroll="checkIfAtBottom"
         >
             <!-- Loading skeleton -->
             <template v-if="props.loading">

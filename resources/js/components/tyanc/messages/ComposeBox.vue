@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { unrefElement } from '@vueuse/core';
 import { SendHorizontal } from 'lucide-vue-next';
-import { nextTick, onBeforeUnmount, useTemplateRef, ref, watch } from 'vue';
+import {
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    useTemplateRef,
+    ref,
+    watch,
+} from 'vue';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslations } from '@/lib/translations';
@@ -20,8 +27,55 @@ const emit = defineEmits<{
 const { __ } = useTranslations();
 const body = ref('');
 const textareaRef = useTemplateRef('textarea');
+const sendButtonRef = useTemplateRef('sendButton');
+
+const MAX_LINES = 15;
+const FALLBACK_LINE_HEIGHT_PX = 20;
+const FALLBACK_MIN_HEIGHT_PX = 36;
 
 let typingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function resizeTextarea(): void {
+    const textarea = unrefElement(textareaRef);
+    const sendButton = unrefElement(sendButtonRef);
+
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    const style = window.getComputedStyle(textarea);
+    const parsedLineHeight = Number.parseFloat(style.lineHeight);
+    const lineHeight = Number.isNaN(parsedLineHeight)
+        ? FALLBACK_LINE_HEIGHT_PX
+        : parsedLineHeight;
+    const paddingTop = Number.parseFloat(style.paddingTop);
+    const paddingBottom = Number.parseFloat(style.paddingBottom);
+    const borderTop = Number.parseFloat(style.borderTopWidth);
+    const borderBottom = Number.parseFloat(style.borderBottomWidth);
+    const minHeight =
+        sendButton instanceof HTMLElement
+            ? sendButton.offsetHeight
+            : FALLBACK_MIN_HEIGHT_PX;
+
+    // Maximum border-box height for 15 visible lines.
+    const maxHeight =
+        lineHeight * MAX_LINES +
+        paddingTop +
+        paddingBottom +
+        borderTop +
+        borderBottom;
+
+    // Shrink to auto first so scrollHeight reflects only the actual content.
+    textarea.style.height = 'auto';
+    textarea.style.overflowY = 'hidden';
+
+    // scrollHeight includes padding but not border; add borders back.
+    const neededHeight = textarea.scrollHeight + borderTop + borderBottom;
+    const nextHeight = Math.max(minHeight, Math.min(neededHeight, maxHeight));
+
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = neededHeight > maxHeight ? 'auto' : 'hidden';
+}
 
 async function focusTextarea(): Promise<void> {
     await nextTick();
@@ -34,6 +88,9 @@ async function focusTextarea(): Promise<void> {
 }
 
 watch(body, (value) => {
+    // Resize after the DOM has updated with the new value.
+    void nextTick(resizeTextarea);
+
     if (value.trim() === '') {
         return;
     }
@@ -63,6 +120,10 @@ watch(
         }
     },
 );
+
+onMounted(() => {
+    void nextTick(resizeTextarea);
+});
 
 onBeforeUnmount(() => {
     if (typingTimer !== null) {
@@ -94,18 +155,19 @@ function handleKeydown(event: KeyboardEvent) {
             <Textarea
                 ref="textarea"
                 v-model="body"
-                :rows="2"
+                :rows="1"
                 :placeholder="__('Type your message…')"
                 :disabled="props.disabled || props.sending"
-                class="flex-1 resize-none text-sm"
+                class="flex-1 py-1.5 text-sm leading-5"
                 :aria-label="__('Type your message…')"
                 @keydown="handleKeydown"
             />
 
             <Button
+                ref="sendButton"
                 type="button"
                 size="icon"
-                class="mb-0.5 shrink-0"
+                class="shrink-0"
                 :disabled="!body.trim() || props.disabled || props.sending"
                 :aria-label="__('Send message')"
                 @click="handleSend"
