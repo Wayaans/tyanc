@@ -30,12 +30,13 @@ final readonly class StoreUser
             $permissions = $this->names($attributes['permissions'] ?? []);
 
             $this->assertAssignableRoles($actor, $roles);
+            $this->assertReservedRoleConstraints($actor, null, $roles);
             $this->assertPermissionScope($actor, $permissions);
 
             $user = $this->users->handle($attributes, (string) $attributes['password']);
             $user->syncRoles($roles);
             $user->syncPermissions($permissions);
-            $user->loadMissing('profile', 'roles', 'permissions');
+            $user->loadMissing('roles', 'permissions');
 
             activity('users')
                 ->performedOn($user)
@@ -62,6 +63,7 @@ final readonly class StoreUser
         return Collection::make($values)
             ->filter(fn (mixed $value): bool => is_string($value) && mb_trim($value) !== '')
             ->map(fn (string $value): string => mb_trim($value))
+            ->unique()
             ->values()
             ->all();
     }
@@ -89,6 +91,26 @@ final readonly class StoreUser
 
         if (is_numeric($highestRequestedLevel) && (int) $highestRequestedLevel >= (int) $actingLevel) {
             throw new AuthorizationException(__('You cannot assign roles at or above your own level.'));
+        }
+    }
+
+    /**
+     * @param  list<string>  $roles
+     */
+    private function assertReservedRoleConstraints(User $actor, ?User $user, array $roles): void
+    {
+        $superAdminRole = (string) config('tyanc.reserved_roles.super_admin');
+
+        if (! in_array($superAdminRole, $roles, true)) {
+            return;
+        }
+
+        if (! $actor->hasRole($superAdminRole)) {
+            throw new AuthorizationException(__('Only the reserved super admin user may assign the super admin role.'));
+        }
+
+        if (! $user instanceof User || $user->reserved_key !== 'super_admin') {
+            throw new AuthorizationException(__('The super admin role may only be assigned to the reserved Supa Manuse user.'));
         }
     }
 

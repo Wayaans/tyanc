@@ -69,7 +69,7 @@ final readonly class StartConversation
             ]);
         }
 
-        return $conversation->fresh(['participants.profile', 'latestMessage.sender.profile']) ?? $conversation;
+        return $conversation->fresh(['participants', 'latestMessage.sender']) ?? $conversation;
     }
 
     /**

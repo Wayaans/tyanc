@@ -26,6 +26,9 @@ final class UserIndexData extends Data
         public string $timezone,
         public array $roles,
         public array $permissions,
+        public bool $is_reserved,
+        public bool $is_delete_protected,
+        public ?string $reserved_key,
         public ?string $last_login_at,
         public ?string $last_login_ip,
         public ?string $deleted_at,
@@ -36,7 +39,7 @@ final class UserIndexData extends Data
 
     public static function fromModel(User $user): self
     {
-        $user->loadMissing('profile', 'roles', 'permissions');
+        $user->loadMissing('roles', 'permissions');
         $form = UserFormData::fromModel($user);
 
         return new self(
@@ -50,6 +53,9 @@ final class UserIndexData extends Data
             timezone: $user->timezone,
             roles: $user->roles->pluck('name')->filter()->values()->all(),
             permissions: $user->permissions->pluck('name')->filter()->values()->all(),
+            is_reserved: $user->isReserved(),
+            is_delete_protected: $user->isDeleteProtected(),
+            reserved_key: $user->reserved_key,
             last_login_at: $user->last_login_at?->toIso8601String(),
             last_login_ip: $user->last_login_ip,
             deleted_at: $user->deleted_at?->toIso8601String(),

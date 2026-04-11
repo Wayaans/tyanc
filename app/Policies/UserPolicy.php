@@ -39,6 +39,7 @@ final class UserPolicy extends PermissionResourcePolicy
     {
         return $this->authorizeAbility($user, __FUNCTION__)
             && $user->isNot($model)
+            && ! $model->isDeleteProtected()
             && $this->canManageTarget($user, $model);
     }
 

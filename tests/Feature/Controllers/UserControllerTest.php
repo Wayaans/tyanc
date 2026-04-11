@@ -43,10 +43,7 @@ it('may register a new user', function (): void {
         ->and($user->status->value)->toBe('active')
         ->and($user->locale)->toBe('en')
         ->and($user->timezone)->toBe('UTC')
-        ->and(Hash::check('password1234', $user->password))->toBeTrue()
-        ->and($user->profile)->not->toBeNull()
-        ->and($user->profile->first_name)->toBe('Test')
-        ->and($user->profile->last_name)->toBe('User');
+        ->and(Hash::check('password1234', $user->password))->toBeTrue();
 
     $this->assertAuthenticatedAs($user);
 
@@ -118,8 +115,7 @@ it('returns dto json when registering with a json request', function (): void {
 
     $response->assertCreated()
         ->assertJsonPath('email', 'json@example.com')
-        ->assertJsonPath('profile.first_name', 'Json')
-        ->assertJsonPath('profile.last_name', 'User');
+        ->assertJsonPath('name', 'Json User');
 });
 
 it('requires password', function (): void {
@@ -164,7 +160,7 @@ it('may delete user account', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
+        ->fromRoute('settings.account.edit')
         ->delete(route('user.destroy'), [
             'password' => 'password',
         ]);
@@ -179,10 +175,10 @@ it('requires password to delete account', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
+        ->fromRoute('settings.account.edit')
         ->delete(route('user.destroy'), []);
 
-    $response->assertRedirectToRoute('user-profile.edit')
+    $response->assertRedirectToRoute('settings.account.edit')
         ->assertSessionHasErrors('password');
 
     $this->assertNotSoftDeleted($user);
@@ -194,12 +190,31 @@ it('requires correct password to delete account', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
+        ->fromRoute('settings.account.edit')
         ->delete(route('user.destroy'), [
             'password' => 'wrong-password',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit')
+    $response->assertRedirectToRoute('settings.account.edit')
+        ->assertSessionHasErrors('password');
+
+    $this->assertNotSoftDeleted($user);
+});
+
+it('blocks deletion of reserved user accounts', function (): void {
+    $user = User::factory()->create([
+        'password' => Hash::make('password'),
+        'is_reserved' => true,
+        'reserved_key' => 'admin',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->fromRoute('settings.account.edit')
+        ->delete(route('user.destroy'), [
+            'password' => 'password',
+        ]);
+
+    $response->assertRedirectToRoute('settings.account.edit')
         ->assertSessionHasErrors('password');
 
     $this->assertNotSoftDeleted($user);

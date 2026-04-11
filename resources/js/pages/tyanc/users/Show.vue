@@ -4,15 +4,9 @@ import { Head } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     AtSign,
-    Briefcase,
-    Building2,
-    Calendar,
     Clock,
     Key,
-    Link2,
     Mail,
-    MapPin,
-    Phone,
     Shield,
     ShieldOff,
     Trash2,
@@ -56,13 +50,6 @@ const dateFormatter = computed(
         }),
 );
 
-const dateOnlyFormatter = computed(
-    () =>
-        new Intl.DateTimeFormat(locale.value, {
-            dateStyle: 'medium',
-        }),
-);
-
 function formatDate(date: string | null | undefined): string {
     if (!date) {
         return '—';
@@ -70,52 +57,6 @@ function formatDate(date: string | null | undefined): string {
 
     return dateFormatter.value.format(new Date(date));
 }
-
-function formatDateOnly(date: string | null | undefined): string {
-    if (!date) {
-        return '—';
-    }
-
-    return dateOnlyFormatter.value.format(new Date(date));
-}
-
-const socialEntries = computed(() =>
-    props.user.social_links
-        ? Object.entries(props.user.social_links).filter(([, url]) =>
-              Boolean(url),
-          )
-        : [],
-);
-
-const hasAddress = computed(
-    () => props.user.address_line_1 || props.user.city || props.user.country,
-);
-
-const formattedAddress = computed(() => {
-    const lines: string[] = [];
-
-    if (props.user.address_line_1) {
-        lines.push(props.user.address_line_1);
-    }
-
-    if (props.user.address_line_2) {
-        lines.push(props.user.address_line_2);
-    }
-
-    const cityLine = [props.user.city, props.user.state, props.user.postal_code]
-        .filter(Boolean)
-        .join(', ');
-
-    if (cityLine) {
-        lines.push(cityLine);
-    }
-
-    if (props.user.country) {
-        lines.push(props.user.country);
-    }
-
-    return lines;
-});
 
 const suspendProcessing = ref(false);
 const deleteProcessing = ref(false);
@@ -235,26 +176,6 @@ function handleDelete() {
                                 >
                                     {{ role }}
                                 </Badge>
-                            </div>
-
-                            <div
-                                v-if="
-                                    props.user.job_title ||
-                                    props.user.company_name
-                                "
-                                class="flex items-center gap-1.5 text-sm text-muted-foreground"
-                            >
-                                <Briefcase class="size-3.5 shrink-0" />
-                                <span>
-                                    {{
-                                        [
-                                            props.user.job_title,
-                                            props.user.company_name,
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' · ')
-                                    }}
-                                </span>
                             </div>
                         </div>
 
@@ -474,167 +395,6 @@ function handleDelete() {
                             <p v-else class="text-sm text-muted-foreground">
                                 {{ __('No direct permissions.') }}
                             </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Profile card -->
-                <div
-                    class="rounded-2xl border border-sidebar-border/70 bg-background/90 p-6"
-                >
-                    <div class="mb-4 flex items-center gap-2">
-                        <Calendar class="size-4 text-muted-foreground" />
-                        <h2 class="text-sm font-semibold text-foreground">
-                            {{ __('Profile') }}
-                        </h2>
-                    </div>
-                    <dl class="space-y-3">
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('First name') }}
-                            </dt>
-                            <dd class="text-right text-sm">
-                                {{ props.user.first_name ?? '—' }}
-                            </dd>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('Last name') }}
-                            </dt>
-                            <dd class="text-right text-sm">
-                                {{ props.user.last_name ?? '—' }}
-                            </dd>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-4">
-                            <dt
-                                class="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground"
-                            >
-                                <Phone class="size-3.5" />
-                                {{ __('Phone') }}
-                            </dt>
-                            <dd class="text-right font-mono text-sm">
-                                {{ props.user.phone_number ?? '—' }}
-                            </dd>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('Date of birth') }}
-                            </dt>
-                            <dd class="text-right text-sm">
-                                {{ formatDateOnly(props.user.date_of_birth) }}
-                            </dd>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('Gender') }}
-                            </dt>
-                            <dd class="text-right text-sm capitalize">
-                                {{ props.user.gender ?? '—' }}
-                            </dd>
-                        </div>
-                        <template v-if="props.user.bio">
-                            <Separator />
-                            <div class="space-y-1.5">
-                                <dt class="text-sm text-muted-foreground">
-                                    {{ __('Bio') }}
-                                </dt>
-                                <dd
-                                    class="text-sm leading-relaxed text-foreground"
-                                >
-                                    {{ props.user.bio }}
-                                </dd>
-                            </div>
-                        </template>
-                    </dl>
-                </div>
-
-                <!-- Address card -->
-                <div
-                    class="rounded-2xl border border-sidebar-border/70 bg-background/90 p-6"
-                >
-                    <div class="mb-4 flex items-center gap-2">
-                        <MapPin class="size-4 text-muted-foreground" />
-                        <h2 class="text-sm font-semibold text-foreground">
-                            {{ __('Address') }}
-                        </h2>
-                    </div>
-
-                    <address
-                        v-if="hasAddress"
-                        class="space-y-1 text-sm text-foreground not-italic"
-                    >
-                        <p v-for="(line, i) in formattedAddress" :key="i">
-                            {{ line }}
-                        </p>
-                    </address>
-                    <p v-else class="text-sm text-muted-foreground">
-                        {{ __('No address on file.') }}
-                    </p>
-
-                    <!-- Work sub-section inside address card for layout balance -->
-                    <Separator class="my-4" />
-
-                    <div class="mb-4 flex items-center gap-2">
-                        <Building2 class="size-4 text-muted-foreground" />
-                        <h2 class="text-sm font-semibold text-foreground">
-                            {{ __('Work') }}
-                        </h2>
-                    </div>
-                    <dl class="space-y-3">
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('Company') }}
-                            </dt>
-                            <dd class="truncate text-right text-sm">
-                                {{ props.user.company_name ?? '—' }}
-                            </dd>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-4">
-                            <dt class="shrink-0 text-sm text-muted-foreground">
-                                {{ __('Job title') }}
-                            </dt>
-                            <dd class="truncate text-right text-sm">
-                                {{ props.user.job_title ?? '—' }}
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
-
-                <!-- Social links card (full-width if present) -->
-                <div
-                    v-if="socialEntries.length > 0"
-                    class="rounded-2xl border border-sidebar-border/70 bg-background/90 p-6 lg:col-span-2"
-                >
-                    <div class="mb-4 flex items-center gap-2">
-                        <Link2 class="size-4 text-muted-foreground" />
-                        <h2 class="text-sm font-semibold text-foreground">
-                            {{ __('Social links') }}
-                        </h2>
-                    </div>
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        <div
-                            v-for="[platform, url] in socialEntries"
-                            :key="platform"
-                            class="flex items-center justify-between gap-3 rounded-lg border border-sidebar-border/50 bg-sidebar/10 px-3 py-2.5"
-                        >
-                            <span
-                                class="shrink-0 text-sm text-muted-foreground capitalize"
-                            >
-                                {{ platform }}
-                            </span>
-                            <a
-                                :href="url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="truncate text-right text-sm text-foreground hover:underline"
-                            >
-                                {{ url }}
-                            </a>
                         </div>
                     </div>
                 </div>

@@ -26,7 +26,7 @@ final readonly class SendMessage
         throw_if(! $conversation->participants()->whereKey($actor->getKey())->exists(), AuthorizationException::class);
 
         $message = DB::transaction(function () use ($actor, $conversation, $attributes): Message {
-            $conversation->loadMissing('participants.profile');
+            $conversation->loadMissing('participants');
 
             $message = $conversation->messages()->create([
                 'sender_id' => $actor->id,
@@ -71,7 +71,7 @@ final readonly class SendMessage
             return $message;
         });
 
-        $message->loadMissing(['sender.profile', 'conversation.participants.profile', 'conversation.latestMessage.sender.profile']);
+        $message->loadMissing(['sender', 'conversation.participants', 'conversation.latestMessage.sender']);
 
         event(new MessageSent($message->conversation, $message));
 

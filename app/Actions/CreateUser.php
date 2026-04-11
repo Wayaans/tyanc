@@ -9,15 +9,11 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
 use SensitiveParameter;
 
 final readonly class CreateUser
 {
-    public function __construct(private UpsertUserProfile $profiles) {}
-
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -28,6 +24,7 @@ final readonly class CreateUser
 
             $user = new User();
             $user->forceFill([
+                'name' => $this->resolveDisplayName($attributes, $username),
                 'username' => $username,
                 'email' => (string) $attributes['email'],
                 'password' => $password,
@@ -35,22 +32,15 @@ final readonly class CreateUser
                 'status' => $attributes['status'] ?? UserStatus::Active,
                 'timezone' => $attributes['timezone'] ?? config('app.timezone', 'UTC'),
                 'locale' => $attributes['locale'] ?? config('app.locale', 'en'),
+                'is_reserved' => (bool) ($attributes['is_reserved'] ?? false),
+                'reserved_key' => $this->nullableString($attributes['reserved_key'] ?? null),
                 'email_verified_at' => Features::enabled(Features::emailVerification()) ? null : now(),
-                ...$this->legacyNameAttributes($attributes, $username),
             ]);
             $user->save();
 
-            $profile = $this->profiles->handle($user, $attributes);
-
-            if (Schema::hasColumn('users', 'name')) {
-                $user->forceFill([
-                    'name' => $profile->fullName() ?? $this->resolveDisplayName($attributes, $username),
-                ])->saveQuietly();
-            }
-
             event(new Registered($user));
 
-            return $user->load('profile');
+            return $user->fresh();
         });
     }
 
@@ -59,13 +49,13 @@ final readonly class CreateUser
      */
     private function resolveUsername(array $attributes): string
     {
-        $base = $attributes['username'] ?? Str::before((string) ($attributes['email'] ?? ''), '@');
+        $base = $attributes['username'] ?? str((string) ($attributes['email'] ?? ''))->before('@')->value();
 
         if ((! is_string($base) || $base === '') && isset($attributes['name']) && is_string($attributes['name'])) {
             $base = $attributes['name'];
         }
 
-        $username = Str::of((string) $base)
+        $username = str((string) $base)
             ->lower()
             ->ascii()
             ->replaceMatches('/[^a-z0-9_-]+/', '-')
@@ -87,6 +77,19 @@ final readonly class CreateUser
         return $candidate;
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function resolveDisplayName(array $attributes, string $fallback): string
+    {
+        $name = $this->nullableString($attributes['name'] ?? null) ?? collect([
+            $this->nullableString($attributes['first_name'] ?? null),
+            $this->nullableString($attributes['last_name'] ?? null),
+        ])->filter()->implode(' ');
+
+        return $name !== '' ? $name : $fallback;
+    }
+
     private function storeAvatar(mixed $avatar): ?string
     {
         if (! $avatar instanceof UploadedFile) {
@@ -96,43 +99,14 @@ final readonly class CreateUser
         return $avatar->store('avatars', 'public');
     }
 
-    /**
-     * @param  array<string, mixed>  $attributes
-     * @return array<string, string>
-     */
-    private function legacyNameAttributes(array $attributes, string $username): array
+    private function nullableString(mixed $value): ?string
     {
-        if (! Schema::hasColumn('users', 'name')) {
-            return [];
+        if (! is_string($value)) {
+            return null;
         }
 
-        return [
-            'name' => $this->resolveDisplayName($attributes, $username),
-        ];
-    }
+        $value = mb_trim($value);
 
-    /**
-     * @param  array<string, mixed>  $attributes
-     */
-    private function resolveDisplayName(array $attributes, string $fallback): string
-    {
-        $name = isset($attributes['name']) && is_string($attributes['name'])
-            ? mb_trim($attributes['name'])
-            : '';
-
-        if ($name !== '') {
-            return $name;
-        }
-
-        $segments = array_filter([
-            is_string($attributes['first_name'] ?? null) ? mb_trim($attributes['first_name']) : null,
-            is_string($attributes['last_name'] ?? null) ? mb_trim($attributes['last_name']) : null,
-        ]);
-
-        if ($segments !== []) {
-            return implode(' ', $segments);
-        }
-
-        return $fallback;
+        return $value === '' ? null : $value;
     }
 }

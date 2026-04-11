@@ -37,10 +37,6 @@ final class RolesAndPermissionsSeeder extends Seeder
         return [
             (string) config('tyanc.reserved_roles.super_admin') => 100,
             (string) config('tyanc.reserved_roles.admin') => 90,
-            'Operations Lead' => 70,
-            'Support Lead' => 40,
-            'Demo Analyst' => 20,
-            'Access Auditor' => 15,
         ];
     }
 }

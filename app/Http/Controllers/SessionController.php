@@ -44,7 +44,7 @@ final readonly class SessionController
         $request->session()->regenerate();
 
         if ($request->wantsJson()) {
-            return response()->json(UserData::fromModel($user->loadMissing('profile')));
+            return response()->json(UserData::fromModel($user));
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

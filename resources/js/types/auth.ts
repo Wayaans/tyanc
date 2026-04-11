@@ -1,24 +1,3 @@
-export type UserProfile = {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    phone_number: string | null;
-    date_of_birth: string | null;
-    gender: string | null;
-    address_line_1: string | null;
-    address_line_2: string | null;
-    city: string | null;
-    state: string | null;
-    country: string | null;
-    postal_code: string | null;
-    company_name: string | null;
-    job_title: string | null;
-    bio: string | null;
-    social_links: Record<string, string> | null;
-    created_at: string;
-    updated_at: string;
-};
-
 export type User = {
     id: string;
     name: string;
@@ -28,12 +7,13 @@ export type User = {
     status: string;
     timezone: string;
     locale: string;
+    is_reserved: boolean;
+    reserved_key: string | null;
     email_verified_at: string | null;
     last_login_at: string | null;
     last_login_ip: string | null;
     created_at: string;
     updated_at: string;
-    profile: UserProfile | null;
 };
 
 export type Auth = {

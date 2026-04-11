@@ -36,7 +36,8 @@ final readonly class ExportController
         $this->authorizePermission($user, PermissionKey::tyanc('users', 'export'));
 
         $users = User::query()
-            ->with(['profile', 'roles'])
+            ->with('roles')
+            ->orderBy('name')
             ->orderBy('username')
             ->get();
 

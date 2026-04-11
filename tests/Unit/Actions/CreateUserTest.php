@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
 
-it('may create a user and profile', function (): void {
+it('may create a user without a profile record', function (): void {
     Event::fake([Registered::class]);
 
     $action = resolve(CreateUser::class);
@@ -24,7 +24,6 @@ it('may create a user and profile', function (): void {
         ->and($user->username)->toBe('example')
         ->and($user->email)->toBe('example@email.com')
         ->and($user->password)->not->toBe('password')
-        ->and($user->profile)->not->toBeNull()
         ->and($user->email_verified_at)->not->toBeNull();
 
     Event::assertDispatched(Registered::class);

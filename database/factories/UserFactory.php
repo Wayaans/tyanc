@@ -19,7 +19,10 @@ final class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $name = fake()->name();
+
         return [
+            'name' => $name,
             'username' => Str::of((string) fake()->unique()->userName())
                 ->lower()
                 ->replaceMatches('/[^a-z0-9_-]+/', '-')
@@ -31,6 +34,8 @@ final class UserFactory extends Factory
             'status' => UserStatus::Active,
             'timezone' => 'UTC',
             'locale' => 'en',
+            'is_reserved' => false,
+            'reserved_key' => null,
             'email_verified_at' => now(),
             'remember_token' => fake()->regexify('[A-Za-z0-9]{10}'),
             'two_factor_secret' => null,

@@ -7,6 +7,7 @@ namespace App\Actions\Tyanc\Users;
 use App\Data\Tyanc\Users\UserFormData;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 final readonly class DeleteUser
 {
@@ -14,7 +15,13 @@ final readonly class DeleteUser
     {
         Gate::forUser($actor)->authorize('delete', $user);
 
-        $before = UserFormData::fromModel($user->fresh(['profile', 'roles', 'permissions']))->toArray();
+        if ($user->isDeleteProtected()) {
+            throw ValidationException::withMessages([
+                'user' => __('Reserved users cannot be deleted.'),
+            ]);
+        }
+
+        $before = UserFormData::fromModel($user->fresh(['roles', 'permissions']))->toArray();
 
         $user->delete();
 
@@ -24,7 +31,7 @@ final readonly class DeleteUser
             ->event('deleted')
             ->withProperties([
                 'old' => $before,
-                'attributes' => UserFormData::fromModel($user->fresh(['profile', 'roles', 'permissions']))->toArray(),
+                'attributes' => UserFormData::fromModel($user->fresh(['roles', 'permissions']))->toArray(),
             ])
             ->log('User deleted');
     }

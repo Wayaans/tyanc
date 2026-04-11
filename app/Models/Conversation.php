@@ -71,7 +71,7 @@ final class Conversation extends Model
 
     public function titleFor(?User $viewer = null): string
     {
-        $this->loadMissing('participants.profile');
+        $this->loadMissing('participants');
 
         $participants = $this->participants;
 

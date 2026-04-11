@@ -318,9 +318,9 @@ it('shares only enabled and accessible apps on shared routes and falls back when
 
     $this->actingAs($user)
         ->withCookie('current_app', 'demo')
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('currentApp', 'tyanc')
             ->has('accessibleApps', 1)
             ->where('accessibleApps.0.key', 'tyanc')
@@ -330,9 +330,9 @@ it('shares only enabled and accessible apps on shared routes and falls back when
 
     $this->actingAs($user)
         ->withCookie('current_app', 'erp')
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('currentApp', 'erp')
             ->has('accessibleApps', 2)
             ->where('accessibleApps.1.key', 'erp')
@@ -348,9 +348,9 @@ it('does not fall back to configured apps when all registry apps are disabled', 
     ]);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('accessibleApps', [])
             ->where('sidebarNavigation.apps', [])
             ->where('sidebarNavigation.menu', []));
@@ -362,9 +362,9 @@ it('seeds the app registry before sharing accessible apps so protected demo page
     expect(AppPage::query()->count())->toBe(0);
 
     $this->actingAs($user)
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('currentApp', 'tyanc')
             ->has('accessibleApps', 1)
             ->where('accessibleApps.0.key', 'tyanc')
@@ -393,9 +393,9 @@ it('shows manage-gated sidebar items for authenticated users with the matching p
     ]));
 
     $this->actingAs($user)
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('sidebarNavigation.menu.1.title', 'Users')
             ->where('sidebarNavigation.menu.1.href', '/tyanc/users'));
 });
