@@ -329,6 +329,9 @@ final readonly class ResolveTranslations
                 'Password confirmation is disabled',
                 'Password confirmation is not available on this application. Contact your administrator for more information.',
                 'Confirm and continue',
+                'The admin foundation for modern apps',
+                'Manage users, roles, permissions, and app access across your platform.',
+                'Go to dashboard',
             ],
             'profile' => [
                 'Profile settings',

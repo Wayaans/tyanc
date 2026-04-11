@@ -10,7 +10,6 @@ export type UseAppearanceReturn = {
     updateAppearance: (value: Appearance) => void;
 };
 
-// Module-level appearance ref — shared across all useAppearance() consumers...
 const appearance = ref<Appearance>('system');
 
 export function updateTheme(value: Appearance): void {
@@ -44,16 +43,12 @@ export function applyCssVariables(vars: Record<string, string>): void {
 }
 
 export function syncThemeFromPageProps(theme: ThemeProps): void {
-    // Apply CSS custom properties from the server-resolved theme...
     applyCssVariables(theme.css_variables);
 
-    // Sync appearance ref so reactive consumers stay correct...
     appearance.value = theme.appearance;
 
-    // Apply dark/light class to <html>...
     updateTheme(theme.appearance);
 
-    // Keep localStorage in sync so initializeTheme (FOUC prevention) stays consistent...
     if (typeof window !== 'undefined') {
         localStorage.setItem('appearance', theme.appearance);
     }
@@ -104,11 +99,9 @@ export function initializeTheme(): void {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
     updateTheme(savedAppearance || 'system');
 
-    // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
@@ -134,10 +127,8 @@ export function useAppearance(): UseAppearanceReturn {
     function updateAppearance(value: Appearance) {
         appearance.value = value;
 
-        // Store in localStorage for client-side persistence...
         localStorage.setItem('appearance', value);
 
-        // Store in cookie for SSR...
         setCookie('appearance', value);
 
         updateTheme(value);

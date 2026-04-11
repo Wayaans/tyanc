@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-it('has welcome page', function (): void {
+it('has the tyanc welcome page', function (): void {
     $page = visit('/');
 
-    $page->assertSee('Laravel');
+    $page->assertSee('Tyanc')
+        ->assertSee('The admin foundation for modern apps');
 });

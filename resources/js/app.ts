@@ -46,7 +46,6 @@ void createInertiaApp({
     },
 });
 
-// Re-apply theme on every Inertia navigation so settings changes take effect without a full reload...
 router.on('navigate', (event) => {
     const theme = event.detail.page.props.theme as ThemeProps | undefined;
 
@@ -55,5 +54,4 @@ router.on('navigate', (event) => {
     }
 });
 
-// This will set light / dark mode on page load...
 initializeTheme();

@@ -32,7 +32,7 @@ final class UserFactory extends Factory
             'timezone' => 'UTC',
             'locale' => 'en',
             'email_verified_at' => now(),
-            'remember_token' => Str::random(10),
+            'remember_token' => fake()->regexify('[A-Za-z0-9]{10}'),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
