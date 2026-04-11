@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 final class SettingsAsset extends Model implements HasMedia
 {
@@ -53,7 +54,11 @@ final class SettingsAsset extends Model implements HasMedia
     {
         $media = $this->getFirstMedia($collection);
 
-        return $media?->getUrl();
+        if (! $media instanceof Media) {
+            return null;
+        }
+
+        return $this->normalizeMediaUrl($media->getUrl(), (string) $media->disk);
     }
 
     public function resolveUuid(string $collection): ?string
@@ -72,5 +77,25 @@ final class SettingsAsset extends Model implements HasMedia
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    private function normalizeMediaUrl(string $url, string $disk): string
+    {
+        if (config(sprintf('filesystems.disks.%s.driver', $disk)) !== 'local') {
+            return $url;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            return $url;
+        }
+
+        $query = parse_url($url, PHP_URL_QUERY);
+        $fragment = parse_url($url, PHP_URL_FRAGMENT);
+
+        return $path
+            .(is_string($query) && $query !== '' ? '?'.$query : '')
+            .(is_string($fragment) && $fragment !== '' ? '#'.$fragment : '');
     }
 }

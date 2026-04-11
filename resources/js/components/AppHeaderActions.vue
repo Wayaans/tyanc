@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import { useFullscreen } from '@vueuse/core';
 import { Maximize, Minimize, Monitor, Moon, Sun } from 'lucide-vue-next';
 import { computed } from 'vue';
+import UserPreferencesController from '@/actions/App/Http/Controllers/UserPreferencesController';
 import MessageDropdown from '@/components/admin/MessageDropdown.vue';
 import NotificationDropdown from '@/components/admin/NotificationDropdown.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ type AppearanceOption = {
     icon: typeof Sun;
 };
 
+const page = usePage();
 const { appearance, updateAppearance } = useAppearance();
 const {
     isFullscreen,
@@ -57,12 +60,57 @@ const currentAppearance = computed(
         ) ?? appearanceOptions.value[2],
 );
 
+function csrfToken(): string {
+    if (typeof document === 'undefined') {
+        return '';
+    }
+
+    return (
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') ?? ''
+    );
+}
+
+function requestHeaders(): HeadersInit {
+    return {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+}
+
+async function syncAppearancePreference(value: Appearance): Promise<void> {
+    if (!page.props.auth.user) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            UserPreferencesController.updateAppearance.url(),
+            {
+                method: 'PATCH',
+                headers: requestHeaders(),
+                body: JSON.stringify({ appearance: value }),
+            },
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to sync appearance preference.');
+        }
+    } catch {
+        // Ignore background preference sync failures and keep immediate UI feedback.
+    }
+}
+
 const handleAppearanceChange = (value: string) => {
     if (value !== 'light' && value !== 'dark' && value !== 'system') {
         return;
     }
 
     updateAppearance(value);
+    void syncAppearancePreference(value);
 };
 
 const handleFullscreenToggle = async () => {
@@ -113,7 +161,7 @@ const handleFullscreenToggle = async () => {
         <Button
             variant="ghost"
             size="icon"
-            class="size-8"
+            class="hidden size-8 sm:inline-flex"
             :disabled="!isFullscreenSupported"
             @click="void handleFullscreenToggle()"
         >

@@ -60,6 +60,10 @@ it('uploads image and non-image files to the shared tyanc library', function ():
         ->assertJsonCount(2, 'files')
         ->assertJsonPath('files.0.uploaded_by_name', $manager->name);
 
+    expect($response->json('files.0.url'))->toStartWith('/storage/')
+        ->and($response->json('files.0.preview_url'))->toStartWith('/storage/')
+        ->and($response->json('files.1.url'))->toStartWith('/storage/');
+
     $library = FileLibrary::shared();
     $mediaItems = $library->getMedia(FileLibrary::FilesCollection);
 

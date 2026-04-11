@@ -6,6 +6,7 @@ import type {
     NotificationsPayload,
     SidebarNavigationData,
     ThemeProps,
+    UserPreferencesProps,
 } from '@/types';
 import type { Auth } from '@/types/auth';
 
@@ -45,6 +46,7 @@ declare module '@inertiajs/core' {
             translations: Record<string, string>;
             /** Notification summary shared on every authenticated page. */
             notifications: NotificationsPayload | null;
+            userPreferences: UserPreferencesProps;
             messages: MessagesShellPayload;
             messagesUnreadCount: number;
             /** All apps the current user can access, registry-driven. */

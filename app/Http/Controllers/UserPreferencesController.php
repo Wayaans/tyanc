@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Settings\ResolveRuntimeSettings;
+use App\Actions\Settings\UpdateUserAppearancePreference;
 use App\Actions\Settings\UpdateUserPreferences;
 use App\Models\User;
 use DateTimeZone;
@@ -47,6 +48,15 @@ final readonly class UserPreferencesController
         }
 
         return to_route('settings.preferences.edit');
+    }
+
+    public function updateAppearance(Request $request, #[CurrentUser] User $user, UpdateUserAppearancePreference $action): JsonResponse
+    {
+        $preference = $action->handle($user, $request->input('appearance'));
+
+        return response()->json([
+            'appearance' => $preference->appearance,
+        ]);
     }
 
     /**

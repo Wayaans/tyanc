@@ -43,6 +43,7 @@ final class MediaFileData extends Data
         $isImage = $mimeGroup === 'image';
         $isPreviewable = $isImage || $mimeType === 'application/pdf';
         $customProperties = $media->custom_properties;
+        $url = self::resolveMediaUrl($media);
 
         return new self(
             id: (int) $media->id,
@@ -56,9 +57,9 @@ final class MediaFileData extends Data
             size_human: Number::fileSize((int) $media->size),
             is_image: $isImage,
             is_previewable: $isPreviewable,
-            preview_url: $isPreviewable ? $media->getUrl() : null,
-            url: $media->getUrl(),
-            download_url: $media->getUrl(),
+            preview_url: $isPreviewable ? $url : null,
+            url: $url,
+            download_url: $url,
             collection_name: (string) $media->collection_name,
             uploaded_by_id: data_get($customProperties, 'uploaded_by_id'),
             uploaded_by_name: data_get($customProperties, 'uploaded_by_name'),
@@ -66,5 +67,27 @@ final class MediaFileData extends Data
             created_at: $media->created_at?->toIso8601String() ?? now()->toIso8601String(),
             updated_at: $media->updated_at?->toIso8601String() ?? now()->toIso8601String(),
         );
+    }
+
+    private static function resolveMediaUrl(Media $media): string
+    {
+        $url = $media->getUrl();
+
+        if (config('filesystems.disks.'.$media->disk.'.driver') !== 'local') {
+            return $url;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            return $url;
+        }
+
+        $query = parse_url($url, PHP_URL_QUERY);
+        $fragment = parse_url($url, PHP_URL_FRAGMENT);
+
+        return $path
+            .(is_string($query) && $query !== '' ? '?'.$query : '')
+            .(is_string($fragment) && $fragment !== '' ? '#'.$fragment : '');
     }
 }

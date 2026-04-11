@@ -23,3 +23,17 @@ export type ThemeProps = {
     font_family_stack: string;
     css_variables: Record<string, string>;
 };
+
+export type UserPreferencesProps = {
+    locale: string | null;
+    timezone: string | null;
+    appearance: Appearance | null;
+    sidebar_variant: string | null;
+    spacing_density: string | null;
+    resolved_locale: string;
+    resolved_timezone: string;
+    resolved_appearance: Appearance;
+    resolved_sidebar_variant: string;
+    resolved_spacing_density: string;
+    resolved_spacing_density_value: number;
+};
