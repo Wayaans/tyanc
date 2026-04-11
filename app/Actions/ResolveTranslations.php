@@ -83,7 +83,7 @@ final readonly class ResolveTranslations
             $groups[] = 'two_factor';
         }
 
-        if (str_starts_with($routeName, 'user-profile.')) {
+        if (str_starts_with($routeName, 'settings.account.')) {
             $groups[] = 'profile';
         }
 

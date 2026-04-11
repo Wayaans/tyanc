@@ -10,16 +10,16 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 
-it('renders profile edit page', function (): void {
+it('renders account settings page', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
         ->fromRoute('dashboard')
-        ->get(route('user-profile.edit'));
+        ->get(route('settings.account.edit'));
 
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->has('locales')
             ->has('statuses')
             ->has('timezones')
@@ -28,33 +28,29 @@ it('renders profile edit page', function (): void {
             ->where('canManageStatus', false));
 });
 
-it('may update profile information', function (): void {
+it('may update account information', function (): void {
     $user = User::factory()->create([
+        'name' => 'Old Name',
         'username' => 'old-name',
         'email' => 'old@example.com',
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
             'name' => 'New Name',
             'username' => 'new-name',
             'email' => 'new@example.com',
-            'city' => 'Denpasar',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit');
+    $response->assertRedirectToRoute('settings.account.edit');
 
-    $user->refresh()->load('profile');
-
-    expect($user->name)->toBe('New Name')
-        ->and($user->username)->toBe('new-name')
-        ->and($user->email)->toBe('new@example.com')
-        ->and($user->profile)->not->toBeNull()
-        ->and($user->profile->city)->toBe('Denpasar');
+    expect($user->fresh()->name)->toBe('New Name')
+        ->and($user->fresh()->username)->toBe('new-name')
+        ->and($user->fresh()->email)->toBe('new@example.com');
 });
 
-it('stores an uploaded avatar when updating the profile', function (): void {
+it('stores an uploaded avatar when updating the account', function (): void {
     Storage::fake('public');
 
     $user = User::factory()->create([
@@ -62,13 +58,15 @@ it('stores an uploaded avatar when updating the profile', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
+            'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'avatar' => UploadedFile::fake()->image('avatar.jpg', 256, 256),
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit');
+    $response->assertRedirectToRoute('settings.account.edit');
 
     $user->refresh();
 
@@ -76,7 +74,7 @@ it('stores an uploaded avatar when updating the profile', function (): void {
     Storage::disk('public')->assertExists((string) $user->avatar);
 
     $this->actingAs($user)
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
             ->where(
                 'auth.user.avatar',
@@ -91,14 +89,16 @@ it('keeps email verification when email changes while the feature is disabled', 
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
+            'name' => $user->name,
+            'username' => $user->username,
             'email' => 'new@example.com',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit');
+    $response->assertRedirectToRoute('settings.account.edit');
 
-    expect($user->refresh()->email_verified_at)->not->toBeNull();
+    expect($user->fresh()->email_verified_at)->not->toBeNull();
 });
 
 it('resets email verification and sends a notification when the feature is enabled', function (): void {
@@ -117,14 +117,16 @@ it('resets email verification and sends a notification when the feature is enabl
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
+            'name' => $user->name,
+            'username' => $user->username,
             'email' => 'new@example.com',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit');
+    $response->assertRedirectToRoute('settings.account.edit');
 
-    expect($user->refresh()->email_verified_at)->toBeNull();
+    expect($user->fresh()->email_verified_at)->toBeNull();
 
     Notification::assertSentTo($user, VerifyEmail::class);
 });
@@ -135,12 +137,15 @@ it('prevents a regular user from updating their own status', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
             'status' => 'suspended',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit')
+    $response->assertRedirectToRoute('settings.account.edit')
         ->assertSessionHasErrors('status');
 
     expect($user->fresh()->status->value)->toBe('active');
@@ -160,60 +165,24 @@ it('allows a Supa Manuse user to update status', function (): void {
     $user->assignRole($role);
 
     $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
+        ->fromRoute('settings.account.edit')
+        ->patch(route('settings.account.update'), [
+            'name' => $user->name,
+            'username' => $user->username,
             'email' => 'super@example.com',
             'status' => 'suspended',
         ]);
 
-    $response->assertRedirectToRoute('user-profile.edit');
+    $response->assertRedirectToRoute('settings.account.edit');
 
     expect($user->fresh()->status->value)->toBe('suspended');
 });
 
-it('requires email', function (): void {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), []);
-
-    $response->assertRedirectToRoute('user-profile.edit')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires valid email', function (): void {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
-            'email' => 'not-an-email',
-        ]);
-
-    $response->assertRedirectToRoute('user-profile.edit')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires unique email except own', function (): void {
-    User::factory()->create(['email' => 'existing@example.com']);
-    $user = User::factory()->create(['email' => 'test@example.com']);
-
-    $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
-            'email' => 'existing@example.com',
-        ]);
-
-    $response->assertRedirectToRoute('user-profile.edit')
-        ->assertSessionHasErrors('email');
-});
-
-it('returns dto json for the profile edit payload', function (): void {
+it('returns dto json for the account edit payload', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->getJson(route('user-profile.edit'))
+        ->getJson(route('settings.account.edit'))
         ->assertOk()
         ->assertJsonPath('user.id', $user->id)
         ->assertJsonPath('user.username', $user->username)
@@ -226,14 +195,16 @@ it('returns dto json for the profile edit payload', function (): void {
             'timezones',
             'user' => [
                 'id',
+                'name',
                 'username',
                 'email',
-                'profile',
+                'is_reserved',
+                'reserved_key',
             ],
         ]);
 });
 
-it('returns dto json when updating profile information', function (): void {
+it('returns dto json when updating account information', function (): void {
     $role = Role::query()->create([
         'name' => config('tyanc.reserved_roles.super_admin'),
         'guard_name' => 'web',
@@ -246,29 +217,14 @@ it('returns dto json when updating profile information', function (): void {
     $user->assignRole($role);
 
     $this->actingAs($user)
-        ->patchJson(route('user-profile.update'), [
+        ->patchJson(route('settings.account.update'), [
+            'name' => 'After User',
+            'username' => $user->username,
             'email' => 'after@example.com',
             'status' => 'suspended',
-            'first_name' => 'After',
-            'last_name' => 'User',
         ])
         ->assertOk()
+        ->assertJsonPath('name', 'After User')
         ->assertJsonPath('email', 'after@example.com')
-        ->assertJsonPath('status', 'suspended')
-        ->assertJsonPath('profile.first_name', 'After');
-});
-
-it('allows keeping same email', function (): void {
-    $user = User::factory()->create([
-        'email' => 'test@example.com',
-    ]);
-
-    $response = $this->actingAs($user)
-        ->fromRoute('user-profile.edit')
-        ->patch(route('user-profile.update'), [
-            'email' => 'test@example.com',
-        ]);
-
-    $response->assertRedirectToRoute('user-profile.edit')
-        ->assertSessionDoesntHaveErrors();
+        ->assertJsonPath('status', 'suspended');
 });

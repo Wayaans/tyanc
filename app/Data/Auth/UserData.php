@@ -20,18 +20,17 @@ final class UserData extends Data
         public string $status,
         public string $timezone,
         public string $locale,
+        public bool $is_reserved,
+        public ?string $reserved_key,
         public ?string $email_verified_at,
         public ?string $last_login_at,
         public ?string $last_login_ip,
         public string $created_at,
         public string $updated_at,
-        public ?UserProfileData $profile,
     ) {}
 
     public static function fromModel(User $user): self
     {
-        $user->loadMissing('profile');
-
         return new self(
             id: (string) $user->id,
             name: $user->name,
@@ -41,12 +40,13 @@ final class UserData extends Data
             status: $user->status instanceof UserStatus ? $user->status->value : (string) $user->status,
             timezone: $user->timezone,
             locale: $user->locale,
+            is_reserved: $user->isReserved(),
+            reserved_key: $user->reserved_key,
             email_verified_at: $user->email_verified_at?->toIso8601String(),
             last_login_at: $user->last_login_at?->toIso8601String(),
             last_login_ip: $user->last_login_ip,
             created_at: $user->created_at instanceof CarbonInterface ? $user->created_at->toIso8601String() : now()->toIso8601String(),
             updated_at: $user->updated_at instanceof CarbonInterface ? $user->updated_at->toIso8601String() : now()->toIso8601String(),
-            profile: $user->profile ? UserProfileData::fromModel($user->profile) : null,
         );
     }
 

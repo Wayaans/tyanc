@@ -39,11 +39,11 @@ final class ConversationData extends Data
         int $unreadCount = 0,
         bool $includeMessages = false,
     ): self {
-        $conversation->loadMissing(['participants.profile', 'latestMessage.sender.profile']);
+        $conversation->loadMissing(['participants', 'latestMessage.sender']);
 
         if ($includeMessages) {
             $conversation->loadMissing(['messages' => fn ($query) => $query
-                ->with('sender.profile')
+                ->with('sender')
                 ->latest('created_at')
                 ->limit(50)]);
         }

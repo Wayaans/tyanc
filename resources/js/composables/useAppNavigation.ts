@@ -5,6 +5,7 @@ import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { dashboard as demoDashboard } from '@/routes/demo';
+import { edit as editAccount } from '@/routes/settings/account';
 import { index as accessMatrixRoute } from '@/routes/tyanc/access-matrix';
 import { index as activityLogRoute } from '@/routes/tyanc/activity-log';
 import {
@@ -23,7 +24,6 @@ import {
     index as usersRoute,
     show as usersShow,
 } from '@/routes/tyanc/users';
-import { edit as editProfile } from '@/routes/user-profile';
 import type { BreadcrumbItem, NavItem, SidebarNavigationData } from '@/types';
 
 const resolveFallbackSidebarNavigation = (
@@ -198,7 +198,7 @@ export function useAppNavigation() {
         rootBreadcrumb.value,
         {
             title: __('Account'),
-            href: editProfile(),
+            href: editAccount(),
         },
         {
             title: __(title),

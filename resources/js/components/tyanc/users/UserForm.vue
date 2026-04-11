@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronUp, Info, Upload } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import DatePickerField from '@/components/DatePickerField.vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import InputError from '@/components/InputError.vue';
 import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
@@ -19,7 +18,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { getInitials } from '@/composables/useInitials';
 import { useTranslations } from '@/lib/translations';
 import type { PermissionOption, RoleOption, SelectOption } from '@/types';
@@ -35,25 +33,6 @@ export type UserEditorFields = {
     timezone: string;
     roles: string[];
     permissions: string[];
-    first_name: string;
-    last_name: string;
-    phone_number: string;
-    date_of_birth: string;
-    gender: string;
-    address_line_1: string;
-    address_line_2: string;
-    city: string;
-    state: string;
-    country: string;
-    postal_code: string;
-    company_name: string;
-    job_title: string;
-    bio: string;
-    social_links: {
-        linkedin: string;
-        twitter: string;
-        github: string;
-    };
     password?: string;
     password_confirmation?: string;
 };
@@ -103,16 +82,6 @@ function updatePermission(permission: string, checked: boolean) {
         ? [...props.modelValue.permissions, permission]
         : props.modelValue.permissions.filter((p) => p !== permission);
     update('permissions', next);
-}
-
-function updateSocialLink(
-    key: keyof UserEditorFields['social_links'],
-    value: string,
-) {
-    update('social_links', {
-        ...props.modelValue.social_links,
-        [key]: value,
-    });
 }
 
 const avatarInputRef = ref<HTMLInputElement | null>(null);
@@ -172,11 +141,6 @@ const avatarPreview = computed(() => {
 
     return props.currentAvatarUrl;
 });
-
-const genderOptions = computed<SelectOption[]>(() => [
-    { value: 'male', label: __('Male') },
-    { value: 'female', label: __('Female') },
-]);
 
 /** Toggle for the direct permissions section (collapsed by default). */
 const showDirectPermissions = ref(props.modelValue.permissions.length > 0);
@@ -477,230 +441,6 @@ watch(
 
     <Separator />
 
-    <!-- Profile section -->
-    <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Profile') }}
-        </h3>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="grid gap-2">
-                <Label for="uf-first-name">{{ __('First name') }}</Label>
-                <Input
-                    id="uf-first-name"
-                    type="text"
-                    autocomplete="given-name"
-                    :placeholder="__('Jane')"
-                    :model-value="props.modelValue.first_name"
-                    @update:model-value="update('first_name', String($event))"
-                />
-                <InputError :message="props.errors.first_name" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-last-name">{{ __('Last name') }}</Label>
-                <Input
-                    id="uf-last-name"
-                    type="text"
-                    autocomplete="family-name"
-                    :placeholder="__('Smith')"
-                    :model-value="props.modelValue.last_name"
-                    @update:model-value="update('last_name', String($event))"
-                />
-                <InputError :message="props.errors.last_name" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-phone">{{ __('Phone number') }}</Label>
-                <Input
-                    id="uf-phone"
-                    type="tel"
-                    autocomplete="tel"
-                    placeholder="+1 555 000 0000"
-                    :model-value="props.modelValue.phone_number"
-                    @update:model-value="update('phone_number', String($event))"
-                />
-                <InputError :message="props.errors.phone_number" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-dob">{{ __('Date of birth') }}</Label>
-                <DatePickerField
-                    id="uf-dob"
-                    :model-value="props.modelValue.date_of_birth"
-                    @update:model-value="update('date_of_birth', $event ?? '')"
-                />
-                <InputError :message="props.errors.date_of_birth" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-gender">{{ __('Gender') }}</Label>
-                <Select
-                    :model-value="props.modelValue.gender"
-                    @update:model-value="update('gender', String($event))"
-                >
-                    <SelectTrigger id="uf-gender" class="w-full">
-                        <SelectValue :placeholder="__('Select gender')" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="option in genderOptions"
-                            :key="option.value"
-                            :value="option.value"
-                        >
-                            {{ option.label }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-                <InputError :message="props.errors.gender" />
-            </div>
-
-            <div class="grid gap-2 sm:col-span-2">
-                <Label for="uf-bio">{{ __('Bio') }}</Label>
-                <Textarea
-                    id="uf-bio"
-                    :rows="3"
-                    :placeholder="__('A short bio…')"
-                    :model-value="props.modelValue.bio"
-                    @update:model-value="update('bio', String($event))"
-                />
-                <InputError :message="props.errors.bio" />
-            </div>
-        </div>
-    </div>
-
-    <Separator />
-
-    <!-- Address section -->
-    <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Address') }}
-        </h3>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="grid gap-2 sm:col-span-2">
-                <Label for="uf-address1">{{ __('Address line 1') }}</Label>
-                <Input
-                    id="uf-address1"
-                    type="text"
-                    autocomplete="address-line1"
-                    :placeholder="__('123 Main St')"
-                    :model-value="props.modelValue.address_line_1"
-                    @update:model-value="
-                        update('address_line_1', String($event))
-                    "
-                />
-                <InputError :message="props.errors.address_line_1" />
-            </div>
-
-            <div class="grid gap-2 sm:col-span-2">
-                <Label for="uf-address2">{{ __('Address line 2') }}</Label>
-                <Input
-                    id="uf-address2"
-                    type="text"
-                    autocomplete="address-line2"
-                    :placeholder="__('Apt 4B')"
-                    :model-value="props.modelValue.address_line_2"
-                    @update:model-value="
-                        update('address_line_2', String($event))
-                    "
-                />
-                <InputError :message="props.errors.address_line_2" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-city">{{ __('City') }}</Label>
-                <Input
-                    id="uf-city"
-                    type="text"
-                    autocomplete="address-level2"
-                    :placeholder="__('New York')"
-                    :model-value="props.modelValue.city"
-                    @update:model-value="update('city', String($event))"
-                />
-                <InputError :message="props.errors.city" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-state">{{ __('State / Province') }}</Label>
-                <Input
-                    id="uf-state"
-                    type="text"
-                    autocomplete="address-level1"
-                    :placeholder="__('NY')"
-                    :model-value="props.modelValue.state"
-                    @update:model-value="update('state', String($event))"
-                />
-                <InputError :message="props.errors.state" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-country">{{ __('Country') }}</Label>
-                <Input
-                    id="uf-country"
-                    type="text"
-                    autocomplete="country"
-                    :placeholder="__('US')"
-                    :model-value="props.modelValue.country"
-                    @update:model-value="update('country', String($event))"
-                />
-                <InputError :message="props.errors.country" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-postal">{{ __('Postal code') }}</Label>
-                <Input
-                    id="uf-postal"
-                    type="text"
-                    autocomplete="postal-code"
-                    placeholder="10001"
-                    :model-value="props.modelValue.postal_code"
-                    @update:model-value="update('postal_code', String($event))"
-                />
-                <InputError :message="props.errors.postal_code" />
-            </div>
-        </div>
-    </div>
-
-    <Separator />
-
-    <!-- Work section -->
-    <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Work') }}
-        </h3>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="grid gap-2">
-                <Label for="uf-company">{{ __('Company') }}</Label>
-                <Input
-                    id="uf-company"
-                    type="text"
-                    autocomplete="organization"
-                    :placeholder="__('Acme Corp')"
-                    :model-value="props.modelValue.company_name"
-                    @update:model-value="update('company_name', String($event))"
-                />
-                <InputError :message="props.errors.company_name" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-job-title">{{ __('Job title') }}</Label>
-                <Input
-                    id="uf-job-title"
-                    type="text"
-                    autocomplete="organization-title"
-                    :placeholder="__('Software Engineer')"
-                    :model-value="props.modelValue.job_title"
-                    @update:model-value="update('job_title', String($event))"
-                />
-                <InputError :message="props.errors.job_title" />
-            </div>
-        </div>
-    </div>
-
-    <Separator />
-
     <!-- Roles section (primary) -->
     <div class="space-y-4">
         <div class="flex items-start justify-between gap-2">
@@ -910,55 +650,5 @@ watch(
 
             <FormFieldSupport :error="permissionsError" />
         </template>
-    </div>
-
-    <Separator />
-
-    <!-- Social links section -->
-    <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Social links') }}
-        </h3>
-
-        <div class="grid gap-4 sm:grid-cols-3">
-            <div class="grid gap-2">
-                <Label for="uf-linkedin">{{ __('LinkedIn URL') }}</Label>
-                <Input
-                    id="uf-linkedin"
-                    type="url"
-                    :model-value="props.modelValue.social_links.linkedin"
-                    @update:model-value="
-                        updateSocialLink('linkedin', String($event))
-                    "
-                />
-                <InputError :message="props.errors['social_links.linkedin']" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-twitter">{{ __('Twitter URL') }}</Label>
-                <Input
-                    id="uf-twitter"
-                    type="url"
-                    :model-value="props.modelValue.social_links.twitter"
-                    @update:model-value="
-                        updateSocialLink('twitter', String($event))
-                    "
-                />
-                <InputError :message="props.errors['social_links.twitter']" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="uf-github">{{ __('GitHub URL') }}</Label>
-                <Input
-                    id="uf-github"
-                    type="url"
-                    :model-value="props.modelValue.social_links.github"
-                    @update:model-value="
-                        updateSocialLink('github', String($event))
-                    "
-                />
-                <InputError :message="props.errors['social_links.github']" />
-            </div>
-        </div>
     </div>
 </template>

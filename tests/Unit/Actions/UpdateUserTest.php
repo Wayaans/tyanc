@@ -8,8 +8,9 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 
-it('may update a user and profile', function (): void {
+it('may update a user without a profile record', function (): void {
     $user = User::factory()->create([
+        'name' => 'Old Name',
         'username' => 'old-name',
         'email' => 'old@email.com',
     ]);
@@ -19,13 +20,10 @@ it('may update a user and profile', function (): void {
     $updatedUser = $action->handle($user, [
         'name' => 'New Name',
         'username' => 'new-name',
-        'city' => 'Denpasar',
     ]);
 
     expect($updatedUser->refresh()->username)->toBe('new-name')
-        ->and($updatedUser->name)->toBe('New Name')
-        ->and($updatedUser->profile)->not->toBeNull()
-        ->and($updatedUser->profile->city)->toBe('Denpasar');
+        ->and($updatedUser->name)->toBe('New Name');
 });
 
 it('keeps email verified and does not send a notification when email changes while verification is disabled', function (): void {

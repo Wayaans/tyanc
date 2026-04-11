@@ -28,9 +28,11 @@ final readonly class UpdateUser
         return DB::transaction(function () use ($actor, $user, $attributes): User {
             $roles = $this->names($attributes['roles'] ?? []);
             $permissions = $this->names($attributes['permissions'] ?? []);
-            $before = UserFormData::fromModel($user->fresh(['profile', 'roles', 'permissions']))->toArray();
+            $before = UserFormData::fromModel($user->fresh(['roles', 'permissions']))->toArray();
 
             $this->assertAssignableRoles($actor, $roles);
+            $this->assertReservedRoleConstraints($actor, $user, $roles);
+            $this->assertReservedUserIntegrity($user, $roles, $permissions);
             $this->assertPermissionScope($actor, $permissions);
 
             $updatedUser = $this->users->handle($user, $attributes);
@@ -43,7 +45,7 @@ final readonly class UpdateUser
 
             $updatedUser->syncRoles($roles);
             $updatedUser->syncPermissions($permissions);
-            $updatedUser->loadMissing('profile', 'roles', 'permissions');
+            $updatedUser->loadMissing('roles', 'permissions');
 
             activity('users')
                 ->performedOn($updatedUser)
@@ -71,6 +73,7 @@ final readonly class UpdateUser
         return Collection::make($values)
             ->filter(fn (mixed $value): bool => is_string($value) && mb_trim($value) !== '')
             ->map(fn (string $value): string => mb_trim($value))
+            ->unique()
             ->values()
             ->all();
     }
@@ -98,6 +101,54 @@ final readonly class UpdateUser
 
         if (is_numeric($highestRequestedLevel) && (int) $highestRequestedLevel >= (int) $actingLevel) {
             throw new AuthorizationException(__('You cannot assign roles at or above your own level.'));
+        }
+    }
+
+    /**
+     * @param  list<string>  $roles
+     */
+    private function assertReservedRoleConstraints(User $actor, User $user, array $roles): void
+    {
+        $superAdminRole = (string) config('tyanc.reserved_roles.super_admin');
+
+        if (! in_array($superAdminRole, $roles, true)) {
+            return;
+        }
+
+        if (! $actor->hasRole($superAdminRole)) {
+            throw new AuthorizationException(__('Only the reserved super admin user may assign the super admin role.'));
+        }
+
+        if ($user->reserved_key !== 'super_admin') {
+            throw new AuthorizationException(__('The super admin role may only be assigned to the reserved Supa Manuse user.'));
+        }
+    }
+
+    /**
+     * @param  list<string>  $roles
+     * @param  list<string>  $permissions
+     */
+    private function assertReservedUserIntegrity(User $user, array $roles, array $permissions): void
+    {
+        if (! $user->isReserved()) {
+            return;
+        }
+
+        $requiredRoles = match ($user->reserved_key) {
+            'super_admin' => [(string) config('tyanc.reserved_roles.super_admin')],
+            'admin' => [(string) config('tyanc.reserved_roles.admin')],
+            default => [],
+        };
+
+        sort($roles);
+        sort($requiredRoles);
+
+        if ($requiredRoles !== [] && $roles !== $requiredRoles) {
+            throw new AuthorizationException(__('Reserved users must keep their reserved role assignment.'));
+        }
+
+        if ($user->reserved_key === 'super_admin' && $permissions !== []) {
+            throw new AuthorizationException(__('The reserved super admin user may not receive direct permissions.'));
         }
     }
 

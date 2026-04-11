@@ -87,7 +87,7 @@ final readonly class UserController
             'abilities' => [
                 'update' => Gate::forUser($actor)->allows('update', $user),
                 'suspend' => Gate::forUser($actor)->allows('suspend', $user),
-                'delete' => Gate::forUser($actor)->allows('delete', $user),
+                'delete' => ! $user->isDeleteProtected() && Gate::forUser($actor)->allows('delete', $user),
             ],
         ];
 

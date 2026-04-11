@@ -17,7 +17,8 @@ final class UsersExport implements FromCollection, WithHeadings, WithMapping
     public function collection()
     {
         return User::query()
-            ->with(['profile', 'roles'])
+            ->with('roles')
+            ->orderBy('name')
             ->orderBy('username')
             ->get();
     }
@@ -32,8 +33,6 @@ final class UsersExport implements FromCollection, WithHeadings, WithMapping
             $user->locale,
             $user->timezone,
             $user->roles->pluck('name')->join(', '),
-            $user->profile?->company_name,
-            $user->profile?->city,
             $user->created_at?->toDateTimeString(),
         ];
     }
@@ -48,8 +47,6 @@ final class UsersExport implements FromCollection, WithHeadings, WithMapping
             __('Locale'),
             __('Timezone'),
             __('Roles'),
-            __('Company'),
-            __('City'),
             __('Joined'),
         ];
     }

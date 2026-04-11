@@ -8,14 +8,11 @@ use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 
 final readonly class UpdateUser
 {
-    public function __construct(private UpsertUserProfile $profiles) {}
-
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -26,6 +23,7 @@ final readonly class UpdateUser
             $emailVerificationEnabled = Features::enabled(Features::emailVerification());
 
             $userAttributes = [
+                'name' => $this->resolveDisplayName($attributes, $user),
                 'username' => $attributes['username'] ?? $user->username,
                 'email' => $attributes['email'] ?? $user->email,
                 'avatar' => $this->storeAvatar(
@@ -45,19 +43,11 @@ final readonly class UpdateUser
             $user->fill($userAttributes);
             $user->save();
 
-            $profile = $this->profiles->handle($user, $attributes);
-
-            if (Schema::hasColumn('users', 'name')) {
-                $user->forceFill([
-                    'name' => $profile->fullName() ?? $this->resolveDisplayName($attributes, $user->username, $user->name),
-                ])->saveQuietly();
-            }
-
             if ($emailChanged && $emailVerificationEnabled) {
                 $user->sendEmailVerificationNotification();
             }
 
-            return $user->load('profile');
+            return $user->fresh();
         });
     }
 
@@ -82,25 +72,28 @@ final readonly class UpdateUser
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function resolveDisplayName(array $attributes, string $fallbackUsername, string $currentName): string
+    private function resolveDisplayName(array $attributes, User $user): string
     {
-        $name = isset($attributes['name']) && is_string($attributes['name'])
-            ? mb_trim($attributes['name'])
-            : '';
+        $name = $this->nullableString($attributes['name'] ?? null) ?? collect([
+            $this->nullableString($attributes['first_name'] ?? null),
+            $this->nullableString($attributes['last_name'] ?? null),
+        ])->filter()->implode(' ');
 
         if ($name !== '') {
             return $name;
         }
 
-        $segments = array_filter([
-            is_string($attributes['first_name'] ?? null) ? mb_trim($attributes['first_name']) : null,
-            is_string($attributes['last_name'] ?? null) ? mb_trim($attributes['last_name']) : null,
-        ]);
+        return $user->name !== '' ? $user->name : $user->username;
+    }
 
-        if ($segments !== []) {
-            return implode(' ', $segments);
+    private function nullableString(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
         }
 
-        return $currentName !== '' ? $currentName : $fallbackUsername;
+        $value = mb_trim($value);
+
+        return $value === '' ? null : $value;
     }
 }

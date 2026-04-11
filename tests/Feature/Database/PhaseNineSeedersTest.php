@@ -2,47 +2,41 @@
 
 declare(strict_types=1);
 
-use App\Models\App;
 use App\Models\ApprovalRequest;
 use App\Models\Conversation;
-use App\Models\FileLibrary;
 use App\Models\ImportRun;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\AccessMatrixSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Support\Facades\Storage;
 
-it('seeds realistic phase-nine demo data for tyanc modules', function (): void {
-    Storage::fake('public');
-
+it('seeds the production bootstrap users and roles without demo records', function (): void {
     $this->seed(DatabaseSeeder::class);
 
+    $supa = User::query()->where('email', 'supa@app.com')->first();
     $admin = User::query()->where('email', 'manuse@app.com')->first();
-    $operationsLead = User::query()->where('email', 'naya.rahma@tyanc.test')->first();
-    $tasksApp = App::query()->where('key', 'tasks')->first();
-    $library = FileLibrary::shared();
-    $conversation = Conversation::query()->where('subject', 'Phase 9 rollout checkpoint')->first();
+    $nonReservedUsers = User::query()->where('is_reserved', false)->get();
 
-    expect($admin)->not->toBeNull()
+    expect($supa)->not->toBeNull()
+        ->and($supa?->reserved_key)->toBe('super_admin')
+        ->and($supa?->hasRole((string) config('tyanc.reserved_roles.super_admin')))->toBeTrue()
+        ->and($supa?->getDirectPermissions())->toHaveCount(0)
+        ->and($admin)->not->toBeNull()
+        ->and($admin?->reserved_key)->toBe('admin')
         ->and($admin?->hasRole((string) config('tyanc.reserved_roles.admin')))->toBeTrue()
-        ->and($operationsLead)->not->toBeNull()
-        ->and($operationsLead?->locale)->toBe('id')
-        ->and($operationsLead?->profile?->city)->toBe('Jakarta')
-        ->and(Role::query()->where('name', 'Operations Lead')->exists())->toBeTrue()
-        ->and(Role::query()->where('name', 'Support Lead')->exists())->toBeTrue()
-        ->and($tasksApp)->not->toBeNull()
-        ->and($tasksApp?->enabled)->toBeFalse()
-        ->and($tasksApp?->pages()->count())->toBe(2)
-        ->and(ImportRun::query()->where('file_name', 'q2-branch-onboarding.xlsx')->exists())->toBeTrue()
-        ->and(ApprovalRequest::query()->where('action', 'tyanc.users.import')->exists())->toBeTrue()
-        ->and($library->getMedia(FileLibrary::FilesCollection))->toHaveCount(2)
-        ->and($conversation)->not->toBeNull()
-        ->and($conversation?->participants()->count())->toBe(3)
-        ->and($conversation?->messages()->count())->toBe(3)
-        ->and(User::query()->where('locale', 'id')->count())->toBeGreaterThanOrEqual(4)
-        ->and($admin?->notifications()->count())->toBeGreaterThan(0);
+        ->and(User::query()->count())->toBe(5)
+        ->and($nonReservedUsers)->toHaveCount(3)
+        ->and($nonReservedUsers->every(fn (User $user): bool => $user->locale === 'id'))->toBeTrue()
+        ->and($nonReservedUsers->every(fn (User $user): bool => $user->roles()->count() === 0))->toBeTrue()
+        ->and($nonReservedUsers->every(fn (User $user): bool => $user->getDirectPermissions()->count() === 0))->toBeTrue()
+        ->and(Role::query()->orderByDesc('level')->pluck('name')->all())->toBe([
+            (string) config('tyanc.reserved_roles.super_admin'),
+            (string) config('tyanc.reserved_roles.admin'),
+        ])
+        ->and(ImportRun::query()->count())->toBe(0)
+        ->and(ApprovalRequest::query()->count())->toBe(0)
+        ->and(Conversation::query()->count())->toBe(0);
 });
 
 it('keeps role and access-matrix seeders idempotent', function (): void {
@@ -61,6 +55,6 @@ it('keeps role and access-matrix seeders idempotent', function (): void {
     ]);
 
     expect(Role::query()->count())->toBe($roleCount)
-        ->and(Role::query()->where('name', (string) config('tyanc.reserved_roles.super_admin'))->firstOrFail()->permissions()->count())->toBeGreaterThan(0)
+        ->and(Role::query()->where('name', (string) config('tyanc.reserved_roles.super_admin'))->firstOrFail()->permissions()->count())->toBe(0)
         ->and(Role::query()->where('name', (string) config('tyanc.reserved_roles.admin'))->firstOrFail()->permissions()->count())->toBe($adminPermissionCount);
 });

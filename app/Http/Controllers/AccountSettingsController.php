@@ -7,7 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\UpdateUser;
 use App\Data\Auth\UserData;
 use App\Enums\UserStatus;
-use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateAccountSettingsRequest;
 use App\Models\Permission;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
@@ -21,7 +21,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
 
-final readonly class UserProfileController
+final readonly class AccountSettingsController
 {
     public function edit(Request $request, #[CurrentUser] User $user): Response|JsonResponse
     {
@@ -37,14 +37,14 @@ final readonly class UserProfileController
         if ($request->wantsJson()) {
             return response()->json([
                 ...$payload,
-                'user' => UserData::fromModel($user->loadMissing('profile')),
+                'user' => UserData::fromModel($user),
             ]);
         }
 
-        return Inertia::render('user-profile/Edit', $payload);
+        return Inertia::render('settings/Account', $payload);
     }
 
-    public function update(UpdateUserProfileRequest $request, #[CurrentUser] User $user, UpdateUser $action): RedirectResponse|JsonResponse
+    public function update(UpdateAccountSettingsRequest $request, #[CurrentUser] User $user, UpdateUser $action): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
 
@@ -58,7 +58,7 @@ final readonly class UserProfileController
             return response()->json(UserData::fromModel($updatedUser));
         }
 
-        return to_route('user-profile.edit');
+        return to_route('settings.account.edit');
     }
 
     private function canManageStatus(User $user): bool

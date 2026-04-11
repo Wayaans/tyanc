@@ -35,7 +35,7 @@ final readonly class ListRecentConversations
 
         $conversations = Conversation::query()
             ->forParticipant($actor)
-            ->with(['participants.profile', 'latestMessage.sender.profile'])
+            ->with(['participants', 'latestMessage.sender'])
             ->withCount('messages')
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')

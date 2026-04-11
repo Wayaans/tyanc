@@ -16,7 +16,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final readonly class ListUsers
@@ -48,7 +47,7 @@ final readonly class ListUsers
         ]);
 
         $users = QueryBuilder::for(
-            subject: User::query()->with(['profile', 'roles', 'permissions']),
+            subject: User::query()->with(['roles', 'permissions']),
             request: $queryRequest,
         )
             ->allowedFilters(
@@ -59,7 +58,7 @@ final readonly class ListUsers
                 AllowedFilter::trashed(),
             )
             ->allowedSorts(
-                AllowedSort::field('name', 'username'),
+                'name',
                 'email',
                 'status',
                 'locale',
@@ -97,16 +96,10 @@ final readonly class ListUsers
 
         $query->where(function (Builder $builder) use ($search): void {
             $builder
-                ->where('username', 'like', sprintf('%%%s%%', $search))
+                ->where('name', 'like', sprintf('%%%s%%', $search))
+                ->orWhere('username', 'like', sprintf('%%%s%%', $search))
                 ->orWhere('email', 'like', sprintf('%%%s%%', $search))
-                ->orWhere('last_login_ip', 'like', sprintf('%%%s%%', $search))
-                ->orWhereHas('profile', function (Builder $profileQuery) use ($search): void {
-                    $profileQuery
-                        ->where('first_name', 'like', sprintf('%%%s%%', $search))
-                        ->orWhere('last_name', 'like', sprintf('%%%s%%', $search))
-                        ->orWhere('city', 'like', sprintf('%%%s%%', $search))
-                        ->orWhere('company_name', 'like', sprintf('%%%s%%', $search));
-                });
+                ->orWhere('last_login_ip', 'like', sprintf('%%%s%%', $search));
         });
     }
 

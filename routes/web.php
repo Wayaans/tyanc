@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AccountSettingsController;
 use App\Http\Controllers\Demo\DashboardController as DemoDashboardController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SessionController;
@@ -11,7 +12,6 @@ use App\Http\Controllers\UserEmailVerificationController;
 use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserPreferencesController;
-use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -37,9 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $dem
 Route::middleware('auth')->group(function (): void {
     Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
 
-    Route::redirect('settings', '/settings/profile');
-    Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
-    Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
+    Route::redirect('settings', '/settings/account');
+    Route::get('settings/account', [AccountSettingsController::class, 'edit'])->name('settings.account.edit');
+    Route::patch('settings/account', [AccountSettingsController::class, 'update'])->name('settings.account.update');
 
     Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
     Route::put('settings/password', [UserPasswordController::class, 'update'])

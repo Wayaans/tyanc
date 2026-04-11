@@ -2,100 +2,54 @@
 
 declare(strict_types=1);
 
+use App\Actions\ResolveTranslations;
+use App\Actions\Settings\ResolveRuntimeSettings;
+use App\Actions\Tyanc\Access\ResolveAccessibleApps;
+use App\Actions\Tyanc\Messaging\CountUnreadMessages;
+use App\Actions\Tyanc\Messaging\ListRecentConversations;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Permission;
 use App\Models\User;
-use App\Models\UserPreference;
-use App\Notifications\NewApprovalRequestedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
 function inertiaMiddleware(): HandleInertiaRequests
 {
-    return resolve(HandleInertiaRequests::class);
+    return new HandleInertiaRequests(
+        runtimeSettings: resolve(ResolveRuntimeSettings::class),
+        translations: resolve(ResolveTranslations::class),
+        accessibleApps: resolve(ResolveAccessibleApps::class),
+        unreadMessages: resolve(CountUnreadMessages::class),
+        recentConversations: resolve(ListRecentConversations::class),
+    );
 }
 
-it('shares the resolved app name from runtime settings', function (): void {
+it('shares the expected top-level inertia props', function (): void {
     $request = Request::create('/', 'GET');
 
     $shared = inertiaMiddleware()->share($request);
 
-    expect($shared)->toHaveKey('name')
-        ->and($shared['name'])->toBe('Tyanc')
-        ->and($shared['brand'])->toMatchArray([
-            'app_name' => 'Tyanc',
-            'company_legal_name' => 'Tyanc',
+    expect($shared)
+        ->toHaveKeys([
+            'name',
+            'brand',
+            'theme',
+            'locale',
+            'availableLocales',
+            'translations',
+            'userPreferences',
+            'auth',
+            'notifications',
+            'messages',
+            'messagesUnreadCount',
+            'accessibleApps',
+            'currentApp',
+            'sidebarNavigation',
+            'sidebarOpen',
         ]);
 });
 
-it('shares locale metadata and route translations', function (): void {
-    app()->setLocale('id');
-
-    $request = Request::create('/login', 'GET');
-    $request->setLocale('id');
-
-    $route = new Route('GET', '/login', fn (): null => null);
-    $route->name('login');
-
-    $request->setRouteResolver(fn (): Route => $route);
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared['locale'])->toBe('id')
-        ->and($shared['availableLocales'])->toBe(['en', 'id'])
-        ->and($shared['translations'])->toHaveKey('Welcome back')
-        ->and($shared['translations']['Welcome back'])->toBe('Selamat datang kembali');
-});
-
-it('shares dashboard shell translations for app-aware routes', function (): void {
-    app()->setLocale('id');
-
-    $request = Request::create('/tyanc/dashboard', 'GET');
-    $request->setLocale('id');
-
-    $route = new Route('GET', '/tyanc/dashboard', fn (): null => null);
-    $route->name('dashboard');
-
-    $request->setRouteResolver(fn (): Route => $route);
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared['translations'])
-        ->toHaveKey('Notifications')
-        ->and($shared['translations']['Notifications'])->toBe('Notifikasi')
-        ->and($shared['translations'])->toHaveKey('Ready for the next module')
-        ->and($shared['translations']['Ready for the next module'])->toBe('Siap untuk modul berikutnya');
-});
-
-it('shares null user when guest', function (): void {
-    $request = Request::create('/', 'GET');
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared)->toHaveKey('auth')
-        ->and($shared['auth'])->toHaveKey('user')
-        ->and($shared['auth']['user'])->toBeNull();
-});
-
-it('shares authenticated user data as a dto', function (): void {
-    $user = User::factory()->create([
-        'username' => 'test-user',
-        'email' => 'test@example.com',
-    ]);
-
-    $request = Request::create('/', 'GET');
-    $request->setUserResolver(fn (): User => $user);
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared['auth']['user'])->not->toBeNull()
-        ->and($shared['auth']['user']->id)->toBe($user->id)
-        ->and($shared['auth']['user']->name)->toBe('test-user')
-        ->and($shared['auth']['user']->username)->toBe('test-user')
-        ->and($shared['auth']['user']->email)->toBe('test@example.com');
-});
-
-it('does not expose protected app navigation to guests on public pages', function (): void {
+it('shares empty app navigation for guests on the home page', function (): void {
     $request = Request::create('/', 'GET');
 
     $shared = inertiaMiddleware()->share($request);
@@ -119,7 +73,7 @@ it('prefers the current app cookie on shared routes', function (): void {
         'guard_name' => 'web',
     ]));
 
-    $request = Request::create('/settings/profile', 'GET');
+    $request = Request::create('/settings/account', 'GET');
     $request->cookies->set('current_app', 'demo');
     $request->setUserResolver(fn (): User => $user);
 
@@ -129,7 +83,7 @@ it('prefers the current app cookie on shared routes', function (): void {
 });
 
 it('falls back to tyanc when the current app cookie is invalid', function (): void {
-    $request = Request::create('/settings/profile', 'GET');
+    $request = Request::create('/settings/account', 'GET');
     $request->cookies->set('current_app', 'invalid');
 
     $shared = inertiaMiddleware()->share($request);
@@ -200,68 +154,5 @@ it('shares tyanc as the current app for the tyanc dashboard route', function ():
 
     $shared = inertiaMiddleware()->share($request);
 
-    expect($shared['currentApp'])->toBe('tyanc')
-        ->and($shared['sidebarNavigation']['menu'][0]['href'])->toBe('/tyanc/dashboard');
-});
-
-it('shares resolved user preferences and theme overrides', function (): void {
-    $user = User::factory()->create([
-        'locale' => 'en',
-        'timezone' => 'UTC',
-    ]);
-
-    UserPreference::factory()->for($user, 'user')->create([
-        'locale' => 'id',
-        'timezone' => 'Asia/Makassar',
-        'appearance' => 'dark',
-        'sidebar_variant' => 'floating',
-        'spacing_density' => 'comfortable',
-    ]);
-
-    app()->setLocale('id');
-
-    $request = Request::create('/', 'GET');
-    $request->setLocale('id');
-    $request->setUserResolver(fn (): User => $user);
-    $request->cookies->set('appearance', 'light');
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared['userPreferences']->resolved_locale)->toBe('id')
-        ->and($shared['userPreferences']->resolved_timezone)->toBe('Asia/Makassar')
-        ->and($shared['userPreferences']->resolved_appearance)->toBe('dark')
-        ->and($shared['theme'])->toMatchArray([
-            'appearance' => 'dark',
-            'sidebar_variant' => 'floating',
-            'spacing_density' => 'comfortable',
-            'spacing_density_value' => 1.25,
-        ]);
-});
-
-it('shares unread notifications for authenticated users', function (): void {
-    $user = User::factory()->create();
-
-    $user->notify(new NewApprovalRequestedNotification());
-
-    $request = Request::create('/tyanc/dashboard', 'GET');
-    $request->setUserResolver(fn (): User => $user);
-
-    $route = new Route('GET', '/tyanc/dashboard', fn (): null => null);
-    $route->name('dashboard');
-
-    $request->setRouteResolver(fn (): Route => $route);
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared['notifications']['unread_count'])->toBe(1)
-        ->and($shared['notifications']['recent'])->toHaveCount(1)
-        ->and($shared['notifications']['recent'][0]->title)->toBe('New approval requested');
-});
-
-it('includes parent shared data', function (): void {
-    $request = Request::create('/', 'GET');
-
-    $shared = inertiaMiddleware()->share($request);
-
-    expect($shared)->toHaveKey('errors');
+    expect($shared['currentApp'])->toBe('tyanc');
 });

@@ -21,9 +21,9 @@ final readonly class ListMessageContacts
         }
 
         return User::query()
-            ->with('profile')
             ->whereKeyNot($actor->getKey())
             ->whereNull('deleted_at')
+            ->orderBy('name')
             ->orderBy('username')
             ->get()
             ->map(fn (User $user): ConversationParticipantData => ConversationParticipantData::fromModel($user))

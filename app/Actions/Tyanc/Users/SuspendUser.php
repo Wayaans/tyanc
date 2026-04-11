@@ -15,7 +15,7 @@ final readonly class SuspendUser
     {
         Gate::forUser($actor)->authorize('suspend', $user);
 
-        $before = UserFormData::fromModel($user->fresh(['profile', 'roles', 'permissions']))->toArray();
+        $before = UserFormData::fromModel($user->fresh(['roles', 'permissions']))->toArray();
 
         if ($user->status !== UserStatus::Suspended) {
             $user->forceFill([
@@ -23,7 +23,7 @@ final readonly class SuspendUser
             ])->save();
         }
 
-        $user->loadMissing('profile', 'roles', 'permissions');
+        $user->loadMissing('roles', 'permissions');
 
         activity('users')
             ->performedOn($user)

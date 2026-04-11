@@ -27,6 +27,25 @@ return [
         $roleNames['super_admin'],
     ],
     'undeletable_roles' => array_values($roleNames),
+    'reserved_users' => [
+        'super_admin' => [
+            'key' => 'super_admin',
+            'name' => 'Supa Manuse',
+            'username' => 'supa-manuse',
+            'email' => 'supa@app.com',
+            'locale' => 'en',
+            'timezone' => 'Asia/Makassar',
+        ],
+        'admin' => [
+            'key' => 'admin',
+            'name' => 'Manuse',
+            'username' => 'manuse',
+            'email' => 'manuse@app.com',
+            'locale' => 'en',
+            'timezone' => 'Asia/Makassar',
+        ],
+    ],
+    'undeletable_user_keys' => ['super_admin', 'admin'],
     'reserved_apps' => [
         'tyanc',
     ],

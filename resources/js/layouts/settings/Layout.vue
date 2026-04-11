@@ -6,17 +6,17 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { edit as editPassword } from '@/routes/password';
+import { edit as editAccount } from '@/routes/settings/account';
 import { edit as editPreferences } from '@/routes/settings/preferences';
 import { show as showTwoFactorAuth } from '@/routes/two-factor';
-import { edit as editProfile } from '@/routes/user-profile';
 import type { NavLinkItem } from '@/types';
 
 const { __ } = useTranslations();
 
 const sidebarNavItems: NavLinkItem[] = [
     {
-        title: 'Profile',
-        href: editProfile(),
+        title: 'Account',
+        href: editAccount(),
     },
     {
         title: 'Password',

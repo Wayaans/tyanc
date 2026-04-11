@@ -31,6 +31,7 @@ final class User extends Authenticatable implements HasLocalePreference
      * @var list<string>
      */
     protected $fillable = [
+        'name',
         'username',
         'email',
         'password',
@@ -38,6 +39,8 @@ final class User extends Authenticatable implements HasLocalePreference
         'status',
         'timezone',
         'locale',
+        'is_reserved',
+        'reserved_key',
         'email_verified_at',
         'two_factor_secret',
         'two_factor_recovery_codes',
@@ -57,16 +60,6 @@ final class User extends Authenticatable implements HasLocalePreference
         'two_factor_recovery_codes',
     ];
 
-    /**
-     * @var list<string>
-     */
-    protected $appends = ['name'];
-
-    public function profile(): HasOne
-    {
-        return $this->hasOne(UserProfile::class);
-    }
-
     public function preference(): HasOne
     {
         return $this->hasOne(UserPreference::class);
@@ -79,15 +72,14 @@ final class User extends Authenticatable implements HasLocalePreference
         return $this->preference?->locale ?? $this->locale;
     }
 
-    protected function getNameAttribute(): string
+    public function isReserved(): bool
     {
-        $profile = $this->relationLoaded('profile') ? $this->getRelation('profile') : $this->profile()->first();
+        return $this->is_reserved || (is_string($this->reserved_key) && $this->reserved_key !== '');
+    }
 
-        if ($profile instanceof UserProfile && $profile->fullName() !== null) {
-            return $profile->fullName();
-        }
-
-        return $this->username;
+    public function isDeleteProtected(): bool
+    {
+        return $this->isReserved();
     }
 
     /**
@@ -97,12 +89,15 @@ final class User extends Authenticatable implements HasLocalePreference
     {
         return [
             'id' => 'string',
+            'name' => 'string',
             'username' => 'string',
             'email' => 'string',
             'avatar' => 'string',
             'status' => UserStatus::class,
             'timezone' => 'string',
             'locale' => 'string',
+            'is_reserved' => 'boolean',
+            'reserved_key' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'remember_token' => 'string',

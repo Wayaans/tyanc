@@ -38,8 +38,8 @@ final class UserStatusChangedNotification extends Notification
                 'from' => __($this->previousStatus),
                 'to' => __($this->currentStatus),
             ]),
-            'action_label' => __('Review profile'),
-            'action_url' => route('user-profile.edit', absolute: false),
+            'action_label' => __('Review account'),
+            'action_url' => route('settings.account.edit', absolute: false),
             'subject_id' => (string) $this->subject->id,
         ];
     }

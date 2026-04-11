@@ -53,8 +53,8 @@ final class MessageSent implements ShouldBroadcastNow, ShouldRescue
      */
     public function broadcastWith(): array
     {
-        $this->conversation->loadMissing('latestMessage.sender.profile');
-        $this->message->loadMissing('sender.profile');
+        $this->conversation->loadMissing('latestMessage.sender');
+        $this->message->loadMissing('sender');
 
         return [
             'conversation' => [

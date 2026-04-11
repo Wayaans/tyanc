@@ -18,9 +18,9 @@ import { useBranding } from '@/composables/useBranding';
 import { useTranslations } from '@/lib/translations';
 import { logout } from '@/routes';
 import { edit as editPassword } from '@/routes/password';
+import { edit as editAccount } from '@/routes/settings/account';
 import { edit as editPreferences } from '@/routes/settings/preferences';
 import { show as showTwoFactor } from '@/routes/two-factor';
-import { edit as editProfile } from '@/routes/user-profile';
 import type { User } from '@/types';
 
 type Props = {
@@ -55,11 +55,11 @@ defineProps<Props>();
         <DropdownMenuItem :as-child="true">
             <Link
                 class="block w-full cursor-pointer"
-                :href="editProfile()"
+                :href="editAccount()"
                 prefetch
             >
                 <Settings class="mr-2 h-4 w-4" />
-                {{ __('Profile') }}
+                {{ __('Account') }}
             </Link>
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">

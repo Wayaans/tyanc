@@ -21,13 +21,13 @@ it('hides disabled auth flows on the login page', function (): void {
             ->where('canRegister', true));
 });
 
-it('marks email verification as disabled on the profile page', function (): void {
+it('marks email verification as disabled on the account page', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('user-profile.edit'))
+        ->get(route('settings.account.edit'))
         ->assertInertia(fn ($page) => $page
-            ->component('user-profile/Edit')
+            ->component('settings/Account')
             ->where('mustVerifyEmail', false));
 });
 

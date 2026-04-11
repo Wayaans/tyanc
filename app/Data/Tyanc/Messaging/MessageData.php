@@ -25,7 +25,7 @@ final class MessageData extends Data
 
     public static function fromModel(Message $message, ?User $viewer = null): self
     {
-        $message->loadMissing('sender.profile');
+        $message->loadMissing('sender');
         $sender = $message->sender;
         $senderData = $sender instanceof User ? UserData::fromModel($sender) : null;
 

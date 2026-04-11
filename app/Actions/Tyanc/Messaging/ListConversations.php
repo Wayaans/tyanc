@@ -31,7 +31,7 @@ final readonly class ListConversations
         Gate::forUser($actor)->authorize(PermissionKey::tyanc('messages', 'viewany'));
 
         $conversations = $this->conversationQuery($actor, $archived)
-            ->with(['participants.profile', 'latestMessage.sender.profile'])
+            ->with(['participants', 'latestMessage.sender'])
             ->withCount('messages')
             ->latest('last_message_at')
             ->latest('updated_at')
@@ -58,10 +58,10 @@ final readonly class ListConversations
         $selectedConversation = $resolvedConversationId !== null
             ? $this->conversationQuery($actor, $archived)
                 ->with([
-                    'participants.profile',
-                    'latestMessage.sender.profile',
+                    'participants',
+                    'latestMessage.sender',
                     'messages' => fn ($query) => $query
-                        ->with('sender.profile')
+                        ->with('sender')
                         ->latest('created_at')
                         ->limit(50),
                 ])

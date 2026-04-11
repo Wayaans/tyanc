@@ -54,7 +54,7 @@ final class HandleInertiaRequests extends Middleware
         $defaultApp = (string) config('tyanc.default_app', 'tyanc');
         $routeName = $request->route()?->getName() ?? '';
         $user = $request->user();
-        $authenticatedUser = $user instanceof User ? $user->loadMissing('profile', 'preference') : null;
+        $authenticatedUser = $user instanceof User ? $user->loadMissing('preference') : null;
         $runtimeSettings = $this->resolveRuntimeSettings($request, $authenticatedUser);
         $accessibleApps = $this->accessibleApps->handle($authenticatedUser);
         $currentApp = $this->resolveCurrentApp($request, $routeName, $accessibleApps, $defaultApp);
