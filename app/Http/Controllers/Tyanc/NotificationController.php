@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Tyanc;
 
 use App\Data\Notifications\NotificationData;
 use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,9 @@ final readonly class NotificationController
 
     public function markAllRead(Request $request, #[CurrentUser] User $user): RedirectResponse|JsonResponse
     {
-        $user->unreadNotifications()->update(['read_at' => now()]);
+        $user->unreadNotifications()
+            ->where('type', '!=', NewMessageNotification::class)
+            ->update(['read_at' => now()]);
 
         if ($request->wantsJson()) {
             return response()->json($this->payload($user->fresh()));
@@ -54,8 +57,11 @@ final readonly class NotificationController
     private function payload(User $user): array
     {
         return [
-            'unread_count' => $user->unreadNotifications()->count(),
+            'unread_count' => $user->unreadNotifications()
+                ->where('type', '!=', NewMessageNotification::class)
+                ->count(),
             'recent' => $user->notifications()
+                ->where('type', '!=', NewMessageNotification::class)
                 ->latest()
                 ->limit(8)
                 ->get()

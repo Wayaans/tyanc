@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronUp, Info, Upload } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import DatePickerField from '@/components/DatePickerField.vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import InputError from '@/components/InputError.vue';
@@ -138,9 +138,32 @@ const avatarFileName = computed(() => {
     return null;
 });
 
+const avatarObjectUrl = ref<string | null>(null);
+
+watch(
+    () => props.modelValue.avatar,
+    (avatar) => {
+        if (avatarObjectUrl.value !== null) {
+            URL.revokeObjectURL(avatarObjectUrl.value);
+            avatarObjectUrl.value = null;
+        }
+
+        if (avatar instanceof File) {
+            avatarObjectUrl.value = URL.createObjectURL(avatar);
+        }
+    },
+    { immediate: true },
+);
+
+onBeforeUnmount(() => {
+    if (avatarObjectUrl.value !== null) {
+        URL.revokeObjectURL(avatarObjectUrl.value);
+    }
+});
+
 const avatarPreview = computed(() => {
-    if (props.modelValue.avatar instanceof File) {
-        return URL.createObjectURL(props.modelValue.avatar);
+    if (avatarObjectUrl.value !== null) {
+        return avatarObjectUrl.value;
     }
 
     if (props.modelValue.remove_avatar) {
@@ -197,6 +220,36 @@ const effectivePermissionsOverflow = computed(
     () =>
         effectivePermissions.value.length -
         effectivePermissionsPreview.value.length,
+);
+
+/**
+ * Surface both top-level errors (roles / permissions) and per-item errors
+ * returned by Laravel array validation rules (roles.0, roles.1 …).
+ */
+const rolesError = computed<string | undefined>(() => {
+    if (props.errors.roles) return props.errors.roles;
+    const entry = Object.entries(props.errors).find(([k]) =>
+        /^roles\.\d+$/.test(k),
+    );
+    return entry?.[1];
+});
+
+const permissionsError = computed<string | undefined>(() => {
+    if (props.errors.permissions) return props.errors.permissions;
+    const entry = Object.entries(props.errors).find(([k]) =>
+        /^permissions\.\d+$/.test(k),
+    );
+    return entry?.[1];
+});
+
+watch(
+    permissionsError,
+    (error) => {
+        if (typeof error === 'string' && error !== '') {
+            showDirectPermissions.value = true;
+        }
+    },
+    { immediate: true },
 );
 </script>
 
@@ -724,7 +777,7 @@ const effectivePermissionsOverflow = computed(
                 </Label>
             </div>
         </div>
-        <InputError :message="props.errors.roles" />
+        <InputError :message="rolesError" />
 
         <!-- Effective access hint -->
         <div
@@ -855,7 +908,7 @@ const effectivePermissionsOverflow = computed(
                 </div>
             </div>
 
-            <FormFieldSupport :error="props.errors.permissions" />
+            <FormFieldSupport :error="permissionsError" />
         </template>
     </div>
 

@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\NewApprovalRequestedNotification;
+use App\Notifications\NewMessageNotification;
 use App\Support\Permissions\PermissionKey;
 use Spatie\Activitylog\Models\Activity;
 
@@ -20,6 +23,10 @@ function activityManager(): User
         ]),
         Permission::query()->firstOrCreate([
             'name' => PermissionKey::tyanc('activity_log', 'view'),
+            'guard_name' => 'web',
+        ]),
+        Permission::query()->firstOrCreate([
+            'name' => PermissionKey::tyanc('messages', 'viewany'),
             'guard_name' => 'web',
         ]),
     ]);
@@ -66,13 +73,45 @@ it('logs user update, suspension, deletion, and login activity events', function
         ->and(Activity::query()->where('event', 'login')->count())->toBe(1);
 });
 
-it('shares unread notifications and marks them as read', function (): void {
+it('shares system notifications separately from message inbox data and marks them as read', function (): void {
     $manager = activityManager();
+    $sender = User::factory()->create();
+    $conversation = Conversation::factory()->for($sender, 'creator')->create();
+
+    $conversation->participants()->attach([
+        (string) $manager->id => [
+            'last_read_at' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        (string) $sender->id => [
+            'last_read_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    $message = Message::factory()
+        ->for($conversation)
+        ->for($sender, 'sender')
+        ->create([
+            'body' => 'Please review the latest update.',
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ]);
+
+    $conversation->forceFill([
+        'last_message_at' => $message->created_at,
+    ])->save();
 
     $manager->notify(new NewApprovalRequestedNotification());
     $manager->notify(new NewApprovalRequestedNotification());
+    $manager->notify(new NewMessageNotification($conversation, $message, $sender));
 
-    $firstNotification = $manager->notifications()->latest()->first();
+    $firstNotification = $manager->notifications()
+        ->where('type', NewApprovalRequestedNotification::class)
+        ->latest()
+        ->first();
     expect($firstNotification)->not->toBeNull();
 
     $this->actingAs($manager)
@@ -80,7 +119,10 @@ it('shares unread notifications and marks them as read', function (): void {
         ->assertInertia(fn ($page) => $page
             ->component('tyanc/Dashboard')
             ->where('notifications.unread_count', 2)
-            ->where('notifications.recent.0.title', 'New approval requested'));
+            ->where('notifications.recent.0.title', 'New approval requested')
+            ->where('notifications.recent', fn ($recent): bool => collect($recent)->every(fn (array $notification): bool => ($notification['kind'] ?? null) !== 'message'))
+            ->where('messagesUnreadCount', 1)
+            ->where('messages.recent.0.id', (string) $conversation->id));
 
     $this->actingAs($manager)
         ->patchJson(route('tyanc.notifications.update', $firstNotification))
@@ -90,7 +132,13 @@ it('shares unread notifications and marks them as read', function (): void {
     $this->actingAs($manager)
         ->patchJson(route('tyanc.notifications.mark-all-read'))
         ->assertOk()
-        ->assertJsonPath('unread_count', 0);
+        ->assertJson(fn ($json) => $json
+            ->where('unread_count', 0)
+            ->where('recent', fn ($recent): bool => collect($recent)->every(fn (array $notification): bool => ($notification['kind'] ?? null) !== 'message')));
+
+    expect($manager->notifications()
+        ->where('type', NewMessageNotification::class)
+        ->first()?->read_at)->toBeNull();
 });
 
 it('renders and filters the activity log page for authorized managers', function (): void {

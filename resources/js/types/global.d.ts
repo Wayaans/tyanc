@@ -2,6 +2,7 @@ import type {
     AccessibleApp,
     AppId,
     BrandProps,
+    MessagesShellPayload,
     NotificationsPayload,
     SidebarNavigationData,
     ThemeProps,
@@ -44,6 +45,8 @@ declare module '@inertiajs/core' {
             translations: Record<string, string>;
             /** Notification summary shared on every authenticated page. */
             notifications: NotificationsPayload | null;
+            messages: MessagesShellPayload;
+            messagesUnreadCount: number;
             /** All apps the current user can access, registry-driven. */
             accessibleApps: AccessibleApp[];
             [key: string]: unknown;

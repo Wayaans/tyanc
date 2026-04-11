@@ -78,6 +78,7 @@ function submit() {
     errors.value = {};
 
     router.post(store.url(), form.value, {
+        forceFormData: true,
         preserveScroll: true,
         onError: (responseErrors) => {
             errors.value = responseErrors as Partial<Record<string, string>>;

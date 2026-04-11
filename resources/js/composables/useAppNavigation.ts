@@ -13,6 +13,7 @@ import {
     index as appsRoute,
 } from '@/routes/tyanc/apps';
 import { index as filesRoute } from '@/routes/tyanc/files';
+import { index as messagesRoute } from '@/routes/tyanc/messages';
 import { index as permissionsRoute } from '@/routes/tyanc/permissions';
 import { index as rolesRoute } from '@/routes/tyanc/roles';
 import { edit as editTyancApplication } from '@/routes/tyanc/settings/application';
@@ -100,6 +101,12 @@ const resolveFallbackSidebarNavigation = (
                     permission: null,
                 },
             ],
+        },
+        {
+            title: translate('Messages'),
+            href: messagesRoute(),
+            icon: 'message-square',
+            permission: null,
         },
         {
             title: translate('App Settings'),
@@ -214,6 +221,11 @@ export function useAppNavigation() {
         },
     ];
 
+    const messagesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Messages'), href: messagesRoute() },
+    ]);
+
     const filesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         { title: __('Files'), href: filesRoute() },
@@ -302,6 +314,7 @@ export function useAppNavigation() {
         usersCreateBreadcrumbs,
         usersShowBreadcrumbs,
         usersEditBreadcrumbs,
+        messagesBreadcrumbs,
         activityLogBreadcrumbs: computed<BreadcrumbItem[]>(() => [
             rootBreadcrumb.value,
             { title: __('Activity log'), href: activityLogRoute() },

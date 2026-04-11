@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import { useFullscreen } from '@vueuse/core';
-import {
-    Maximize,
-    MessageSquareMore,
-    Minimize,
-    Monitor,
-    Moon,
-    Sun,
-} from 'lucide-vue-next';
+import { Maximize, Minimize, Monitor, Moon, Sun } from 'lucide-vue-next';
 import { computed } from 'vue';
+import MessageDropdown from '@/components/admin/MessageDropdown.vue';
 import NotificationDropdown from '@/components/admin/NotificationDropdown.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -114,21 +108,7 @@ const handleFullscreenToggle = async () => {
 
         <NotificationDropdown />
 
-        <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="size-8">
-                    <MessageSquareMore class="size-4" />
-                    <span class="sr-only">{{ __('Chats') }}</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-72 rounded-lg">
-                <DropdownMenuLabel>{{ __('Chats') }}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div class="px-2 py-4 text-sm text-muted-foreground">
-                    {{ __('No unread conversations.') }}
-                </div>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <MessageDropdown />
 
         <Button
             variant="ghost"

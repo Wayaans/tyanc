@@ -8,10 +8,13 @@ use App\Actions\ResolveSidebarNavigation;
 use App\Actions\ResolveTranslations;
 use App\Actions\Settings\ResolveRuntimeSettings;
 use App\Actions\Tyanc\Access\ResolveAccessibleApps;
+use App\Actions\Tyanc\Messaging\CountUnreadMessages;
+use App\Actions\Tyanc\Messaging\ListRecentConversations;
 use App\Data\Auth\UserData;
 use App\Data\Notifications\NotificationData;
 use App\Models\App;
 use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
@@ -29,6 +32,8 @@ final class HandleInertiaRequests extends Middleware
         private readonly ResolveRuntimeSettings $runtimeSettings,
         private readonly ResolveTranslations $translations,
         private readonly ResolveAccessibleApps $accessibleApps,
+        private readonly CountUnreadMessages $unreadMessages,
+        private readonly ListRecentConversations $recentConversations,
     ) {}
 
     /**
@@ -72,6 +77,8 @@ final class HandleInertiaRequests extends Middleware
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,
             ],
             'notifications' => $this->notifications($authenticatedUser),
+            'messages' => $this->recentConversations->handle($authenticatedUser),
+            'messagesUnreadCount' => $this->unreadMessages->handle($authenticatedUser),
             'accessibleApps' => $accessibleApps,
             'currentApp' => $currentApp,
             'sidebarNavigation' => resolve(ResolveSidebarNavigation::class)->handle($currentApp, $authenticatedUser, $accessibleApps),
@@ -144,8 +151,11 @@ final class HandleInertiaRequests extends Middleware
         }
 
         return [
-            'unread_count' => $user->unreadNotifications()->count(),
+            'unread_count' => $user->unreadNotifications()
+                ->where('type', '!=', NewMessageNotification::class)
+                ->count(),
             'recent' => $user->notifications()
+                ->where('type', '!=', NewMessageNotification::class)
                 ->latest()
                 ->limit(8)
                 ->get()
