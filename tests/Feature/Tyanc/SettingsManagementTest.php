@@ -44,17 +44,22 @@ it('updates application settings and stores brand assets with media library', fu
 
     $user = settingsManager();
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->patchJson(route('tyanc.settings.application.update'), [
             'app_name' => 'Tyanc Admin',
             'company_legal_name' => 'Tyanc Labs LLC',
             'app_logo' => UploadedFile::fake()->image('logo.png', 240, 240),
             'favicon' => UploadedFile::fake()->image('favicon.png', 64, 64),
             'login_cover_image' => UploadedFile::fake()->image('cover.png', 1200, 630),
-        ])
-        ->assertOk()
+        ]);
+
+    $response->assertOk()
         ->assertJsonPath('settings.app_name', 'Tyanc Admin')
         ->assertJsonPath('settings.company_legal_name', 'Tyanc Labs LLC');
+
+    expect($response->json('settings.app_logo'))->toStartWith('/storage/')
+        ->and($response->json('settings.favicon'))->toStartWith('/storage/')
+        ->and($response->json('settings.login_cover_image'))->toStartWith('/storage/');
 
     $settings = resolve(AppSettings::class);
     $assetStore = SettingsAsset::forKey(SettingsAsset::GLOBAL_BRANDING_KEY);
@@ -186,6 +191,34 @@ it('renders and updates personal user preferences', function (): void {
         ->assertJsonPath('preferences.resolved_appearance', 'dark')
         ->assertJsonPath('preferences.resolved_sidebar_variant', 'floating')
         ->assertJsonPath('preferences.resolved_spacing_density', 'compact');
+
+    $preference = UserPreference::query()->where('user_id', $user->id)->first();
+
+    expect($preference)->not->toBeNull()
+        ->and($preference->locale)->toBe('id')
+        ->and($preference->timezone)->toBe('Asia/Makassar')
+        ->and($preference->appearance)->toBe('dark')
+        ->and($preference->sidebar_variant)->toBe('floating')
+        ->and($preference->spacing_density)->toBe('compact');
+});
+
+it('updates only the user appearance preference without overwriting other preferences', function (): void {
+    $user = User::factory()->create();
+
+    UserPreference::factory()->for($user, 'user')->create([
+        'locale' => 'id',
+        'timezone' => 'Asia/Makassar',
+        'appearance' => 'light',
+        'sidebar_variant' => 'floating',
+        'spacing_density' => 'compact',
+    ]);
+
+    $this->actingAs($user)
+        ->patchJson(route('settings.preferences.appearance.update'), [
+            'appearance' => 'dark',
+        ])
+        ->assertOk()
+        ->assertJsonPath('appearance', 'dark');
 
     $preference = UserPreference::query()->where('user_id', $user->id)->first();
 
