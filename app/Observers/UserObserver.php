@@ -21,7 +21,7 @@ final class UserObserver
 
         $original = Arr::except($user->getOriginal(), ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes']);
 
-        if (array_key_exists('status', $changes) && $user->status !== null) {
+        if (array_key_exists('status', $changes)) {
             $user->notify(new UserStatusChangedNotification(
                 subject: $user,
                 previousStatus: $this->stringValue($original['status'] ?? ''),

@@ -98,12 +98,14 @@ final class ApprovalContextRequestData extends Data
 
         $currentStepOrder = $pendingAssignments
             ->map(function (ApprovalAssignment $assignment): ?int {
-                if (is_numeric($assignment->step_order_snapshot)) {
+                if ($assignment->step_order_snapshot !== null) {
                     return (int) $assignment->step_order_snapshot;
                 }
 
-                return is_numeric($assignment->step?->step_order)
-                    ? (int) $assignment->step?->step_order
+                $step = $assignment->step;
+
+                return $step instanceof ApprovalRuleStep
+                    ? $step->step_order
                     : null;
             })
             ->filter(fn (mixed $stepOrder): bool => is_numeric($stepOrder))
@@ -116,12 +118,14 @@ final class ApprovalContextRequestData extends Data
 
         return $pendingAssignments
             ->filter(function (ApprovalAssignment $assignment) use ($currentStepOrder): bool {
-                if (is_numeric($assignment->step_order_snapshot)) {
+                if ($assignment->step_order_snapshot !== null) {
                     return (int) $assignment->step_order_snapshot === $currentStepOrder;
                 }
 
-                return is_numeric($assignment->step?->step_order)
-                    && (int) $assignment->step?->step_order === $currentStepOrder;
+                $step = $assignment->step;
+
+                return $step instanceof ApprovalRuleStep
+                    && $step->step_order === $currentStepOrder;
             })
             ->values();
     }

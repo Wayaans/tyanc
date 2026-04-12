@@ -87,7 +87,7 @@ final readonly class UpdateRole
 
     /**
      * @param  array{name: string, level: int, request_note?: string|null}  $attributes
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(Role $role, array $attributes): array
     {

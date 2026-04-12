@@ -11,8 +11,8 @@ use Spatie\LaravelData\Data;
 final class DataTableQueryData extends Data
 {
     /**
-     * @param  list<string>  $sort
-     * @param  array<string, string|list<string>>  $filter
+     * @param  array<int, string>  $sort
+     * @param  array<string, string|array<int, string>>  $filter
      * @param  array<string, bool>  $columns
      */
     public function __construct(
@@ -24,10 +24,10 @@ final class DataTableQueryData extends Data
     ) {}
 
     /**
-     * @param  list<string>  $allowedSorts
-     * @param  list<string>  $allowedFilters
-     * @param  list<string>  $defaultSort
-     * @param  list<string>  $allowedColumns
+     * @param  array<int, string>  $allowedSorts
+     * @param  array<int, string>  $allowedFilters
+     * @param  array<int, string>  $defaultSort
+     * @param  array<int, string>  $allowedColumns
      */
     public static function fromRequest(
         Request $request,
@@ -67,9 +67,9 @@ final class DataTableQueryData extends Data
     }
 
     /**
-     * @param  list<string>  $allowedSorts
-     * @param  list<string>  $defaultSort
-     * @return list<string>
+     * @param  array<int, string>  $allowedSorts
+     * @param  array<int, string>  $defaultSort
+     * @return array<int, string>
      */
     private static function sanitizeSort(mixed $sort, array $allowedSorts, array $defaultSort): array
     {
@@ -107,14 +107,14 @@ final class DataTableQueryData extends Data
         }
 
         return Collection::make($defaultSort)
-            ->filter(fn (mixed $value): bool => is_string($value) && $value !== '')
+            ->filter(fn (string $value): bool => $value !== '')
             ->values()
             ->all();
     }
 
     /**
-     * @param  list<string>  $allowedFilters
-     * @return array<string, string|list<string>>
+     * @param  array<int, string>  $allowedFilters
+     * @return array<string, string|array<int, string>>
      */
     private static function sanitizeFilter(mixed $filter, array $allowedFilters): array
     {
@@ -150,7 +150,7 @@ final class DataTableQueryData extends Data
     }
 
     /**
-     * @param  list<string>  $allowedColumns
+     * @param  array<int, string>  $allowedColumns
      * @return array<string, bool>
      */
     private static function sanitizeColumns(mixed $columns, array $allowedColumns): array

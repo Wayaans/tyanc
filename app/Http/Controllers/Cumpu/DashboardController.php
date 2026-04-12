@@ -103,7 +103,7 @@ final readonly class DashboardController
     }
 
     /**
-     * @return list<ApprovalRequestData>
+     * @return array<int, ApprovalRequestData>
      */
     private function recentInbox(User $user): array
     {
@@ -120,7 +120,7 @@ final readonly class DashboardController
     }
 
     /**
-     * @return list<ApprovalRequestData>
+     * @return array<int, ApprovalRequestData>
      */
     private function recentMyRequests(User $user): array
     {
@@ -133,6 +133,9 @@ final readonly class DashboardController
             ->all();
     }
 
+    /**
+     * @return Builder<ApprovalRequest>
+     */
     private function dashboardQuery(): Builder
     {
         return ApprovalRequest::query()->with([

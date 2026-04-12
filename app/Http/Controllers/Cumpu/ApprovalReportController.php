@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Excel as ExcelFormat;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class ApprovalReportController
@@ -31,7 +32,7 @@ final readonly class ApprovalReportController
         return Inertia::render('cumpu/approvals/Reports', $payload);
     }
 
-    public function export(Request $request, #[CurrentUser] User $user, ListApprovalReports $action)
+    public function export(Request $request, #[CurrentUser] User $user, ListApprovalReports $action): StreamedResponse
     {
         $this->ensureExportsEnabled();
 

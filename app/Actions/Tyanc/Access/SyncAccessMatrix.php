@@ -18,7 +18,7 @@ final readonly class SyncAccessMatrix
     public function __construct(private SyncRolePermissions $permissions) {}
 
     /**
-     * @param  list<string>  $permissionNames
+     * @param  array<int, string>  $permissionNames
      */
     public function handle(User $actor, Role $role, array $permissionNames): Role
     {

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Role as SpatieRole;
 
@@ -16,7 +17,9 @@ use Spatie\Permission\Models\Role as SpatieRole;
  */
 final class Role extends SpatieRole implements ApprovalSubject
 {
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use InteractsWithApprovals;
 
     /**

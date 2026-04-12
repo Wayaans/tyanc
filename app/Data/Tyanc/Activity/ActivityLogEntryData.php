@@ -64,6 +64,6 @@ final class ActivityLogEntryData extends Data
             return $name;
         }
 
-        return method_exists($model, 'getKey') ? (string) $model->getKey() : $model::class;
+        return (string) $model->getKey();
     }
 }

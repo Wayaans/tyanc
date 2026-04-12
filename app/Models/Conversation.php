@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Database\Factories\ConversationFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $subject
+ * @property string $created_by_id
+ * @property Carbon|null $last_message_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $creator
+ * @property-read Collection<int, User> $participants
+ * @property-read Collection<int, Message> $messages
+ * @property-read Message|null $latestMessage
+ */
 final class Conversation extends Model
 {
     /** @use HasFactory<ConversationFactory> */
@@ -40,11 +54,17 @@ final class Conversation extends Model
         'last_message_at',
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
+    /**
+     * @return BelongsToMany<User, $this>
+     */
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
@@ -52,11 +72,17 @@ final class Conversation extends Model
             ->withTimestamps();
     }
 
+    /**
+     * @return HasMany<Message, $this>
+     */
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class)->oldest();
     }
 
+    /**
+     * @return HasOne<Message, $this>
+     */
     public function latestMessage(): HasOne
     {
         return $this->hasOne(Message::class)->latestOfMany('created_at');
@@ -101,11 +127,19 @@ final class Conversation extends Model
         return __('Conversation');
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     protected function scopeForParticipant(Builder $query, User $user): Builder
     {
-        return $query->forParticipantState($user, false);
+        return $this->scopeForParticipantState($query, $user, false);
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     protected function scopeForParticipantState(Builder $query, User $user, bool $archived): Builder
     {
         return $query->whereHas('participants', function (Builder $participants) use ($user, $archived): Builder {

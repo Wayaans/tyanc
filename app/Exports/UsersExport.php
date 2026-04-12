@@ -5,16 +5,21 @@ declare(strict_types=1);
 namespace App\Exports;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Exportable;
 
+/** @implements WithMapping<User> */
 final class UsersExport implements FromCollection, WithHeadings, WithMapping
 {
     use Exportable;
 
-    public function collection()
+    /**
+     * @return Collection<int, User>
+     */
+    public function collection(): Collection
     {
         return User::query()
             ->with('roles')
@@ -23,13 +28,17 @@ final class UsersExport implements FromCollection, WithHeadings, WithMapping
             ->get();
     }
 
+    /**
+     * @param  User  $user
+     * @return array<int, string|null>
+     */
     public function map($user): array
     {
         return [
             $user->name,
             $user->username,
             $user->email,
-            $user->status?->value ?? (string) $user->status,
+            $user->status->value,
             $user->locale,
             $user->timezone,
             $user->roles->pluck('name')->join(', '),
@@ -37,6 +46,9 @@ final class UsersExport implements FromCollection, WithHeadings, WithMapping
         ];
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function headings(): array
     {
         return [

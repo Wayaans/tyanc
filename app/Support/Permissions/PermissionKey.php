@@ -55,7 +55,7 @@ final class PermissionKey
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     public static function all(): array
     {
@@ -140,7 +140,7 @@ final class PermissionKey
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     public static function actionsFor(string $app, string $resource): array
     {
@@ -151,7 +151,7 @@ final class PermissionKey
     }
 
     /**
-     * @return array<string, array{label: string, actions: list<string>}>
+     * @return array<string, array{label: string, actions: array<int, string>}>
      */
     public static function resourcesFor(string $app): array
     {
@@ -172,7 +172,7 @@ final class PermissionKey
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     public static function manageImpliedActions(): array
     {

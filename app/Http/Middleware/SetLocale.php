@@ -39,7 +39,7 @@ final readonly class SetLocale
                 return $preferredLocale;
             }
 
-            if (is_string($user->locale) && in_array($user->locale, $supportedLocales, true)) {
+            if (in_array($user->locale, $supportedLocales, true)) {
                 return $user->locale;
             }
         }

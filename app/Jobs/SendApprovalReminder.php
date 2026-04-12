@@ -43,7 +43,9 @@ final class SendApprovalReminder implements ShouldBeUnique, ShouldQueue
         }
 
         $this->notifiableAssignees($approvalRequest)
-            ->each(fn (User $user): mixed => $user->notify(new ApprovalReminderNotification($approvalRequest)));
+            ->each(function (User $user) use ($approvalRequest): void {
+                $user->notify(new ApprovalReminderNotification($approvalRequest));
+            });
 
         $approvalRequest->forceFill([
             'last_reminded_at' => now(),

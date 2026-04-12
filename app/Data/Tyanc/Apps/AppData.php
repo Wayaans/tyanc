@@ -12,7 +12,7 @@ use Spatie\LaravelData\Data;
 final class AppData extends Data
 {
     /**
-     * @param  list<AppPageData>  $pages
+     * @param  array<int, AppPageData>  $pages
      */
     public function __construct(
         public string $id,

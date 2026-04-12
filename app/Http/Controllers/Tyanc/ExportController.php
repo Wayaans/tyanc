@@ -16,11 +16,12 @@ use Spatie\Activitylog\Models\Activity;
 use Spatie\LaravelPdf\Enums\Format;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class ExportController
 {
-    public function users(#[CurrentUser] User $user)
+    public function users(#[CurrentUser] User $user): StreamedResponse
     {
         $this->ensureExportsEnabled();
         $this->authorizePermission($user, PermissionKey::tyanc('users', 'export'));
@@ -50,7 +51,7 @@ final readonly class ExportController
             ->download();
     }
 
-    public function activityLog(#[CurrentUser] User $user)
+    public function activityLog(#[CurrentUser] User $user): StreamedResponse
     {
         $this->ensureExportsEnabled();
         $this->authorizePermission($user, PermissionKey::tyanc('activity_log', 'export'));

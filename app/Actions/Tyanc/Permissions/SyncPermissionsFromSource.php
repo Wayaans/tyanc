@@ -13,7 +13,7 @@ use Spatie\Permission\PermissionRegistrar;
 final readonly class SyncPermissionsFromSource
 {
     /**
-     * @return array{created: int, existing: int, total: int, permissions: list<string>}
+     * @return array{created: int, existing: int, total: int, permissions: array<int, string>}
      */
     public function handle(?User $actor = null): array
     {

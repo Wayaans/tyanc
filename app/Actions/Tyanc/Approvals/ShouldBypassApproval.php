@@ -26,7 +26,7 @@ final readonly class ShouldBypassApproval
 
         $step = $rule->steps->sortBy('step_order')->first();
 
-        if (! $step instanceof ApprovalRuleStep || ! is_numeric($step->role_id)) {
+        if (! $step instanceof ApprovalRuleStep) {
             return false;
         }
 

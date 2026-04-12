@@ -96,7 +96,9 @@ final readonly class CreateUser
             return null;
         }
 
-        return $avatar->store('avatars', 'public');
+        $storedPath = $avatar->store('avatars', 'public');
+
+        return is_string($storedPath) ? $storedPath : null;
     }
 
     private function nullableString(mixed $value): ?string

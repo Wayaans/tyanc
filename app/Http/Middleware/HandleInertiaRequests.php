@@ -135,11 +135,11 @@ final class HandleInertiaRequests extends Middleware
      */
     private function availableLocales(): array
     {
-        return array_values(array_keys((array) config('tyanc.supported_locales', [])));
+        return array_keys((array) config('tyanc.supported_locales', []));
     }
 
     /**
-     * @return array{unread_count: int, recent: list<NotificationData>}
+     * @return array{unread_count: int, recent: array<int, NotificationData>}
      */
     private function notifications(?User $user): array
     {
@@ -165,7 +165,7 @@ final class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @param  list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>  $accessibleApps
+     * @param  array<int, array<string, mixed>>  $accessibleApps
      */
     private function resolveCurrentApp(Request $request, string $routeName, array $accessibleApps, string $defaultApp): string
     {

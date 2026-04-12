@@ -12,7 +12,7 @@ use Spatie\LaravelData\Data;
 final class RoleData extends Data
 {
     /**
-     * @param  list<string>  $permissions
+     * @param  array<int, string>  $permissions
      */
     public function __construct(
         public int $id,

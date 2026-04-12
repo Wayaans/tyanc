@@ -14,8 +14,8 @@ use Spatie\LaravelData\Data;
 final class ConversationData extends Data
 {
     /**
-     * @param  list<ConversationParticipantData>  $participants
-     * @param  list<MessageData>  $messages
+     * @param  array<int, ConversationParticipantData>  $participants
+     * @param  array<int, MessageData>  $messages
      */
     public function __construct(
         public string $id,

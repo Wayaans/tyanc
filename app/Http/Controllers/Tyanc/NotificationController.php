@@ -52,7 +52,7 @@ final readonly class NotificationController
     }
 
     /**
-     * @return array{unread_count: int, recent: list<NotificationData>}
+     * @return array{unread_count: int, recent: array<int, NotificationData>}
      */
     private function payload(User $user): array
     {

@@ -9,7 +9,24 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $app_id
+ * @property string $key
+ * @property string $label
+ * @property string|null $route_name
+ * @property string|null $path
+ * @property string|null $permission_name
+ * @property int $sort_order
+ * @property bool $enabled
+ * @property bool $is_navigation
+ * @property bool $is_system
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read App $app
+ */
 final class AppPage extends Model
 {
     /** @use HasFactory<AppPageFactory> */
@@ -53,6 +70,9 @@ final class AppPage extends Model
         'is_system' => false,
     ];
 
+    /**
+     * @return BelongsTo<App, $this>
+     */
     public function app(): BelongsTo
     {
         return $this->belongsTo(App::class);

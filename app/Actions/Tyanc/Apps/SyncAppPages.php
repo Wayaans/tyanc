@@ -51,8 +51,13 @@ final readonly class SyncAppPages
             ],
         );
 
-        /** @var list<array<string, mixed>> $normalizedPages */
-        $normalizedPages = Collection::make($validated['pages'])
+        /** @var array<int, array<string, mixed>> $validatedPages */
+        $validatedPages = is_array($validated['pages'] ?? null)
+            ? array_values(array_filter($validated['pages'], is_array(...)))
+            : [];
+
+        /** @var array<int, array<string, mixed>> $normalizedPages */
+        $normalizedPages = Collection::make($validatedPages)
             ->map(fn (array $page): array => [
                 'key' => $this->normalizeKey((string) $page['key']),
                 'label' => mb_trim((string) $page['label']),

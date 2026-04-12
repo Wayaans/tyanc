@@ -19,7 +19,7 @@ final readonly class UploadFile
 {
     /**
      * @param  array<string, mixed>  $attributes
-     * @return list<Media>
+     * @return array<int, Media>
      */
     public function handle(User $actor, array $attributes): array
     {

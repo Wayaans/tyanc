@@ -65,9 +65,9 @@ final readonly class CancelRequest
                 ->pluck('assignee')
                 ->filter(fn (mixed $user): bool => $user instanceof User)
                 ->unique('id')
-                ->each(fn (User $assignee): mixed => $assignee->notify(
-                    new ApprovalCancelledNotification($lockedRequest)->afterCommit(),
-                ));
+                ->each(function (User $assignee) use ($lockedRequest): void {
+                    $assignee->notify(new ApprovalCancelledNotification($lockedRequest)->afterCommit());
+                });
 
             return $lockedRequest->fresh([
                 'requester',

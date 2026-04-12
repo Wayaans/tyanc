@@ -19,7 +19,7 @@ final readonly class ListConversations
 {
     /**
      * @return array{
-     *     conversations: list<ConversationData>,
+     *     conversations: array<int, ConversationData>,
      *     selectedConversation: ConversationData|null,
      *     selectedConversationId: string|null,
      *     unreadCount: int,
@@ -53,7 +53,14 @@ final readonly class ListConversations
                 ]);
         }
 
-        $unreadCounts = $this->resolveUnreadCounts($actor, $conversations->pluck('id')->all(), $archived);
+        $unreadCounts = $this->resolveUnreadCounts(
+            $actor,
+            $conversations->pluck('id')
+                ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+                ->values()
+                ->all(),
+            $archived,
+        );
 
         if ($markConversationAsRead && is_string($resolvedConversationId)) {
             $unreadCounts[$resolvedConversationId] = 0;
@@ -119,7 +126,7 @@ final readonly class ListConversations
     }
 
     /**
-     * @param  list<string>  $conversationIds
+     * @param  array<int, string>  $conversationIds
      * @return array<string, int>
      */
     private function resolveUnreadCounts(User $actor, array $conversationIds, bool $archived): array
@@ -151,6 +158,9 @@ final readonly class ListConversations
             ->all();
     }
 
+    /**
+     * @return Builder<Conversation>
+     */
     private function conversationQuery(User $actor, bool $archived): Builder
     {
         return Conversation::query()->forParticipantState($actor, $archived);

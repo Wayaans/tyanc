@@ -72,7 +72,7 @@ final class AppRegistrySeeder extends Seeder
 
         $existingPages = $app->pages()->get()->keyBy('key');
 
-        return Collection::make($expectedPages)->contains(function (array $page) use ($app, $existingPages): bool {
+        return Collection::make($expectedPages)->contains(function (array $page) use ($existingPages): bool {
             $existingPage = $existingPages->get($page['key']);
 
             if (! $existingPage instanceof AppPage) {
@@ -86,7 +86,7 @@ final class AppRegistrySeeder extends Seeder
                 || $existingPage->sort_order !== $page['sort_order']
                 || $existingPage->enabled !== $page['enabled']
                 || $existingPage->is_navigation !== $page['is_navigation']
-                || $existingPage->is_system !== ($page['is_system'] ?? $app->is_system);
+                || $existingPage->is_system !== $page['is_system'];
         });
     }
 }

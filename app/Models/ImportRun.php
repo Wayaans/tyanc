@@ -7,13 +7,31 @@ namespace App\Models;
 use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\ImportRunFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property string $id
+ * @property string $type
+ * @property string $status
+ * @property string|null $file_name
+ * @property int $processed_rows
+ * @property array<string, mixed>|null $meta
+ * @property string|null $failure_message
+ * @property string|null $created_by_id
+ * @property Carbon|null $started_at
+ * @property Carbon|null $finished_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User|null $creator
+ * @property-read Collection<int, ApprovalRequest> $approvalRequests
+ */
 final class ImportRun extends Model implements ApprovalSubject, HasMedia
 {
     /** @use HasFactory<ImportRunFactory> */

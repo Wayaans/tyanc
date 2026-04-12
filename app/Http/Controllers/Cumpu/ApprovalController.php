@@ -179,7 +179,7 @@ final readonly class ApprovalController
     }
 
     /**
-     * @return list<array{assignment_id: string, assigned_to_id: string|null, assigned_to_name: string|null, step_label: string|null, step_order: int|null, eligible_assignees: list<array{value: string, label: string}>}>
+     * @return array<int, array{assignment_id: string, assigned_to_id: string|null, assigned_to_name: string|null, step_label: string|null, step_order: int|null, eligible_assignees: array<int, array{value: string, label: string}>}>
      */
     private function reassignOptions(
         ApprovalRequest $approvalRequest,
@@ -190,17 +190,20 @@ final readonly class ApprovalController
             return [];
         }
 
+        /** @var Collection<int, ApprovalAssignment>|null $currentStepAssignments */
         $currentStepAssignments = $approvalRequest->assignments
             ->filter(fn (ApprovalAssignment $assignment): bool => $assignment->status === ApprovalAssignment::StatusPending)
             ->sortBy(fn (ApprovalAssignment $assignment): int => $this->stepOrder($assignment) ?? PHP_INT_MAX)
             ->groupBy(fn (ApprovalAssignment $assignment): string => (string) ($this->stepOrder($assignment) ?? ''))
-            ->first() ?? collect();
+            ->first();
 
-        if (! $currentStepAssignments instanceof Collection || $currentStepAssignments->isEmpty()) {
+        if ($currentStepAssignments === null || $currentStepAssignments->isEmpty()) {
             return [];
         }
 
-        $step = $currentStepAssignments->first()?->step;
+        /** @var ApprovalAssignment $assignment */
+        $assignment = $currentStepAssignments->first();
+        $step = $assignment->step;
         $requester = $approvalRequest->requester instanceof User
             ? $approvalRequest->requester
             : null;
@@ -217,20 +220,13 @@ final readonly class ApprovalController
             ->values()
             ->all();
 
-        /** @var ApprovalAssignment|null $assignment */
-        $assignment = $currentStepAssignments->first();
-
-        if (! $assignment instanceof ApprovalAssignment) {
-            return [];
-        }
-
         return [[
             'assignment_id' => (string) $assignment->id,
             'assigned_to_id' => $assignment->assigned_to_id,
-            'assigned_to_name' => $assignment->assignee?->name,
+            'assigned_to_name' => $assignment->assignee instanceof User ? $assignment->assignee->name : null,
             'step_label' => is_string($assignment->step_label_snapshot) && $assignment->step_label_snapshot !== ''
                 ? $assignment->step_label_snapshot
-                : $assignment->step?->label,
+                : $step->label,
             'step_order' => $this->stepOrder($assignment),
             'eligible_assignees' => $eligibleAssignees,
         ]];
@@ -238,12 +234,14 @@ final readonly class ApprovalController
 
     private function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

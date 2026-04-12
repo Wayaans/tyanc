@@ -66,7 +66,9 @@ final readonly class UpdateUser
             Storage::disk('public')->delete($currentAvatar);
         }
 
-        return $avatar->store('avatars', 'public');
+        $storedPath = $avatar->store('avatars', 'public');
+
+        return is_string($storedPath) ? $storedPath : null;
     }
 
     /**

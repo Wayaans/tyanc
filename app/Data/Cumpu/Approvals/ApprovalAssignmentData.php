@@ -38,12 +38,12 @@ final class ApprovalAssignmentData extends Data
             step_label: is_string($assignment->step_label_snapshot) && $assignment->step_label_snapshot !== ''
                 ? $assignment->step_label_snapshot
                 : ($assignment->step instanceof ApprovalRuleStep ? $assignment->step->label : null),
-            step_order: is_numeric($assignment->step_order_snapshot)
+            step_order: $assignment->step_order_snapshot !== null
                 ? (int) $assignment->step_order_snapshot
                 : ($assignment->step instanceof ApprovalRuleStep ? $assignment->step->step_order : null),
             role_name: is_string($assignment->role_name_snapshot) && $assignment->role_name_snapshot !== ''
                 ? $assignment->role_name_snapshot
-                : $assignment->step?->role?->name,
+                : ($assignment->step instanceof ApprovalRuleStep ? $assignment->step->role->name : null),
             assigned_at: $assignment->created_at instanceof CarbonInterface ? $assignment->created_at->toIso8601String() : now()->toIso8601String(),
             completed_at: $assignment->completed_at instanceof CarbonInterface ? $assignment->completed_at->toIso8601String() : null,
         );

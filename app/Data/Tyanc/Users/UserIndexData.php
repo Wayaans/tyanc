@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Data\Tyanc\Users;
 
-use App\Enums\UserStatus;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Spatie\LaravelData\Data;
@@ -12,8 +11,8 @@ use Spatie\LaravelData\Data;
 final class UserIndexData extends Data
 {
     /**
-     * @param  list<string>  $roles
-     * @param  list<string>  $permissions
+     * @param  array<int, string>  $roles
+     * @param  array<int, string>  $permissions
      */
     public function __construct(
         public string $id,
@@ -48,7 +47,7 @@ final class UserIndexData extends Data
             username: $user->username,
             email: $user->email,
             avatar: $form->avatar,
-            status: $user->status instanceof UserStatus ? $user->status->value : (string) $user->status,
+            status: $user->status->value,
             locale: $user->locale,
             timezone: $user->timezone,
             roles: $user->roles->pluck('name')->filter()->values()->all(),

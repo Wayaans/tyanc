@@ -14,6 +14,10 @@ final class AppliesTableQuery
     use Macroable;
 
     /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param  Collection<TKey, TValue>  $items
      * @param  array<string, callable(mixed): mixed|string>  $sorts
      * @param  array<string, callable(mixed, mixed): bool|string>  $filters
      * @return array{
@@ -64,7 +68,12 @@ final class AppliesTableQuery
     }
 
     /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param  Collection<TKey, TValue>  $items
      * @param  array<string, callable(mixed, mixed): bool|string>  $filters
+     * @return Collection<int, TValue>
      */
     private function applyFilters(Collection $items, DataTableQueryData $query, array $filters): Collection
     {
@@ -78,7 +87,12 @@ final class AppliesTableQuery
     }
 
     /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param  Collection<TKey, TValue>  $items
      * @param  array<string, callable(mixed): mixed|string>  $sorts
+     * @return Collection<int, TValue>
      */
     private function applySorting(Collection $items, DataTableQueryData $query, array $sorts): Collection
     {
@@ -112,7 +126,7 @@ final class AppliesTableQuery
      */
     private function matchesFilter(mixed $row, callable|string $resolver, mixed $filterValue): bool
     {
-        if (! is_string($resolver) && is_callable($resolver)) {
+        if (! is_string($resolver)) {
             return (bool) $resolver($row, $filterValue);
         }
 
@@ -151,7 +165,7 @@ final class AppliesTableQuery
      */
     private function resolveValue(mixed $row, callable|string $resolver): mixed
     {
-        if (! is_string($resolver) && is_callable($resolver)) {
+        if (! is_string($resolver)) {
             return $resolver($row);
         }
 

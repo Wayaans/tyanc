@@ -16,7 +16,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -26,10 +25,10 @@ final readonly class ListApprovalRequests
 
     /**
      * @return array{
-     *     rows: list<ApprovalRequestData>,
+     *     rows: array<int, ApprovalRequestData>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
-     *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     *     filters: array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      * }
      */
     public function handle(User $actor, Request $request, string $scope = 'inbox'): array
@@ -71,7 +70,12 @@ final readonly class ListApprovalRequests
             'sort' => implode(',', $tableQuery->sort),
         ]);
 
-        $overdueIds = $this->overdueApprovals->handle()->pluck('id')->all();
+        $overdueIds = $this->overdueApprovals->handle()
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->values()
+            ->all();
+
         $requests = $this->query($actor, $queryRequest, $scope, $overdueIds)
             ->paginate(
                 perPage: $tableQuery->per_page,
@@ -80,7 +84,7 @@ final readonly class ListApprovalRequests
             ->withQueryString();
 
         return [
-            'rows' => Collection::make($requests->items())
+            'rows' => $requests->getCollection()
                 ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $actor))
                 ->all(),
             'meta' => $this->meta($requests),
@@ -90,7 +94,8 @@ final readonly class ListApprovalRequests
     }
 
     /**
-     * @param  list<string>  $overdueIds
+     * @param  array<int, string>  $overdueIds
+     * @return QueryBuilder<ApprovalRequest>
      */
     private function query(User $actor, Request $request, string $scope, array $overdueIds): QueryBuilder
     {
@@ -159,6 +164,9 @@ final readonly class ListApprovalRequests
             ->defaultSort('-requested_at');
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applySearch(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -190,6 +198,9 @@ final readonly class ListApprovalRequests
         });
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyAssignedToFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value) || (string) $value === '') {
@@ -200,6 +211,9 @@ final readonly class ListApprovalRequests
             ->where('assigned_to_id', (string) $value));
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyAssigneeSearchFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -217,6 +231,9 @@ final readonly class ListApprovalRequests
             ->orWhere('email', 'like', sprintf('%%%s%%', $search)));
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyAgingFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -231,6 +248,9 @@ final readonly class ListApprovalRequests
         };
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyReassignedFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -248,6 +268,9 @@ final readonly class ListApprovalRequests
         }
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyEscalatedFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -266,7 +289,9 @@ final readonly class ListApprovalRequests
     }
 
     /**
-     * @param  list<string>  $overdueIds
+     * @param  Builder<ApprovalRequest>  $query
+     * @param  array<int, string>  $overdueIds
+     * @return Builder<ApprovalRequest>
      */
     private function applyOverdueFilter(Builder $query, mixed $value, array $overdueIds): Builder
     {
@@ -288,7 +313,7 @@ final readonly class ListApprovalRequests
     }
 
     /**
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(string $scope): array
     {
@@ -462,6 +487,7 @@ final readonly class ListApprovalRequests
     }
 
     /**
+     * @param  LengthAwarePaginator<int, ApprovalRequest>  $paginator
      * @return array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool}
      */
     private function meta(LengthAwarePaginator $paginator): array

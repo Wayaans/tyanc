@@ -22,10 +22,10 @@ final readonly class ListUsers
 {
     /**
      * @return array{
-     *     rows: list<UserIndexData>,
+     *     rows: array<int, UserIndexData>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
-     *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     *     filters: array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      * }
      */
     public function handle(User $actor, Request $request): array
@@ -73,7 +73,7 @@ final readonly class ListUsers
             ->withQueryString();
 
         return [
-            'rows' => Collection::make($users->items())
+            'rows' => $users->getCollection()
                 ->map(fn (User $user): UserIndexData => UserIndexData::fromModel($user))
                 ->all(),
             'meta' => $this->meta($users),
@@ -82,6 +82,9 @@ final readonly class ListUsers
         ];
     }
 
+    /**
+     * @param  Builder<User>  $query
+     */
     private function applySearch(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -104,7 +107,7 @@ final readonly class ListUsers
     }
 
     /**
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(): array
     {
@@ -156,6 +159,7 @@ final readonly class ListUsers
     }
 
     /**
+     * @param  LengthAwarePaginator<int, User>  $paginator
      * @return array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool}
      */
     private function meta(LengthAwarePaginator $paginator): array

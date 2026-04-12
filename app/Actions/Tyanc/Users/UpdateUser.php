@@ -54,7 +54,7 @@ final readonly class UpdateUser
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(User $user, array $attributes): array
     {
@@ -87,7 +87,9 @@ final readonly class UpdateUser
             $changedFields->push('timezone');
         }
 
-        $nextRoles = collect($attributes['roles'] ?? $user->roles->pluck('name')->all())
+        $roles = $attributes['roles'] ?? $user->roles->pluck('name')->all();
+
+        $nextRoles = collect(is_array($roles) ? $roles : [])
             ->filter(fn (mixed $role): bool => is_string($role) && $role !== '')
             ->sort()
             ->values()
@@ -99,7 +101,9 @@ final readonly class UpdateUser
             $changedFields->push('roles');
         }
 
-        $nextPermissions = collect($attributes['permissions'] ?? $user->permissions->pluck('name')->all())
+        $permissions = $attributes['permissions'] ?? $user->permissions->pluck('name')->all();
+
+        $nextPermissions = collect(is_array($permissions) ? $permissions : [])
             ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
             ->sort()
             ->values()
@@ -123,7 +127,7 @@ final readonly class UpdateUser
     }
 
     /**
-     * @return list<int>
+     * @return array<int, int>
      */
     private function targetRoleLevels(mixed $roles): array
     {

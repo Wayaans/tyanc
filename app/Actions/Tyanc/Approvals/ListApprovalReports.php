@@ -24,11 +24,11 @@ final readonly class ListApprovalReports
 
     /**
      * @return array{
-     *     rows: list<ApprovalReportRowData>,
+     *     rows: array<int, ApprovalReportRowData>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
      *     filters: array{date_from: string, date_to: string, status: string, app_key: string, escalated: bool, reassigned: bool, overdue: bool},
-     *     appOptions: list<array{value: string, label: string}>,
+     *     appOptions: array<int, array{value: string, label: string}>,
      *     summary: array{total: int, pending: int, in_review: int, approved: int, consumed: int, rejected: int, cancelled: int, expired: int, overdue: int, escalated: int, reassigned: int}
      * }
      */
@@ -74,7 +74,12 @@ final readonly class ListApprovalReports
             'sort' => implode(',', $tableQuery->sort),
         ]);
 
-        $overdueIds = $this->overdueApprovals->handle()->pluck('id')->all();
+        $overdueIds = $this->overdueApprovals->handle()
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->values()
+            ->all();
+
         $reports = $this->query($queryRequest, $overdueIds)
             ->paginate(
                 perPage: $tableQuery->per_page,
@@ -85,7 +90,7 @@ final readonly class ListApprovalReports
         $summaryRows = $this->rows($actor, $request, $overdueIds);
 
         return [
-            'rows' => Collection::make($reports->items())
+            'rows' => $reports->getCollection()
                 ->map(fn (ApprovalRequest $approvalRequest): ApprovalReportRowData => ApprovalReportRowData::fromModel(
                     $approvalRequest,
                     in_array($approvalRequest->id, $overdueIds, true),
@@ -132,6 +137,7 @@ final readonly class ListApprovalReports
     }
 
     /**
+     * @param  array<int, string>|null  $overdueIds
      * @return Collection<int, ApprovalReportRowData>
      */
     public function rows(User $actor, Request $request, ?array $overdueIds = null): Collection
@@ -139,7 +145,11 @@ final readonly class ListApprovalReports
         $this->authorizeView($actor);
         ApprovalRequest::expirePastDueGrants();
 
-        $resolvedOverdueIds = $overdueIds ?? $this->overdueApprovals->handle()->pluck('id')->all();
+        $resolvedOverdueIds = $overdueIds ?? $this->overdueApprovals->handle()
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->values()
+            ->all();
 
         return $this->query($request, $resolvedOverdueIds)
             ->get()
@@ -158,7 +168,8 @@ final readonly class ListApprovalReports
     }
 
     /**
-     * @param  list<string>  $overdueIds
+     * @param  array<int, string>  $overdueIds
+     * @return QueryBuilder<ApprovalRequest>
      */
     private function query(Request $request, array $overdueIds): QueryBuilder
     {
@@ -194,6 +205,9 @@ final readonly class ListApprovalReports
             ->defaultSort('-requested_at');
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applySearch(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -225,6 +239,9 @@ final readonly class ListApprovalReports
         });
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyDateFromFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value) || (string) $value === '') {
@@ -234,6 +251,9 @@ final readonly class ListApprovalReports
         $query->whereDate('requested_at', '>=', (string) $value);
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyDateToFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value) || (string) $value === '') {
@@ -243,6 +263,9 @@ final readonly class ListApprovalReports
         $query->whereDate('requested_at', '<=', (string) $value);
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyAssignedToFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value) || (string) $value === '') {
@@ -253,6 +276,9 @@ final readonly class ListApprovalReports
             ->where('assigned_to_id', (string) $value));
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyAgingFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -269,6 +295,9 @@ final readonly class ListApprovalReports
         };
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyReassignedFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -286,6 +315,9 @@ final readonly class ListApprovalReports
         }
     }
 
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     */
     private function applyEscalatedFilter(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -304,7 +336,9 @@ final readonly class ListApprovalReports
     }
 
     /**
-     * @param  list<string>  $overdueIds
+     * @param  Builder<ApprovalRequest>  $query
+     * @param  array<int, string>  $overdueIds
+     * @return Builder<ApprovalRequest>
      */
     private function applyOverdueFilter(Builder $query, mixed $value, array $overdueIds): Builder
     {
@@ -326,6 +360,7 @@ final readonly class ListApprovalReports
     }
 
     /**
+     * @param  LengthAwarePaginator<int, ApprovalRequest>  $paginator
      * @return array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool}
      */
     private function meta(LengthAwarePaginator $paginator): array

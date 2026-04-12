@@ -12,9 +12,9 @@ final readonly class ResolvePermissionOptions
 {
     /**
      * @return array{
-     *     apps: list<array{value: string, label: string}>,
-     *     resources: array<string, list<array{value: string, label: string}>>,
-     *     actions: array<string, array<string, list<array{value: string, label: string, permission: string}>>>
+     *     apps: array<int, array{value: string, label: string}>,
+     *     resources: array<string, array<int, array{value: string, label: string}>>,
+     *     actions: array<string, array<string, array<int, array{value: string, label: string, permission: string}>>>
      * }
      */
     public function handle(bool $includeNavigationResources = true): array
@@ -27,7 +27,7 @@ final readonly class ResolvePermissionOptions
             ->filter(fn (mixed $appKey): bool => is_string($appKey) && $appKey !== '')
             ->map(fn (string $appKey): array => [
                 'value' => $appKey,
-                'label' => $registeredApps->get($appKey, PermissionKey::appLabel($appKey)),
+                'label' => (string) $registeredApps->get($appKey, PermissionKey::appLabel($appKey)),
             ])
             ->values()
             ->all();

@@ -21,13 +21,12 @@ final readonly class UsersImport implements SkipsEmptyRows, ToCollection, WithCh
 {
     public function __construct(private string $importRunId) {}
 
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     */
     public function collection(Collection $rows): void
     {
         foreach ($rows as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
             $attributes = $this->normalizeRow($row);
 
             if (($attributes['email'] ?? null) === null) {
@@ -68,8 +67,10 @@ final readonly class UsersImport implements SkipsEmptyRows, ToCollection, WithCh
     private function normalizeRow(array $row): array
     {
         $email = $this->nullableString($row['email'] ?? null);
-        $status = UserStatus::tryFrom($this->nullableString($row['status'] ?? null) ?? '')?->value
-            ?? UserStatus::Active->value;
+        $statusValue = UserStatus::tryFrom($this->nullableString($row['status'] ?? null) ?? '');
+        $status = $statusValue instanceof UserStatus
+            ? $statusValue->value
+            : UserStatus::Active->value;
 
         return array_filter([
             'username' => $this->nullableString($row['username'] ?? null),

@@ -12,7 +12,7 @@ use App\Support\Permissions\PermissionKey;
 final readonly class ListMessageContacts
 {
     /**
-     * @return list<ConversationParticipantData>
+     * @return array<int, ConversationParticipantData>
      */
     public function handle(User $actor): array
     {
