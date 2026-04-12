@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 $adminPath = mb_trim((string) config('tyanc.admin_path', 'tyanc'), '/');
+$cumpuPath = 'cumpu';
 $demoPath = mb_trim((string) config('tyanc.demo_path', 'demo'), '/');
 
 Route::get('/', fn () => Inertia::render('Welcome', [
@@ -24,10 +25,11 @@ Route::get('/', fn () => Inertia::render('Welcome', [
 ]))->name('home');
 Route::patch('locale', [LocaleController::class, 'update'])->name('locale.update');
 
-Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $demoPath): void {
+Route::middleware(['auth', 'verified'])->group(function () use ($adminPath, $cumpuPath, $demoPath): void {
     Route::redirect('dashboard', sprintf('/%s/dashboard', $adminPath));
 
     Route::prefix($adminPath)->group(base_path('routes/tyanc.php'));
+    Route::prefix($cumpuPath)->name('cumpu.')->group(base_path('routes/cumpu.php'));
 
     Route::prefix($demoPath)->name('demo.')->group(function (): void {
         Route::get('dashboard', [DemoDashboardController::class, 'show'])->name('dashboard');

@@ -47,7 +47,7 @@ final readonly class UserController
             'abilities' => [
                 'import' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'import')),
                 'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'export')),
-                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('approvals', 'viewany')),
+                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::cumpu('approvals', 'viewany')),
             ],
             'features' => [
                 'imports_enabled' => (bool) config('tyanc.features.imports_enabled', false),
@@ -184,13 +184,15 @@ final readonly class UserController
      */
     private function approvalRequests(User $actor): array
     {
-        if (! $this->permissionAccess()->handle($actor, PermissionKey::tyanc('approvals', 'viewany'))) {
+        if (! $this->permissionAccess()->handle($actor, PermissionKey::cumpu('approvals', 'viewany'))) {
             return [];
         }
 
         return ApprovalRequest::query()
-            ->with(['requester', 'reviewer', 'subject'])
-            ->where('action', PermissionKey::tyanc('users', 'import'))
+            ->with(['requester', 'reviewer', 'subject', 'assignments'])
+            ->whereHas('assignments', fn ($query) => $query
+                ->where('assigned_to_id', $actor->id)
+                ->where('status', 'pending'))
             ->latest('requested_at')
             ->limit(6)
             ->get()

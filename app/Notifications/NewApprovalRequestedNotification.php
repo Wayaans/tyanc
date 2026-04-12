@@ -37,10 +37,10 @@ final class NewApprovalRequestedNotification extends Notification
             'body' => $subjectLabel !== null
                 ? __('Approval required for :subject.', ['subject' => $subjectLabel])
                 : __('A new approval request requires your review.'),
-            'action_label' => __('Open approvals'),
-            'action_url' => is_string(data_get($this->approvalRequest?->payload, 'action_url'))
-                ? data_get($this->approvalRequest?->payload, 'action_url')
-                : route('tyanc.users.index', absolute: false),
+            'action_label' => __('Open request'),
+            'action_url' => $this->approvalRequest instanceof ApprovalRequest
+                ? route('cumpu.approvals.show', $this->approvalRequest, absolute: false)
+                : route('cumpu.approvals.index', absolute: false),
         ];
     }
 }

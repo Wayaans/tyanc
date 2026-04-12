@@ -13,6 +13,29 @@ final readonly class PermissionResourceAccess
 {
     public function handle(User $user, string $permissionName): bool
     {
+        if ($this->allowsPermission($user, $permissionName)) {
+            return true;
+        }
+
+        return collect($this->legacyPermissionsFor($permissionName))
+            ->contains(fn (string $legacyPermission): bool => $this->allowsPermission($user, $legacyPermission));
+    }
+
+    /**
+     * @param  Collection<int, string>  $permissionNames
+     */
+    public function matchesGrantedPermissions(Collection $permissionNames, string $permissionName): bool
+    {
+        if ($this->permissionNamesContain($permissionNames, $permissionName)) {
+            return true;
+        }
+
+        return collect($this->legacyPermissionsFor($permissionName))
+            ->contains(fn (string $legacyPermission): bool => $this->permissionNamesContain($permissionNames, $legacyPermission));
+    }
+
+    private function allowsPermission(User $user, string $permissionName): bool
+    {
         if (Gate::forUser($user)->allows($permissionName)) {
             return true;
         }
@@ -26,7 +49,7 @@ final readonly class PermissionResourceAccess
     /**
      * @param  Collection<int, string>  $permissionNames
      */
-    public function matchesGrantedPermissions(Collection $permissionNames, string $permissionName): bool
+    private function permissionNamesContain(Collection $permissionNames, string $permissionName): bool
     {
         if ($permissionNames->contains($permissionName)) {
             return true;
@@ -35,6 +58,26 @@ final readonly class PermissionResourceAccess
         $managePermission = $this->managePermissionFor($permissionName);
 
         return $managePermission !== null && $permissionNames->contains($managePermission);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function legacyPermissionsFor(string $permissionName): array
+    {
+        $parsed = PermissionKey::parse($permissionName);
+
+        if ($parsed === null || $parsed['app'] !== 'cumpu' || $parsed['resource'] !== 'approvals') {
+            return [];
+        }
+
+        return match ($parsed['action']) {
+            'view' => [
+                PermissionKey::tyanc('approvals', 'view'),
+                PermissionKey::tyanc('approvals', 'viewany'),
+            ],
+            default => [PermissionKey::tyanc('approvals', $parsed['action'])],
+        };
     }
 
     private function managePermissionFor(string $permissionName): ?string

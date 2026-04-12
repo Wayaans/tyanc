@@ -26,6 +26,11 @@ final class PermissionKey
         return self::make('tyanc', $resource, $action);
     }
 
+    public static function cumpu(string $resource, string $action): string
+    {
+        return self::make('cumpu', $resource, $action);
+    }
+
     public static function isValid(string $permissionName): bool
     {
         return preg_match(self::Pattern, $permissionName) === 1;

@@ -72,7 +72,7 @@ final readonly class ActivityLogController
             'approvalRequests' => $this->approvalRequests($user),
             'abilities' => [
                 'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('activity_log', 'export')),
-                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('approvals', 'viewany')),
+                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::cumpu('approvals', 'viewany')),
             ],
             'features' => [
                 'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
@@ -91,12 +91,15 @@ final readonly class ActivityLogController
      */
     private function approvalRequests(User $actor): array
     {
-        if (! $this->permissionAccess()->handle($actor, PermissionKey::tyanc('approvals', 'viewany'))) {
+        if (! $this->permissionAccess()->handle($actor, PermissionKey::cumpu('approvals', 'viewany'))) {
             return [];
         }
 
         return ApprovalRequest::query()
-            ->with(['requester', 'reviewer', 'subject'])
+            ->with(['requester', 'reviewer', 'subject', 'assignments'])
+            ->whereHas('assignments', fn ($query) => $query
+                ->where('assigned_to_id', $actor->id)
+                ->where('status', 'pending'))
             ->latest('requested_at')
             ->limit(6)
             ->get()

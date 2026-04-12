@@ -25,9 +25,11 @@ final readonly class ImportController
         );
 
         if ($request->wantsJson()) {
-            return response()->json($payload, 201);
+            return response()->json($payload, $payload['executed'] ? 201 : 202);
         }
 
-        return to_route('tyanc.users.index');
+        return $payload['executed']
+            ? to_route('tyanc.users.index')
+            : to_route('cumpu.approvals.my-requests');
     }
 }

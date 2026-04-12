@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, Clock, XCircle } from 'lucide-vue-next';
+import { Ban, CheckCircle2, Clock, XCircle } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/lib/translations';
@@ -27,12 +27,26 @@ const statusConfigs: Record<
     ApprovalStatus,
     { label: string; badgeClass: string; icon: typeof Clock; iconClass: string }
 > = {
+    draft: {
+        label: 'Draft approval',
+        badgeClass:
+            'border-zinc-500/20 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
+        icon: Clock,
+        iconClass: 'text-zinc-500',
+    },
     pending: {
         label: 'Pending approval',
         badgeClass:
             'border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300',
         icon: Clock,
         iconClass: 'text-slate-500',
+    },
+    in_review: {
+        label: 'Approval in review',
+        badgeClass:
+            'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+        icon: Clock,
+        iconClass: 'text-sky-500',
     },
     approved: {
         label: 'Approval approved',
@@ -47,6 +61,27 @@ const statusConfigs: Record<
             'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400',
         icon: XCircle,
         iconClass: 'text-red-500',
+    },
+    cancelled: {
+        label: 'Approval cancelled',
+        badgeClass:
+            'border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300',
+        icon: Ban,
+        iconClass: 'text-orange-500',
+    },
+    expired: {
+        label: 'Approval expired',
+        badgeClass:
+            'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+        icon: Ban,
+        iconClass: 'text-amber-500',
+    },
+    superseded: {
+        label: 'Approval superseded',
+        badgeClass:
+            'border-stone-500/20 bg-stone-500/10 text-stone-700 dark:text-stone-300',
+        icon: Ban,
+        iconClass: 'text-stone-500',
     },
 };
 </script>

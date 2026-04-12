@@ -36,15 +36,17 @@ it('lists the app registry for authorized managers', function (): void {
         ->assertInertia(fn ($page) => $page
             ->component('tyanc/apps/Index')
             ->where('apps.0.key', 'tyanc')
-            ->where('apps.1.key', 'demo'));
+            ->where('apps.1.key', 'cumpu')
+            ->where('apps.2.key', 'demo'));
 
     $this->actingAs($manager)
         ->getJson(route('tyanc.apps.index'))
         ->assertOk()
-        ->assertJsonCount(2, 'apps')
+        ->assertJsonCount(3, 'apps')
         ->assertJsonPath('apps.0.key', 'tyanc')
         ->assertJsonPath('apps.0.pages.0.key', 'dashboard')
-        ->assertJsonPath('apps.1.key', 'demo');
+        ->assertJsonPath('apps.1.key', 'cumpu')
+        ->assertJsonPath('apps.2.key', 'demo');
 });
 
 it('does not mutate app state when listing the registry', function (): void {

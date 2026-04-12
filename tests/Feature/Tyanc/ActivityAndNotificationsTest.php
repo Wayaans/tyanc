@@ -44,6 +44,7 @@ it('logs user update, suspension, deletion, and login activity events', function
 
     $this->actingAs($manager)
         ->patchJson(route('tyanc.users.update', $managedUser), [
+            'name' => 'Updated User',
             'username' => 'updated-user',
             'email' => 'updated@example.com',
             'status' => 'active',

@@ -89,6 +89,19 @@ return [
                 ],
             ],
         ],
+        'cumpu' => [
+            'label' => 'Cumpu',
+            'resources' => [
+                'approvals' => [
+                    'label' => 'Approvals',
+                    'actions' => ['viewany', 'view', 'approve', 'reject', 'manage'],
+                ],
+                'approval_rules' => [
+                    'label' => 'Approval rules',
+                    'actions' => ['viewany', 'create', 'update', 'delete', 'manage'],
+                ],
+            ],
+        ],
         'demo' => [
             'label' => 'Demo',
             'resources' => [

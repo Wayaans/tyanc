@@ -152,7 +152,8 @@ it('returns not found for user imports while the feature is disabled', function 
 
 it('rejects an approval request and marks the import run as failed', function (): void {
     $approver = documentManager([
-        PermissionKey::tyanc('approvals', 'reject'),
+        PermissionKey::cumpu('approvals', 'reject'),
+        PermissionKey::tyanc('users', 'import'),
     ]);
 
     $requester = User::factory()->create();
@@ -164,7 +165,7 @@ it('rejects an approval request and marks the import run as failed', function ()
     ]);
 
     $this->actingAs($approver)
-        ->patchJson(route('tyanc.users.approvals.reject', $approvalRequest), [
+        ->patchJson(route('cumpu.approvals.reject', $approvalRequest), [
             'review_note' => 'The file needs corrections first.',
         ])
         ->assertOk()

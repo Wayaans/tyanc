@@ -81,6 +81,37 @@ return [
                 ],
             ],
         ],
+        'cumpu' => [
+            'title' => 'Cumpu',
+            'subtitle' => 'Approval workspace',
+            'icon' => 'shield-check',
+            'menu' => [
+                [
+                    'title' => 'Dashboard',
+                    'icon' => 'layout-grid',
+                    'route' => 'cumpu.dashboard',
+                    'permission' => PermissionKey::cumpu('approvals', 'view'),
+                ],
+                [
+                    'title' => 'My requests',
+                    'icon' => 'clock-3',
+                    'route' => 'cumpu.approvals.my-requests',
+                    'permission' => PermissionKey::cumpu('approvals', 'view'),
+                ],
+                [
+                    'title' => 'Approval inbox',
+                    'icon' => 'shield-check',
+                    'route' => 'cumpu.approvals.index',
+                    'permission' => PermissionKey::cumpu('approvals', 'viewany'),
+                ],
+                [
+                    'title' => 'Approval rules',
+                    'icon' => 'settings-2',
+                    'route' => 'cumpu.approval-rules.index',
+                    'permission' => PermissionKey::cumpu('approval_rules', 'viewany'),
+                ],
+            ],
+        ],
         'demo' => [
             'title' => 'Demo',
             'subtitle' => 'Sandbox',

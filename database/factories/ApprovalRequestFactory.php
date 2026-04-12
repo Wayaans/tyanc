@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalRule;
 use App\Models\ImportRun;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,17 +22,34 @@ final class ApprovalRequestFactory extends Factory
     public function definition(): array
     {
         return [
-            'action' => 'tyanc.users.import',
+            'rule_id' => ApprovalRule::factory()->withRoleStep(),
+            'action' => PermissionKey::tyanc('users', 'import'),
+            'app_key' => 'tyanc',
+            'resource_key' => 'users',
+            'action_key' => 'import',
             'status' => ApprovalRequest::StatusPending,
             'subject_type' => ImportRun::class,
             'subject_id' => ImportRun::factory(),
             'requested_by_id' => User::factory(),
             'reviewed_by_id' => null,
+            'cancelled_by_id' => null,
+            'previous_request_id' => null,
+            'superseded_by_id' => null,
             'request_note' => fake()->sentence(),
             'review_note' => null,
-            'payload' => null,
+            'payload' => [
+                'action_label' => 'Users import',
+                'subject_label' => 'users.xlsx',
+            ],
+            'subject_snapshot' => null,
+            'before_payload' => null,
+            'after_payload' => null,
+            'impact_summary' => null,
             'requested_at' => now(),
             'reviewed_at' => null,
+            'cancelled_at' => null,
+            'expires_at' => null,
+            'superseded_at' => null,
         ];
     }
 
@@ -51,6 +70,15 @@ final class ApprovalRequestFactory extends Factory
             'reviewed_by_id' => User::factory(),
             'review_note' => fake()->sentence(),
             'reviewed_at' => now(),
+        ]);
+    }
+
+    public function cancelled(): self
+    {
+        return $this->state(fn (): array => [
+            'status' => ApprovalRequest::StatusCancelled,
+            'cancelled_by_id' => User::factory(),
+            'cancelled_at' => now(),
         ]);
     }
 }

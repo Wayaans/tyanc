@@ -51,6 +51,7 @@ final class AppRegistrySeeder extends Seeder
     {
         return match ($key) {
             'tyanc' => 0,
+            'cumpu' => 5,
             'demo' => 10,
             default => 100,
         };
