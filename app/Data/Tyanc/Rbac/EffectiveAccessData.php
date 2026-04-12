@@ -9,11 +9,11 @@ use Spatie\LaravelData\Data;
 final class EffectiveAccessData extends Data
 {
     /**
-     * @param  list<string>  $roles
-     * @param  list<string>  $direct_permissions
-     * @param  list<string>  $permissions
-     * @param  list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>  $accessible_apps
-     * @param  list<array{app_key: string, app_label: string, page_key: string, page_label: string, permission_name: string|null}>  $accessible_pages
+     * @param  array<int, string>  $roles
+     * @param  array<int, string>  $direct_permissions
+     * @param  array<int, string>  $permissions
+     * @param  array<int, array<string, mixed>>  $accessible_apps
+     * @param  array<int, array{app_key: string, app_label: string, page_key: string, page_label: string, permission_name: string|null}>  $accessible_pages
      */
     public function __construct(
         public ?int $role_id,

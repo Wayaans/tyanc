@@ -89,7 +89,7 @@ final readonly class CreateApprovalProposal
                 'action_key' => $parsed['action'],
                 'status' => ApprovalRequest::StatusPending,
                 'subject_type' => $subject?->getMorphClass(),
-                'subject_id' => is_scalar($subject?->getKey()) ? (string) $subject?->getKey() : null,
+                'subject_id' => $subject instanceof Model && is_scalar($subject->getKey()) ? (string) $subject->getKey() : null,
                 'requested_by_id' => $actor->id,
                 'request_note' => $requestNote,
                 'payload' => $this->proposalPayload($attributes, $permissionName, $subject),
@@ -102,7 +102,7 @@ final readonly class CreateApprovalProposal
                     'approval_rule_step_id' => $step->id,
                     'step_order_snapshot' => $step->step_order,
                     'step_label_snapshot' => $step->label,
-                    'role_name_snapshot' => $step->role?->name,
+                    'role_name_snapshot' => $step->role->name,
                     'assigned_to_id' => $approver->id,
                     'status' => ApprovalAssignment::StatusPending,
                 ]);
@@ -118,9 +118,9 @@ final readonly class CreateApprovalProposal
                 ])
                 ->log('Approval requested');
 
-            $approvers->each(fn (User $approver): mixed => $approver->notify(
-                new NewApprovalRequestedNotification($approvalRequest)->afterCommit(),
-            ));
+            $approvers->each(function (User $approver) use ($approvalRequest): void {
+                $approver->notify(new NewApprovalRequestedNotification($approvalRequest)->afterCommit());
+            });
 
             return $approvalRequest->fresh([
                 'requester',

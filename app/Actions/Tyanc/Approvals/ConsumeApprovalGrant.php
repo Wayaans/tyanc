@@ -92,7 +92,7 @@ final readonly class ConsumeApprovalGrant
                     'approval_request_id' => (string) $approvalRequest->id,
                     'permission_name' => $permissionName,
                     'subject_type' => $subject?->getMorphClass(),
-                    'subject_id' => is_scalar($subject?->getKey()) ? (string) $subject?->getKey() : null,
+                    'subject_id' => $subject instanceof Model && is_scalar($subject->getKey()) ? (string) $subject->getKey() : null,
                 ])
                 ->log('Approval grant consumed');
 

@@ -81,7 +81,7 @@ final readonly class PersistUserUpdate
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     private function names(mixed $values): array
     {
@@ -121,7 +121,7 @@ final readonly class PersistUserUpdate
                 Storage::disk('public')->delete($currentAvatar);
             }
 
-            return $storedPath;
+            return is_string($storedPath) ? $storedPath : null;
         }
 
         if ((bool) ($payload['remove_avatar'] ?? false) && is_string($currentAvatar) && $currentAvatar !== '') {

@@ -12,7 +12,7 @@ use Spatie\Activitylog\Models\Activity;
 final readonly class ListApprovalRequestHistory
 {
     /**
-     * @return list<ActivityLogEntryData>
+     * @return array<int, ActivityLogEntryData>
      */
     public function handle(ApprovalRequest $approvalRequest): array
     {

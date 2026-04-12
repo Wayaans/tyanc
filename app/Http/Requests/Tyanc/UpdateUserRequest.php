@@ -160,7 +160,7 @@ final class UpdateUserRequest extends FormRequest
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(User $user): array
     {
@@ -193,7 +193,9 @@ final class UpdateUserRequest extends FormRequest
             $changedFields->push('timezone');
         }
 
-        $nextRoles = collect($this->input('roles', $user->roles->pluck('name')->all()))
+        $roles = $this->input('roles', $user->roles->pluck('name')->all());
+
+        $nextRoles = collect(is_array($roles) ? $roles : [])
             ->filter(fn (mixed $role): bool => is_string($role) && $role !== '')
             ->sort()
             ->values()
@@ -205,7 +207,9 @@ final class UpdateUserRequest extends FormRequest
             $changedFields->push('roles');
         }
 
-        $nextPermissions = collect($this->input('permissions', $user->permissions->pluck('name')->all()))
+        $permissions = $this->input('permissions', $user->permissions->pluck('name')->all());
+
+        $nextPermissions = collect(is_array($permissions) ? $permissions : [])
             ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
             ->sort()
             ->values()
@@ -229,13 +233,15 @@ final class UpdateUserRequest extends FormRequest
     }
 
     /**
-     * @return list<int>
+     * @return array<int, int>
      */
     private function targetRoleLevels(User $user): array
     {
         $user->loadMissing('roles');
 
-        $roleNames = collect($this->input('roles', $user->roles->pluck('name')->all()))
+        $roles = $this->input('roles', $user->roles->pluck('name')->all());
+
+        $roleNames = collect(is_array($roles) ? $roles : [])
             ->filter(fn (mixed $role): bool => is_string($role) && mb_trim($role) !== '')
             ->map(fn (string $role): string => mb_trim($role))
             ->unique()

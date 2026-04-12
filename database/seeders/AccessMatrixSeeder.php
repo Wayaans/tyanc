@@ -37,7 +37,7 @@ final class AccessMatrixSeeder extends Seeder
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, array<int, string>>
      */
     private function rolePermissions(): array
     {

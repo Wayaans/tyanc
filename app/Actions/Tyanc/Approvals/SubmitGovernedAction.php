@@ -83,7 +83,7 @@ final readonly class SubmitGovernedAction
                 ->withProperties([
                     'permission_name' => $permissionName,
                     'subject_type' => $subject?->getMorphClass(),
-                    'subject_id' => is_scalar($subject?->getKey()) ? (string) $subject?->getKey() : null,
+                    'subject_id' => $subject instanceof Model && is_scalar($subject->getKey()) ? (string) $subject->getKey() : null,
                 ])
                 ->log('Approval bypassed and action executed');
 

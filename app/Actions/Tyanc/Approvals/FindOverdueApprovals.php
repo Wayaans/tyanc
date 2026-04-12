@@ -99,6 +99,10 @@ final readonly class FindOverdueApprovals
             ->sortBy('created_at')
             ->first();
 
-        return $pendingAssignment?->created_at ?? $approvalRequest->requested_at ?? $approvalRequest->created_at;
+        if ($pendingAssignment instanceof ApprovalAssignment) {
+            return $pendingAssignment->created_at ?? $approvalRequest->requested_at ?? $approvalRequest->created_at;
+        }
+
+        return $approvalRequest->requested_at ?? $approvalRequest->created_at;
     }
 }

@@ -77,7 +77,7 @@ final readonly class StartConversation
     }
 
     /**
-     * @return Collection<int, string>
+     * @return Collection<int, non-empty-string>
      */
     private function participantIds(User $actor, mixed $value): Collection
     {
@@ -89,6 +89,9 @@ final readonly class StartConversation
             ->values();
     }
 
+    /**
+     * @param  Collection<int, non-empty-string>  $participantIds
+     */
     private function existingDirectConversation(User $actor, Collection $participantIds): ?Conversation
     {
         if ($participantIds->count() !== 1) {
@@ -97,7 +100,7 @@ final readonly class StartConversation
 
         $otherParticipantId = $participantIds->first();
 
-        if (! is_string($otherParticipantId) || $otherParticipantId === '') {
+        if (! is_string($otherParticipantId)) {
             return null;
         }
 

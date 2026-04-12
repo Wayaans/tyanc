@@ -6,25 +6,33 @@ namespace App\Exports;
 
 use App\Data\Tyanc\Approvals\ApprovalReportRowData;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Exportable;
 
-final class ApprovalRequestsExport implements FromCollection, WithHeadings, WithMapping
+/** @implements WithMapping<ApprovalReportRowData> */
+final readonly class ApprovalRequestsExport implements FromCollection, WithHeadings, WithMapping
 {
     use Exportable;
 
     /**
      * @param  Collection<int, ApprovalReportRowData>  $rows
      */
-    public function __construct(private readonly Collection $rows) {}
+    public function __construct(private Collection $rows) {}
 
+    /**
+     * @return Collection<int, ApprovalReportRowData>
+     */
     public function collection(): Collection
     {
         return $this->rows;
     }
 
+    /**
+     * @param  ApprovalReportRowData  $row
+     * @return array<int, bool|float|int|string|null>
+     */
     public function map($row): array
     {
         return [
@@ -49,6 +57,9 @@ final class ApprovalRequestsExport implements FromCollection, WithHeadings, With
         ];
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function headings(): array
     {
         return [

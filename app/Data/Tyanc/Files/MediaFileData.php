@@ -63,7 +63,7 @@ final class MediaFileData extends Data
             collection_name: (string) $media->collection_name,
             uploaded_by_id: data_get($customProperties, 'uploaded_by_id'),
             uploaded_by_name: data_get($customProperties, 'uploaded_by_name'),
-            custom_properties: is_array($customProperties) ? $customProperties : null,
+            custom_properties: $customProperties !== [] ? $customProperties : null,
             created_at: $media->created_at?->toIso8601String() ?? now()->toIso8601String(),
             updated_at: $media->updated_at?->toIso8601String() ?? now()->toIso8601String(),
         );

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Data\Auth;
 
-use App\Enums\UserStatus;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Spatie\LaravelData\Data;
@@ -37,7 +36,7 @@ final class UserData extends Data
             username: $user->username,
             email: $user->email,
             avatar: self::resolveAvatarUrl($user->avatar),
-            status: $user->status instanceof UserStatus ? $user->status->value : (string) $user->status,
+            status: $user->status->value,
             timezone: $user->timezone,
             locale: $user->locale,
             is_reserved: $user->isReserved(),

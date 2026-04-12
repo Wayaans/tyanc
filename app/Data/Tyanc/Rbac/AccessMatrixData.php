@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Data\Tyanc\Rbac;
 
+use App\Data\Tyanc\Apps\AppData;
 use Spatie\LaravelData\Data;
 
 final class AccessMatrixData extends Data
 {
     /**
      * @param  array<string, mixed>  $matrix
-     * @param  list<RoleData>  $roles
-     * @param  list<PermissionData>  $permissions
-     * @param  list<array<string, mixed>>  $apps
+     * @param  array<int, RoleData>  $roles
+     * @param  array<int, PermissionData>  $permissions
+     * @param  array<int, AppData>  $apps
      */
     public function __construct(
         public array $matrix,

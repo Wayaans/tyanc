@@ -34,7 +34,7 @@ final readonly class ListRoles
      *     rows: list<array<string, mixed>>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
-     *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     *     filters: array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      * }
      */
     public function handle(User $actor, DataTableQueryData $query): array
@@ -88,16 +88,15 @@ final readonly class ListRoles
         }
 
         $permissionName = PermissionKey::tyanc('roles', 'update');
+        /** @var Role $sampleRole */
         $sampleRole = $roles->first();
-        $rule = $sampleRole instanceof Role
-            ? $this->rules->handle($actor, $permissionName, $sampleRole)
-            : null;
+        $rule = $this->rules->handle($actor, $permissionName, $sampleRole);
         $approvalEnabled = $rule instanceof ApprovalRule;
         $bypassesForActor = $approvalEnabled && $this->bypassApproval->handle($actor, $rule);
         $canViewDetails = $this->access->handle($actor, PermissionKey::cumpu('approvals', 'viewany'))
             || $this->access->handle($actor, PermissionKey::cumpu('approvals', 'view'));
 
-        $subjectType = $sampleRole instanceof Role ? $sampleRole->getMorphClass() : new Role()->getMorphClass();
+        $subjectType = $sampleRole->getMorphClass();
         $roleIds = $roles
             ->map(fn (Role $role): string => (string) $role->getKey())
             ->values()
@@ -154,6 +153,9 @@ final readonly class ListRoles
             ->all();
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesSearch(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -167,11 +169,14 @@ final readonly class ListRoles
         }
 
         return str_contains(mb_strtolower((string) $row['name']), $search)
-            || Collection::make($row['permissions'] ?? [])->contains(
+            || collect(is_array($row['permissions'] ?? null) ? $row['permissions'] : [])->contains(
                 fn (mixed $permission): bool => is_string($permission) && str_contains(mb_strtolower($permission), $search),
             );
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesReserved(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -186,7 +191,7 @@ final readonly class ListRoles
     }
 
     /**
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(): array
     {

@@ -71,7 +71,7 @@ final readonly class UpdateSecuritySettings
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(array $attributes, SecuritySettings $settings): array
     {

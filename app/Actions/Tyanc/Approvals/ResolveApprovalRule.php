@@ -61,7 +61,7 @@ final readonly class ResolveApprovalRule
 
         $changedFields = data_get($conditions, 'changed_fields');
         if (is_array($changedFields) && $changedFields !== []) {
-            $contextChangedFields = collect(data_get($context, 'changed_fields', []))
+            $contextChangedFields = collect(is_array(data_get($context, 'changed_fields')) ? data_get($context, 'changed_fields') : [])
                 ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
                 ->values()
                 ->all();
@@ -73,7 +73,7 @@ final readonly class ResolveApprovalRule
 
         $targetRoleMaxLevel = data_get($conditions, 'target_role_max_level');
         if (is_numeric($targetRoleMaxLevel)) {
-            $targetRoleLevels = collect(data_get($context, 'target_role_levels', []))
+            $targetRoleLevels = collect(is_array(data_get($context, 'target_role_levels')) ? data_get($context, 'target_role_levels') : [])
                 ->filter(fn (mixed $level): bool => is_numeric($level))
                 ->map(fn (mixed $level): int => (int) $level)
                 ->values();

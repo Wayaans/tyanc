@@ -156,7 +156,7 @@ final readonly class ReassignApprovalRequest
                     'approval_rule_step_id' => $step->id,
                     'step_order_snapshot' => $step->step_order,
                     'step_label_snapshot' => $step->label,
-                    'role_name_snapshot' => $step->role?->name,
+                    'role_name_snapshot' => $step->role->name,
                     'assigned_to_id' => $targetAssignee->id,
                     'status' => ApprovalAssignment::StatusPending,
                 ]);
@@ -222,12 +222,14 @@ final readonly class ReassignApprovalRequest
 
     private function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

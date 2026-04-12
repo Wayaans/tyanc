@@ -19,7 +19,9 @@ use Spatie\LaravelData\Data;
 final class ApprovalRequestData extends Data
 {
     /**
-     * @param  list<string>  $pending_assignee_names
+     * @param  array<string, mixed>|null  $payload
+     * @param  array<string, mixed>|null  $subject_snapshot
+     * @param  array<int, string>  $pending_assignee_names
      */
     public function __construct(
         public string $id,
@@ -109,7 +111,13 @@ final class ApprovalRequestData extends Data
             subject_snapshot: is_array($approvalRequest->subject_snapshot) ? $approvalRequest->subject_snapshot : null,
             is_assigned_to_actor: $isAssignedToActor,
             pending_assignee_names: $currentAssignments
-                ->map(fn (ApprovalAssignment $assignment): string => (string) ($assignment->assignee?->name ?? __('Unknown')))
+                ->map(function (ApprovalAssignment $assignment): string {
+                    $assignee = $assignment->assignee;
+
+                    return $assignee instanceof User
+                        ? $assignee->name
+                        : (string) __('Unknown');
+                })
                 ->unique()
                 ->values()
                 ->all(),
@@ -233,12 +241,14 @@ final class ApprovalRequestData extends Data
 
     private static function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

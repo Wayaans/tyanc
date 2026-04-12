@@ -14,7 +14,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 final readonly class ListApprovalRules
 {
     /**
-     * @return list<array{
+     * @return array<int, array{
      *     id: string,
      *     app_key: string,
      *     app_label: string,
@@ -31,7 +31,7 @@ final readonly class ListApprovalRules
      *     step_role_id: int|null,
      *     step_role_name: string|null,
      *     step_label: string|null,
-     *     steps: list<array{order: int, role_id: int|null, role_name: string|null, label: string|null}>
+     *     steps: array<int, array{order: int, role_id: int|null, role_name: string|null, label: string|null}>
      * }>
      */
     public function handle(User $actor): array
@@ -66,14 +66,14 @@ final readonly class ListApprovalRules
                     'reminder_after_minutes' => is_numeric($rule->reminder_after_minutes) ? (int) $rule->reminder_after_minutes : null,
                     'escalation_after_minutes' => is_numeric($rule->escalation_after_minutes) ? (int) $rule->escalation_after_minutes : null,
                     'step_role_id' => $firstStep?->role_id,
-                    'step_role_name' => $firstStep?->role?->name,
+                    'step_role_name' => $firstStep?->role->name,
                     'step_label' => $firstStep?->label,
                     'steps' => $rule->steps
                         ->sortBy('step_order')
                         ->map(fn (ApprovalRuleStep $step): array => [
                             'order' => $step->step_order,
                             'role_id' => $step->role_id,
-                            'role_name' => $step->role?->name,
+                            'role_name' => $step->role->name,
                             'label' => $step->label,
                         ])
                         ->values()

@@ -7,13 +7,52 @@ namespace App\Models;
 use App\Actions\Tyanc\Approvals\ExpireApprovalGrants;
 use Carbon\CarbonInterface;
 use Database\Factories\ApprovalRequestFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $rule_id
+ * @property string $action
+ * @property string|null $app_key
+ * @property string|null $resource_key
+ * @property string|null $action_key
+ * @property string $status
+ * @property string|null $subject_type
+ * @property string|null $subject_id
+ * @property string|null $requested_by_id
+ * @property string|null $reviewed_by_id
+ * @property string|null $cancelled_by_id
+ * @property string|null $consumed_by_id
+ * @property string|null $request_note
+ * @property string|null $review_note
+ * @property array<string, mixed>|null $payload
+ * @property array<string, mixed>|null $subject_snapshot
+ * @property Carbon|null $requested_at
+ * @property Carbon|null $reviewed_at
+ * @property Carbon|null $cancelled_at
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $consumed_at
+ * @property Carbon|null $superseded_at
+ * @property Carbon|null $last_reassigned_at
+ * @property Carbon|null $last_reminded_at
+ * @property Carbon|null $escalated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Model|null $subject
+ * @property-read User|null $requester
+ * @property-read User|null $reviewer
+ * @property-read User|null $cancelledBy
+ * @property-read User|null $consumedBy
+ * @property-read ApprovalRule|null $rule
+ * @property-read Collection<int, ApprovalAssignment> $assignments
+ */
 final class ApprovalRequest extends Model
 {
     /** @use HasFactory<ApprovalRequestFactory> */
@@ -141,36 +180,57 @@ final class ApprovalRequest extends Model
         return resolve(ExpireApprovalGrants::class)->handle($referenceTime);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function subject(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function cancelledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function consumedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'consumed_by_id');
     }
 
+    /**
+     * @return BelongsTo<ApprovalRule, $this>
+     */
     public function rule(): BelongsTo
     {
         return $this->belongsTo(ApprovalRule::class, 'rule_id');
     }
 
+    /**
+     * @return HasMany<ApprovalAssignment, $this>
+     */
     public function assignments(): HasMany
     {
         return $this->hasMany(ApprovalAssignment::class, 'approval_request_id');

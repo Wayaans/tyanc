@@ -65,7 +65,7 @@ final class MessageSent implements ShouldBroadcastNow, ShouldRescue
                     ->limit(120)
                     ->value(),
                 'last_message_at' => $this->message->created_at?->toIso8601String(),
-                'last_sender_name' => $this->message->sender?->name,
+                'last_sender_name' => $this->message->sender->name,
             ],
             'message' => MessageData::fromModel($this->message)->toArray(),
         ];

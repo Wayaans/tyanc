@@ -39,7 +39,7 @@ final readonly class PrepareUserUpdate
     }
 
     /**
-     * @return list<string>
+     * @return array<int, string>
      */
     private function names(mixed $values): array
     {
@@ -56,7 +56,7 @@ final readonly class PrepareUserUpdate
     }
 
     /**
-     * @param  list<string>  $roles
+     * @param  array<int, string>  $roles
      */
     private function assertAssignableRoles(User $actor, array $roles): void
     {
@@ -82,7 +82,7 @@ final readonly class PrepareUserUpdate
     }
 
     /**
-     * @param  list<string>  $roles
+     * @param  array<int, string>  $roles
      */
     private function assertReservedRoleConstraints(User $actor, User $user, array $roles): void
     {
@@ -102,8 +102,8 @@ final readonly class PrepareUserUpdate
     }
 
     /**
-     * @param  list<string>  $roles
-     * @param  list<string>  $permissions
+     * @param  array<int, string>  $roles
+     * @param  array<int, string>  $permissions
      */
     private function assertReservedUserIntegrity(User $user, array $roles, array $permissions): void
     {
@@ -130,7 +130,7 @@ final readonly class PrepareUserUpdate
     }
 
     /**
-     * @param  list<string>  $permissions
+     * @param  array<int, string>  $permissions
      */
     private function assertPermissionScope(User $actor, array $permissions): void
     {

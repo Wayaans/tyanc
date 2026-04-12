@@ -253,6 +253,15 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    * {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    *::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 @keyframes collapsible-down {

@@ -6,6 +6,7 @@ namespace App\Http\Requests\Tyanc;
 
 use App\Models\Role;
 use App\Support\Permissions\PermissionKey;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -32,7 +33,7 @@ final class AssignRolePermissionsRequest extends FormRequest
     }
 
     /**
-     * @return array<int, \\Closure(Validator): void>
+     * @return array<int, Closure(Validator): void>
      */
     public function after(): array
     {

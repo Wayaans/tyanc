@@ -63,7 +63,7 @@ final class AuthorizeAppPageAccess
 
         $page->loadMissing('app');
 
-        abort_if(! $page->enabled || ! $page->app?->enabled, 404);
+        abort_if(! $page->enabled || ! $page->app->enabled, 404);
 
         if (! is_string($page->permission_name) || mb_trim($page->permission_name) === '') {
             return $next($request);

@@ -10,6 +10,7 @@ use App\Models\Permission;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use App\Support\Tables\AppliesTableQuery;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -22,7 +23,7 @@ final readonly class ListPermissions
      *     rows: list<array<string, mixed>>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
-     *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>,
+     *     filters: array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>,
      *     summary: array{synced: int, missing: int, orphaned: int, total: int, last_synced_at: string|null}
      * }
      */
@@ -39,6 +40,7 @@ final readonly class ListPermissions
 
         $sourcePermissionNames = collect(PermissionKey::all());
 
+        /** @var Collection<int, array<string, mixed>> $permissions */
         $permissions = $sourcePermissionNames
             ->merge($databasePermissions->keys())
             ->unique()
@@ -85,13 +87,18 @@ final readonly class ListPermissions
                 'missing' => $permissions->where('sync_status', 'missing')->count(),
                 'orphaned' => $permissions->where('sync_status', 'orphaned')->count(),
                 'total' => $permissions->count(),
-                'last_synced_at' => $databasePermissions
+                'last_synced_at' => (($lastSyncedAt = $databasePermissions
                     ->whereIn('name', $sourcePermissionNames->all())
-                    ->max('updated_at')?->toIso8601String(),
+                    ->max('updated_at')) instanceof CarbonInterface)
+                    ? $lastSyncedAt->toIso8601String()
+                    : null,
             ],
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesSearch(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -109,11 +116,14 @@ final readonly class ListPermissions
             return true;
         }
 
-        return Collection::make($row['roles'] ?? [])->contains(
+        return collect(is_array($row['roles'] ?? null) ? $row['roles'] : [])->contains(
             fn (mixed $role): bool => is_string($role) && str_contains(mb_strtolower($role), $search),
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesRole(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -126,13 +136,13 @@ final readonly class ListPermissions
             return true;
         }
 
-        return Collection::make($row['roles'] ?? [])
+        return collect(is_array($row['roles'] ?? null) ? $row['roles'] : [])
             ->contains(fn (mixed $assignedRole): bool => is_string($assignedRole) && mb_strtolower($assignedRole) === $role);
     }
 
     /**
      * @param  Collection<int, array<string, mixed>>  $permissions
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(Collection $permissions): array
     {
@@ -190,7 +200,7 @@ final readonly class ListPermissions
                 'options' => $permissions
                     ->flatMap(fn (array $row): array => array_map(
                         fn (string $role): array => ['label' => $role, 'value' => $role],
-                        $row['roles'] ?? [],
+                        is_array($row['roles'] ?? null) ? $row['roles'] : [],
                     ))
                     ->unique('value')
                     ->sortBy('label')

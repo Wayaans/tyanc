@@ -30,13 +30,17 @@ final readonly class ResolveEffectivePermissions
             ->whereIn('name', $directPermissionNames)
             ->get();
 
-        $permissionNames = $roles
-            ->flatMap(fn (Role $role): Collection => $role->permissions->pluck('name'))
-            ->merge($directPermissions->pluck('name'))
-            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
-            ->unique()
-            ->sort()
-            ->values();
+        /** @var Collection<int, string> $permissionNames */
+        $permissionNames = Collection::make(
+            $roles
+                ->flatMap(fn (Role $role): array => $role->permissions->pluck('name')->all())
+                ->merge($directPermissions->pluck('name'))
+                ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
+                ->unique()
+                ->sort()
+                ->values()
+                ->all(),
+        );
 
         $apps = App::query()
             ->with('pages')
@@ -74,8 +78,8 @@ final readonly class ResolveEffectivePermissions
             ->all();
 
         $accessiblePages = $apps
-            ->flatMap(fn (App $app): Collection => $app->pages
-                ->filter(fn ($page): bool => $page->enabled)
+            ->flatMap(fn (App $app): array => $app->pages
+                ->filter(fn (AppPage $page): bool => $page->enabled)
                 ->filter(function (AppPage $page) use ($permissionNames): bool {
                     if (! $this->pageRequiresPermission($page)) {
                         return true;
@@ -83,13 +87,15 @@ final readonly class ResolveEffectivePermissions
 
                     return resolve(PermissionResourceAccess::class)->matchesGrantedPermissions($permissionNames, $page->permission_name);
                 })
-                ->map(fn ($page): array => [
+                ->map(fn (AppPage $page): array => [
                     'app_key' => $app->key,
                     'app_label' => $app->label,
                     'page_key' => $page->key,
                     'page_label' => $page->label,
                     'permission_name' => $page->permission_name,
-                ]))
+                ])
+                ->values()
+                ->all())
             ->values()
             ->all();
 
@@ -104,6 +110,9 @@ final readonly class ResolveEffectivePermissions
         );
     }
 
+    /**
+     * @param  Collection<int, string>  $permissionNames
+     */
     private function preferredPage(App $app, Collection $permissionNames): ?AppPage
     {
         $app->loadMissing('pages');

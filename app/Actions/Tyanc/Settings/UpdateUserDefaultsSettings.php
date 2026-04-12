@@ -73,7 +73,7 @@ final readonly class UpdateUserDefaultsSettings
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(array $attributes, UserDefaultsSettings $settings): array
     {

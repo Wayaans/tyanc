@@ -156,8 +156,9 @@ final readonly class ApproveRequest
 
     private function hasNextStep(ApprovalRequest $approvalRequest, int $currentStepOrder): bool
     {
-        return $approvalRequest->rule?->steps
-            ->contains(fn (ApprovalRuleStep $step): bool => $step->step_order > $currentStepOrder) ?? false;
+        $rule = $approvalRequest->rule;
+
+        return $rule instanceof ApprovalRule && $rule->steps->contains(fn (ApprovalRuleStep $step): bool => $step->step_order > $currentStepOrder);
     }
 
     private function grantValidityMinutes(ApprovalRequest $approvalRequest): int
@@ -171,12 +172,14 @@ final readonly class ApproveRequest
 
     private function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

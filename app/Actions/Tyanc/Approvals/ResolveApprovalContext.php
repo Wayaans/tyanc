@@ -26,8 +26,8 @@ final readonly class ResolveApprovalContext
     ) {}
 
     /**
-     * @param  list<string>  $actionKeys
-     * @param  list<string>  $governedActionKeys
+     * @param  array<int, string>  $actionKeys
+     * @param  array<int, string>  $governedActionKeys
      */
     public function handle(
         User $actor,
@@ -111,7 +111,8 @@ final readonly class ResolveApprovalContext
     }
 
     /**
-     * @param  list<string>  $actionKeys
+     * @param  array<int, string>  $actionKeys
+     * @return Builder<ApprovalRequest>
      */
     private function baseQuery(string $appKey, string $resourceKey, ?Model $subject, array $actionKeys): Builder
     {
@@ -260,13 +261,13 @@ final readonly class ResolveApprovalContext
     }
 
     /**
-     * @param  list<string>  $keys
-     * @return list<string>
+     * @param  array<int, string>  $keys
+     * @return array<int, string>
      */
     private function sanitizeKeys(array $keys): array
     {
         return collect($keys)
-            ->filter(fn (mixed $key): bool => is_string($key) && $key !== '')
+            ->filter(fn (string $key): bool => $key !== '')
             ->unique()
             ->values()
             ->all();

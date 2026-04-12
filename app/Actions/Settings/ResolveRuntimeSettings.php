@@ -130,10 +130,17 @@ final readonly class ResolveRuntimeSettings
 
     private function resolveTimezone(?User $user, ?UserPreference $preferences): string
     {
-        return $preferences?->timezone
-            ?? $user?->timezone
-            ?? $this->userDefaultsSettings->timezone
-            ?? (string) config('app.timezone', 'UTC');
+        if (is_string($preferences?->timezone) && $preferences->timezone !== '') {
+            return $preferences->timezone;
+        }
+
+        if ($user instanceof User) {
+            return $user->timezone;
+        }
+
+        return $this->userDefaultsSettings->timezone !== ''
+            ? $this->userDefaultsSettings->timezone
+            : (string) config('app.timezone', 'UTC');
     }
 
     private function resolveSidebarVariant(?string $sidebarVariant): string

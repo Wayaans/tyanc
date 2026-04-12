@@ -12,7 +12,7 @@ use Spatie\LaravelData\Data;
 final class PermissionData extends Data
 {
     /**
-     * @param  list<string>  $roles
+     * @param  array<int, string>  $roles
      */
     public function __construct(
         public ?int $id,
@@ -59,7 +59,7 @@ final class PermissionData extends Data
         return new self(
             id: $permission instanceof Permission ? (int) $permission->id : null,
             name: $permissionName,
-            guard_name: $permission?->guard_name ?? 'web',
+            guard_name: $permission instanceof Permission ? $permission->guard_name : 'web',
             app: $app,
             app_label: PermissionKey::appLabel($app),
             resource: $resource,
@@ -70,8 +70,12 @@ final class PermissionData extends Data
             exists_in_database: $existsInDatabase,
             sync_status: self::syncStatus($existsInSource, $existsInDatabase),
             is_reserved: false,
-            role_count: $permission?->roles_count ?? $permission?->roles->count() ?? 0,
-            roles: $permission?->roles->pluck('name')->sort()->values()->all() ?? [],
+            role_count: $permission instanceof Permission
+                ? ($permission->roles_count ?? $permission->roles->count())
+                : 0,
+            roles: $permission instanceof Permission
+                ? $permission->roles->pluck('name')->sort()->values()->all()
+                : [],
             created_at: $permission?->created_at instanceof CarbonInterface ? $permission->created_at->toIso8601String() : null,
             updated_at: $permission?->updated_at instanceof CarbonInterface ? $permission->updated_at->toIso8601String() : null,
         );

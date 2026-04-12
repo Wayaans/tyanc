@@ -18,7 +18,7 @@ use Spatie\LaravelData\Data;
 final class ApprovalReportRowData extends Data
 {
     /**
-     * @param  list<string>  $current_assignee_names
+     * @param  array<int, string>  $current_assignee_names
      */
     public function __construct(
         public string $id,
@@ -82,7 +82,13 @@ final class ApprovalReportRowData extends Data
             reviewed_by_name: $approvalRequest->reviewer instanceof User ? $approvalRequest->reviewer->name : null,
             consumed_by_name: $approvalRequest->consumedBy instanceof User ? $approvalRequest->consumedBy->name : null,
             current_assignee_names: $currentStepAssignments
-                ->map(fn (ApprovalAssignment $assignment): string => (string) ($assignment->assignee?->name ?? __('Unknown')))
+                ->map(function (ApprovalAssignment $assignment): string {
+                    $assignee = $assignment->assignee;
+
+                    return $assignee instanceof User
+                        ? $assignee->name
+                        : (string) __('Unknown');
+                })
                 ->unique()
                 ->values()
                 ->all(),
@@ -176,12 +182,14 @@ final class ApprovalReportRowData extends Data
 
     private static function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

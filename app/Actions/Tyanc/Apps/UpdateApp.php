@@ -77,7 +77,8 @@ final readonly class UpdateApp
             $app->save();
 
             if (! $app->isSystem() && is_array($validated['pages'] ?? null)) {
-                $this->pages->handle($app, $validated['pages']);
+                $pages = array_values(array_filter($validated['pages'], is_array(...)));
+                $this->pages->handle($app, $pages);
             } else {
                 $this->pages->handle($app);
             }
@@ -100,7 +101,7 @@ final readonly class UpdateApp
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return list<string>
+     * @return array<int, string>
      */
     private function changedFields(App $app, array $attributes): array
     {

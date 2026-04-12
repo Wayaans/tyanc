@@ -85,9 +85,9 @@ final readonly class AdvanceWorkflowStep
             ])
             ->log('Approval step advanced');
 
-        $nextApprovers->each(fn (User $approver): mixed => $approver->notify(
-            new NewApprovalRequestedNotification($approvalRequest)->afterCommit(),
-        ));
+        $nextApprovers->each(function (User $approver) use ($approvalRequest): void {
+            $approver->notify(new NewApprovalRequestedNotification($approvalRequest)->afterCommit());
+        });
 
         return $approvalRequest->fresh([
             'requester',
@@ -137,7 +137,7 @@ final readonly class AdvanceWorkflowStep
                 'approval_rule_step_id' => $step->id,
                 'step_order_snapshot' => $step->step_order,
                 'step_label_snapshot' => $step->label,
-                'role_name_snapshot' => $step->role?->name,
+                'role_name_snapshot' => $step->role->name,
                 'assigned_to_id' => $approver->id,
                 'status' => ApprovalAssignment::StatusPending,
             ]);
@@ -146,12 +146,14 @@ final readonly class AdvanceWorkflowStep
 
     private function stepOrder(ApprovalAssignment $assignment): ?int
     {
-        if (is_numeric($assignment->step_order_snapshot)) {
+        if ($assignment->step_order_snapshot !== null) {
             return (int) $assignment->step_order_snapshot;
         }
 
-        if (is_numeric($assignment->step?->step_order)) {
-            return (int) $assignment->step?->step_order;
+        $step = $assignment->step;
+
+        if ($step instanceof ApprovalRuleStep) {
+            return $step->step_order;
         }
 
         return null;

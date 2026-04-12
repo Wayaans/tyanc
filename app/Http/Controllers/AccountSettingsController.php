@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +26,7 @@ final readonly class AccountSettingsController
     {
         $payload = [
             'status' => $request->session()->get('status'),
-            'mustVerifyEmail' => Features::enabled(Features::emailVerification()) && $user instanceof MustVerifyEmail,
+            'mustVerifyEmail' => Features::enabled(Features::emailVerification()),
             'canManageStatus' => $this->canManageStatus($user),
             'locales' => array_keys((array) config('tyanc.supported_locales', [])),
             'statuses' => UserStatus::values(),

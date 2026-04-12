@@ -43,7 +43,9 @@ final class SendApprovalEscalation implements ShouldBeUnique, ShouldQueue
         }
 
         $this->notifiableUsers($approvalRequest)
-            ->each(fn (User $user): mixed => $user->notify(new ApprovalEscalatedNotification($approvalRequest)));
+            ->each(function (User $user) use ($approvalRequest): void {
+                $user->notify(new ApprovalEscalatedNotification($approvalRequest));
+            });
 
         $approvalRequest->forceFill([
             'escalated_at' => now(),

@@ -105,7 +105,7 @@ return new class extends Migration
     }
 
     /**
-     * @param  list<string>  $usedUsernames
+     * @param  array<int, string>  $usedUsernames
      */
     private function resolveUniqueUsername(object $user, array &$usedUsernames): string
     {

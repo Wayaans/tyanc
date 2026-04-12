@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Gate;
 final readonly class ListApps
 {
     /**
-     * @return list<AppData>
+     * @return array<int, AppData>
      */
     public function handle(User $actor): array
     {

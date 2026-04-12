@@ -47,7 +47,12 @@ final readonly class RegisterApp
                 'is_system' => false,
             ]);
 
-            $this->pages->handle($app, is_array($validated['pages'] ?? null) ? $validated['pages'] : []);
+            $pages = is_array($validated['pages'] ?? null)
+                ? array_values(array_filter($validated['pages'], is_array(...)))
+                : [];
+
+            $this->pages->handle($app, $pages);
+
             $app->load('pages');
 
             activity('apps')

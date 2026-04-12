@@ -68,7 +68,7 @@ final readonly class UserPreferencesController
         return [
             'preferences' => $runtimeSettings['preferences'],
             'appearances' => $this->mapSimpleOptions((array) config('tyanc.appearance_options', [])),
-            'locales' => array_values(array_keys((array) config('tyanc.supported_locales', []))),
+            'locales' => array_keys((array) config('tyanc.supported_locales', [])),
             'timezones' => DateTimeZone::listIdentifiers(),
             'sidebarVariants' => $this->mapSimpleOptions((array) config('tyanc.sidebar_variants', [])),
             'spacingDensities' => $this->spacingDensities(),
@@ -76,14 +76,14 @@ final readonly class UserPreferencesController
     }
 
     /**
-     * @return list<array{value: string, label: string, density: float}>
+     * @return array<int, array{value: string, label: string, density: float}>
      */
     private function spacingDensities(): array
     {
         return Collection::make((array) config('tyanc.spacing_densities', []))
             ->map(fn (array $density, string $value): array => [
                 'value' => $value,
-                'label' => __((string) ($density['label'] ?? $value)),
+                'label' => (string) __((string) ($density['label'] ?? $value)),
                 'density' => (float) ($density['value'] ?? 1.0),
             ])
             ->values()
@@ -92,14 +92,14 @@ final readonly class UserPreferencesController
 
     /**
      * @param  array<string, string>  $options
-     * @return list<array{value: string, label: string}>
+     * @return array<int, array{value: string, label: string}>
      */
     private function mapSimpleOptions(array $options): array
     {
         return Collection::make($options)
             ->map(fn (string $label, string $value): array => [
                 'value' => $value,
-                'label' => __($label),
+                'label' => (string) __($label),
             ])
             ->values()
             ->all();

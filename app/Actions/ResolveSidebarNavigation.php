@@ -10,10 +10,10 @@ use App\Models\User;
 final readonly class ResolveSidebarNavigation
 {
     /**
-     * @param  list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>  $accessibleApps
+     * @param  array<int, array<string, mixed>>  $accessibleApps
      * @return array{
-     *     apps: list<array{id: string, title: string, subtitle: string, icon: string, href: string}>,
-     *     menu: list<array{title: string, icon?: string, href?: string, permission?: string|null, children?: list<array{title: string, icon?: string, href?: string, permission?: string|null, children?: array}>}>
+     *     apps: array<int, array{id: string, title: string, subtitle: string, icon: string, href: string}>,
+     *     menu: array<int, array<string, mixed>>
      * }
      */
     public function handle(string $currentApp, ?User $user = null, array $accessibleApps = []): array
@@ -39,8 +39,8 @@ final readonly class ResolveSidebarNavigation
     }
 
     /**
-     * @param  list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>  $apps
-     * @return list<array{id: string, title: string, subtitle: string, icon: string, href: string}>
+     * @param  array<int, array<string, mixed>>  $apps
+     * @return array<int, array{id: string, title: string, subtitle: string, icon: string, href: string}>
      */
     private function resolveAccessibleApps(array $apps): array
     {
@@ -58,7 +58,7 @@ final readonly class ResolveSidebarNavigation
 
     /**
      * @param  array<int, array<string, mixed>>  $items
-     * @return list<array{title: string, icon?: string, href?: string, permission?: string|null, children?: array}>
+     * @return array<int, array<string, mixed>>
      */
     private function resolveMenu(array $items, ?User $user): array
     {

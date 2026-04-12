@@ -25,7 +25,10 @@ final readonly class DeleteConversation
             ->first();
 
         throw_if(! $membership instanceof User, AuthorizationException::class);
-        throw_if($membership->pivot?->archived_at === null, AuthorizationException::class);
+
+        $membershipPivot = $membership->pivot;
+
+        throw_if($membershipPivot->getAttribute('archived_at') === null, AuthorizationException::class);
 
         DB::transaction(function () use ($actor, $conversation): void {
             $conversation->participants()->detach($actor->getKey());

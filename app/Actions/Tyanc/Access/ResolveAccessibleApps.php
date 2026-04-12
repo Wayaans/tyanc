@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 final readonly class ResolveAccessibleApps
 {
     /**
-     * @return list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>
+     * @return array<int, array<string, mixed>>
      */
     public function handle(?User $user): array
     {
@@ -156,7 +156,7 @@ final readonly class ResolveAccessibleApps
     }
 
     /**
-     * @return list<array{id: string, key: string, label: string, subtitle: string, route_prefix: string, icon: string, permission_namespace: string, enabled: bool, sort_order: int, is_system: bool, href: string}>
+     * @return array<int, array<string, mixed>>
      */
     private function fallbackAccessibleApps(): array
     {

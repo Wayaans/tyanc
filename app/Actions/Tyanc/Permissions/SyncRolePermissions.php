@@ -15,14 +15,14 @@ use Illuminate\Support\Facades\Gate;
 final readonly class SyncRolePermissions
 {
     /**
-     * @param  list<string>  $permissionNames
+     * @param  array<int, string>  $permissionNames
      */
     public function handle(User $actor, Role $role, array $permissionNames): Role
     {
         Gate::forUser($actor)->authorize('assignPermissions', $role);
 
         $normalizedPermissionNames = Collection::make($permissionNames)
-            ->filter(fn (mixed $permission): bool => is_string($permission) && mb_trim($permission) !== '')
+            ->filter(fn (string $permission): bool => mb_trim($permission) !== '')
             ->map(fn (string $permission): string => mb_trim($permission))
             ->unique()
             ->values()
@@ -38,7 +38,7 @@ final readonly class SyncRolePermissions
     }
 
     /**
-     * @param  list<string>  $permissionNames
+     * @param  array<int, string>  $permissionNames
      */
     private function assertPermissionScope(Role $role, array $permissionNames): void
     {
@@ -54,7 +54,7 @@ final readonly class SyncRolePermissions
     }
 
     /**
-     * @param  list<string>  $permissionNames
+     * @param  array<int, string>  $permissionNames
      */
     private function ensurePermissionRecords(array $permissionNames): void
     {

@@ -9,7 +9,7 @@ use Spatie\LaravelData\Data;
 final class ApprovalContextData extends Data
 {
     /**
-     * @param  list<ApprovalContextRequestData>  $history
+     * @param  array<int, ApprovalContextRequestData>  $history
      * @param  array<string, GovernedActionStateData>  $governed_actions
      */
     public function __construct(

@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Exports;
 
 use App\Data\Tyanc\Activity\ActivityLogEntryData;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Exportable;
 use Spatie\Activitylog\Models\Activity;
 
+/** @implements WithMapping<Activity> */
 final class ActivityLogExport implements FromCollection, WithHeadings, WithMapping
 {
     use Exportable;
 
-    public function collection()
+    /**
+     * @return Collection<int, Activity>
+     */
+    public function collection(): Collection
     {
         return Activity::query()
             ->with(['subject', 'causer'])
@@ -23,6 +28,10 @@ final class ActivityLogExport implements FromCollection, WithHeadings, WithMappi
             ->get();
     }
 
+    /**
+     * @param  Activity  $activity
+     * @return array<int, string|null>
+     */
     public function map($activity): array
     {
         $entry = ActivityLogEntryData::fromModel($activity);
@@ -37,6 +46,9 @@ final class ActivityLogExport implements FromCollection, WithHeadings, WithMappi
         ];
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function headings(): array
     {
         return [

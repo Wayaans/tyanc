@@ -22,7 +22,7 @@ final readonly class ResolveApprovers
 
         $resolvedStep = $step ?? $rule->steps->sortBy('step_order')->first();
 
-        if (! $resolvedStep instanceof ApprovalRuleStep || ! is_numeric($resolvedStep->role_id)) {
+        if (! $resolvedStep instanceof ApprovalRuleStep) {
             return collect();
         }
 

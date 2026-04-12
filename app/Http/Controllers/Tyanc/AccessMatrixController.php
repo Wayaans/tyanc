@@ -13,6 +13,7 @@ use App\Data\Tyanc\Rbac\PermissionData;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Http\Requests\Tyanc\SyncAccessMatrixRequest;
 use App\Models\App;
+use App\Models\AppPage;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -62,6 +63,7 @@ final readonly class AccessMatrixController
                     fn (Collection $permissions): Collection => $permissions->push($permission->name),
                     fn (Collection $permissions): Collection => $permissions->reject(fn (string $name): bool => $name === $permission->name),
                 )
+                ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
                 ->unique()
                 ->values()
                 ->all();
@@ -114,17 +116,19 @@ final readonly class AccessMatrixController
             ->map(function (Permission $permission) use ($roles, $apps): array {
                 $permissionData = PermissionData::fromModel($permission);
                 $matchingPage = $apps
-                    ->flatMap(fn (App $app): Collection => $app->pages->map(fn ($page): array => ['app' => $app, 'page' => $page]))
+                    ->flatMap(fn (App $app): array => $app->pages
+                        ->map(fn (AppPage $page): array => ['app' => $app, 'page' => $page])
+                        ->all())
                     ->first(fn (array $item): bool => $item['page']->permission_name === $permission->name);
 
-                $page = is_array($matchingPage) ? $matchingPage['page'] ?? null : null;
-                $app = is_array($matchingPage) ? $matchingPage['app'] ?? null : null;
+                $page = is_array($matchingPage) ? $matchingPage['page'] : null;
+                $app = is_array($matchingPage) ? $matchingPage['app'] : null;
 
                 $row = [
                     'id' => (int) $permission->id,
                     'permission' => $permission->name,
                     'app' => $permissionData->app,
-                    'app_label' => $app?->label ?? $permissionData->app_label,
+                    'app_label' => $app instanceof App ? $app->label : $permissionData->app_label,
                     'resource' => $permissionData->resource,
                     'resource_label' => $permissionData->resource_label,
                     'action' => $permissionData->action,
@@ -138,14 +142,15 @@ final readonly class AccessMatrixController
                 }
 
                 return $row;
-            })
-            ->when(
-                is_string($selectedAppKey) && $selectedAppKey !== '',
-                fn (Collection $rows): Collection => $rows->filter(
-                    fn (array $row): bool => ($row['app'] ?? null) === $selectedAppKey,
-                ),
-                fn (Collection $rows): Collection => collect(),
-            )
+            });
+
+        if (is_string($selectedAppKey) && $selectedAppKey !== '') {
+            $matrixRows = $matrixRows
+                ->filter(fn (array $row): bool => ($row['app'] ?? null) === $selectedAppKey)
+                ->values();
+        }
+
+        $matrixRows = $matrixRows
             ->sortBy([
                 ['resource_label', 'asc'],
                 ['action_label', 'asc'],
@@ -193,6 +198,9 @@ final readonly class AccessMatrixController
         );
     }
 
+    /**
+     * @param  Collection<int, Role>  $roles
+     */
     private function resolvePreviewRoleName(Request $request, Collection $roles, ?int $selectedRoleId): ?string
     {
         if (is_string($request->input('preview_role')) && $request->string('preview_role')->toString() !== '') {
@@ -210,6 +218,9 @@ final readonly class AccessMatrixController
         return null;
     }
 
+    /**
+     * @param  Collection<int, Role>  $roles
+     */
     private function resolveSelectedRoleId(Request $request, Collection $roles): ?int
     {
         if (! $request->filled('role_id')) {
@@ -221,6 +232,9 @@ final readonly class AccessMatrixController
         return $roles->contains('id', $roleId) ? $roleId : null;
     }
 
+    /**
+     * @param  Collection<int, App>  $apps
+     */
     private function resolveSelectedAppKey(Request $request, Collection $apps): ?string
     {
         if (! is_string($request->input('app'))) {
@@ -237,7 +251,8 @@ final readonly class AccessMatrixController
     }
 
     /**
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @param  Collection<int, App>  $apps
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(Collection $apps): array
     {

@@ -15,7 +15,7 @@ use Illuminate\Database\Query\JoinClause;
 final readonly class ListRecentConversations
 {
     /**
-     * @return array{unread_count: int, recent: list<ConversationData>}
+     * @return array{unread_count: int, recent: array<int, ConversationData>}
      */
     public function handle(?User $actor, int $limit = 6): array
     {
@@ -42,7 +42,13 @@ final readonly class ListRecentConversations
             ->limit($limit)
             ->get();
 
-        $unreadCounts = $this->resolveUnreadCounts($actor, $conversations->pluck('id')->all());
+        $unreadCounts = $this->resolveUnreadCounts(
+            $actor,
+            $conversations->pluck('id')
+                ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+                ->values()
+                ->all(),
+        );
 
         return [
             'unread_count' => array_sum($unreadCounts),
@@ -58,7 +64,7 @@ final readonly class ListRecentConversations
     }
 
     /**
-     * @param  list<string>  $conversationIds
+     * @param  array<int, string>  $conversationIds
      * @return array<string, int>
      */
     private function resolveUnreadCounts(User $actor, array $conversationIds): array

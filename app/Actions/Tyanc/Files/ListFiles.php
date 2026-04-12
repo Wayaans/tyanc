@@ -14,7 +14,6 @@ use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\AllowedSort;
@@ -24,10 +23,10 @@ final readonly class ListFiles
 {
     /**
      * @return array{
-     *     rows: list<MediaFileData>,
+     *     rows: array<int, MediaFileData>,
      *     meta: array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool},
      *     query: DataTableQueryData,
-     *     filters: list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     *     filters: array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      * }
      */
     public function handle(User $actor, FileIndexRequest $request): array
@@ -69,7 +68,7 @@ final readonly class ListFiles
             ->withQueryString();
 
         return [
-            'rows' => Collection::make($files->items())
+            'rows' => $files->getCollection()
                 ->map(fn (Media $media): MediaFileData => MediaFileData::fromModel($media))
                 ->all(),
             'meta' => $this->meta($files),
@@ -78,6 +77,9 @@ final readonly class ListFiles
         ];
     }
 
+    /**
+     * @param  Builder<Media>  $query
+     */
     private function applySearch(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -98,6 +100,9 @@ final readonly class ListFiles
         });
     }
 
+    /**
+     * @param  Builder<Media>  $query
+     */
     private function applyMimeGroup(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -127,7 +132,7 @@ final readonly class ListFiles
     }
 
     /**
-     * @return list<array{id: string, label: string, type: string, placeholder?: string, options?: list<array{label: string, value: string}>}>
+     * @return array<int, array{id: string, label: string, type: string, placeholder?: string, options?: array<int, array{label: string, value: string}>}>
      */
     private function filters(): array
     {
@@ -156,6 +161,7 @@ final readonly class ListFiles
     }
 
     /**
+     * @param  LengthAwarePaginator<int, Media>  $paginator
      * @return array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool}
      */
     private function meta(LengthAwarePaginator $paginator): array

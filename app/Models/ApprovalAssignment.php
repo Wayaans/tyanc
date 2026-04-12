@@ -9,7 +9,26 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $approval_request_id
+ * @property string|null $approval_rule_step_id
+ * @property int|null $step_order_snapshot
+ * @property string|null $step_label_snapshot
+ * @property string|null $role_name_snapshot
+ * @property string|null $assigned_to_id
+ * @property string $status
+ * @property string|null $completed_by_id
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read ApprovalRequest $request
+ * @property-read ApprovalRuleStep|null $step
+ * @property-read User|null $assignee
+ * @property-read User|null $completedBy
+ */
 final class ApprovalAssignment extends Model
 {
     /** @use HasFactory<ApprovalAssignmentFactory> */
@@ -55,21 +74,33 @@ final class ApprovalAssignment extends Model
         'status' => self::StatusPending,
     ];
 
+    /**
+     * @return BelongsTo<ApprovalRequest, $this>
+     */
     public function request(): BelongsTo
     {
         return $this->belongsTo(ApprovalRequest::class, 'approval_request_id');
     }
 
+    /**
+     * @return BelongsTo<ApprovalRuleStep, $this>
+     */
     public function step(): BelongsTo
     {
         return $this->belongsTo(ApprovalRuleStep::class, 'approval_rule_step_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function completedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'completed_by_id');

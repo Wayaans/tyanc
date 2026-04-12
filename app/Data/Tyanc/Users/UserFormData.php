@@ -13,8 +13,8 @@ use Spatie\LaravelData\Data;
 final class UserFormData extends Data
 {
     /**
-     * @param  list<string>  $roles
-     * @param  list<string>  $permissions
+     * @param  array<int, string>  $roles
+     * @param  array<int, string>  $permissions
      */
     public function __construct(
         public string $id,
@@ -73,7 +73,7 @@ final class UserFormData extends Data
             username: $user->username,
             email: $user->email,
             avatar: UserData::fromModel($user)->avatar,
-            status: $user->status instanceof UserStatus ? $user->status->value : (string) $user->status,
+            status: $user->status->value,
             timezone: $user->timezone,
             locale: $user->locale,
             roles: $user->roles->pluck('name')->filter()->values()->all(),
