@@ -4,6 +4,8 @@ import {
     BookCheck,
     CheckCircle2,
     ClipboardList,
+    FileBarChart2,
+    LayoutList,
     ShieldCheck,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -19,7 +21,9 @@ import { index as approvalRulesRoute } from '@/routes/cumpu/approval-rules';
 import {
     index as approvalsInboxRoute,
     myRequests as approvalsMyRequestsRoute,
+    all as approvalsAllRoute,
 } from '@/routes/cumpu/approvals';
+import { index as approvalsReportsRoute } from '@/routes/cumpu/approvals/reports';
 import type {
     CumpuDashboardAbilities,
     CumpuDashboardSummary,
@@ -53,6 +57,15 @@ const summaryCards = computed(() => [
             ? approvalsMyRequestsRoute()
             : null,
         linkLabel: __('View my requests'),
+    },
+    {
+        key: 'all_pending',
+        title: __('All pending'),
+        value: props.summary.all_pending_count,
+        description: __('Total pending requests across all workflows.'),
+        icon: LayoutList,
+        href: props.abilities.viewAll ? approvalsAllRoute() : null,
+        linkLabel: __('View all'),
     },
     {
         key: 'rules',
@@ -136,6 +149,28 @@ const summaryCards = computed(() => [
                                 <TextLink :href="approvalRulesRoute()">
                                     <ShieldCheck class="mr-1.5 size-3.5" />
                                     {{ __('Approval rules') }}
+                                </TextLink>
+                            </Button>
+                            <Button
+                                v-if="props.abilities.viewAll"
+                                size="sm"
+                                variant="outline"
+                                as-child
+                            >
+                                <TextLink :href="approvalsAllRoute()">
+                                    <LayoutList class="mr-1.5 size-3.5" />
+                                    {{ __('All approvals') }}
+                                </TextLink>
+                            </Button>
+                            <Button
+                                v-if="props.abilities.viewReports"
+                                size="sm"
+                                variant="outline"
+                                as-child
+                            >
+                                <TextLink :href="approvalsReportsRoute()">
+                                    <FileBarChart2 class="mr-1.5 size-3.5" />
+                                    {{ __('Reports') }}
                                 </TextLink>
                             </Button>
                         </div>
@@ -274,6 +309,62 @@ const summaryCards = computed(() => [
                                     {{
                                         __(
                                             'Configure which actions require sign-off and who reviews them.',
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        v-if="props.abilities.viewAll"
+                        class="group border-sidebar-border/70 bg-sidebar/10 shadow-none transition-colors hover:bg-sidebar/25"
+                    >
+                        <CardContent class="flex items-start gap-3 px-4 py-4">
+                            <div
+                                class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            >
+                                <LayoutList class="size-4" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <TextLink
+                                    :href="approvalsAllRoute()"
+                                    class="text-sm font-medium text-foreground hover:underline"
+                                >
+                                    {{ __('All approvals') }}
+                                </TextLink>
+                                <p class="mt-0.5 text-xs text-muted-foreground">
+                                    {{
+                                        __(
+                                            'View and manage every request across all apps and workflows.',
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        v-if="props.abilities.viewReports"
+                        class="group border-sidebar-border/70 bg-sidebar/10 shadow-none transition-colors hover:bg-sidebar/25"
+                    >
+                        <CardContent class="flex items-start gap-3 px-4 py-4">
+                            <div
+                                class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            >
+                                <FileBarChart2 class="size-4" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <TextLink
+                                    :href="approvalsReportsRoute()"
+                                    class="text-sm font-medium text-foreground hover:underline"
+                                >
+                                    {{ __('Approval reports') }}
+                                </TextLink>
+                                <p class="mt-0.5 text-xs text-muted-foreground">
+                                    {{
+                                        __(
+                                            'Analyse trends, filter by status, and export approval data to CSV.',
                                         )
                                     }}
                                 </p>

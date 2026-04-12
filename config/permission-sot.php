@@ -100,6 +100,10 @@ return [
                     'label' => 'Approval rules',
                     'actions' => ['viewany', 'create', 'update', 'delete', 'manage'],
                 ],
+                'reports' => [
+                    'label' => 'Reports',
+                    'actions' => ['viewany', 'view', 'export', 'manage'],
+                ],
             ],
         ],
         'demo' => [

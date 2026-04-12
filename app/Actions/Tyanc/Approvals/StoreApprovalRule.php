@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class StoreApprovalRule
 {
+    public function __construct(private SyncApprovalRuleSteps $syncSteps) {}
+
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -32,8 +34,12 @@ final readonly class StoreApprovalRule
             'resource_key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
             'action_key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
             'enabled' => ['sometimes', 'boolean'],
-            'role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
-            'step_label' => ['nullable', 'string', 'max:120'],
+            'workflow_type' => ['required', 'string', Rule::in([ApprovalRule::WorkflowSingle, ApprovalRule::WorkflowMulti])],
+            'steps' => ['required', 'array', 'min:1'],
+            'steps.*.role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
+            'steps.*.label' => ['nullable', 'string', 'max:120'],
+            'reminder_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
+            'escalation_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
         ]);
 
         $validator->after(function ($validator) use ($attributes): void {
@@ -50,7 +56,7 @@ final readonly class StoreApprovalRule
             }
         });
 
-        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, role_id: int, step_label?: string|null} $validated */
+        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, workflow_type: string, steps: list<array{role_id: int, label?: string|null}>, reminder_after_minutes?: int|null, escalation_after_minutes?: int|null} $validated */
         $validated = $validator->validate();
         $permissionName = $this->permissionName($validated);
 
@@ -67,15 +73,13 @@ final readonly class StoreApprovalRule
                 'action_key' => $validated['action_key'],
                 'permission_name' => $permissionName,
                 'enabled' => (bool) ($validated['enabled'] ?? false),
-                'workflow_type' => ApprovalRule::WorkflowSingle,
+                'workflow_type' => $validated['workflow_type'],
                 'conditions' => null,
+                'reminder_after_minutes' => $validated['reminder_after_minutes'] ?? null,
+                'escalation_after_minutes' => $validated['escalation_after_minutes'] ?? null,
             ]);
 
-            $rule->steps()->create([
-                'role_id' => $validated['role_id'],
-                'step_order' => 1,
-                'label' => $this->nullableString($validated['step_label'] ?? null),
-            ]);
+            $rule = $this->syncSteps->handle($rule, $validated['steps']);
 
             activity('approvals')
                 ->performedOn($rule)
@@ -86,7 +90,7 @@ final readonly class StoreApprovalRule
                 ])
                 ->log('Approval rule created');
 
-            return $rule->fresh('steps.role');
+            return $rule;
         });
     }
 
@@ -106,16 +110,5 @@ final readonly class StoreApprovalRule
         $permissionName = PermissionKey::make($appKey, $resourceKey, $actionKey);
 
         return PermissionKey::existsInSource($permissionName) ? $permissionName : null;
-    }
-
-    private function nullableString(mixed $value): ?string
-    {
-        if (! is_string($value)) {
-            return null;
-        }
-
-        $value = mb_trim($value);
-
-        return $value === '' ? null : $value;
     }
 }

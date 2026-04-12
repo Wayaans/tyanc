@@ -101,6 +101,9 @@ final readonly class CreateApprovalProposal
             $approvers->each(function (User $approver) use ($approvalRequest, $step): void {
                 $approvalRequest->assignments()->create([
                     'approval_rule_step_id' => $step->id,
+                    'step_order_snapshot' => $step->step_order,
+                    'step_label_snapshot' => $step->label,
+                    'role_name_snapshot' => $step->role?->name,
                     'assigned_to_id' => $approver->id,
                     'status' => ApprovalAssignment::StatusPending,
                 ]);

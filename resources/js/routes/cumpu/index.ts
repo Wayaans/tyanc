@@ -3,7 +3,7 @@ import approvals from './approvals'
 import approvalRules from './approval-rules'
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -18,7 +18,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -27,7 +27,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -37,7 +37,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -47,7 +47,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -57,7 +57,7 @@ const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> 
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -67,7 +67,7 @@ dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> =>
 
 /**
 * @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
-* @see app/Http/Controllers/Cumpu/DashboardController.php:21
+* @see app/Http/Controllers/Cumpu/DashboardController.php:22
 * @route '/cumpu/dashboard'
 */
 dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

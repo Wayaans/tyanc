@@ -9,6 +9,8 @@ use App\Actions\Tyanc\Approvals\ListApprovalRules;
 use App\Actions\Tyanc\Approvals\StoreApprovalRule;
 use App\Actions\Tyanc\Approvals\UpdateApprovalRule;
 use App\Actions\Tyanc\Permissions\ResolvePermissionOptions;
+use App\Http\Requests\Cumpu\StoreApprovalRuleRequest;
+use App\Http\Requests\Cumpu\UpdateApprovalRuleRequest;
 use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
@@ -50,9 +52,12 @@ final readonly class ApprovalRuleController
         return Inertia::render('cumpu/approval-rules/Index', $payload);
     }
 
-    public function store(Request $request, #[CurrentUser] User $user, StoreApprovalRule $action): RedirectResponse|JsonResponse
-    {
-        $approvalRule = $action->handle($user, $this->payload($request));
+    public function store(
+        StoreApprovalRuleRequest $request,
+        #[CurrentUser] User $user,
+        StoreApprovalRule $action,
+    ): RedirectResponse|JsonResponse {
+        $approvalRule = $action->handle($user, $request->validated());
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -66,12 +71,12 @@ final readonly class ApprovalRuleController
     }
 
     public function update(
-        Request $request,
+        UpdateApprovalRuleRequest $request,
         #[CurrentUser] User $user,
         ApprovalRule $approvalRule,
         UpdateApprovalRule $action,
     ): RedirectResponse|JsonResponse {
-        $approvalRule = $action->handle($user, $approvalRule, $this->payload($request));
+        $approvalRule = $action->handle($user, $approvalRule, $request->validated());
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -97,22 +102,5 @@ final readonly class ApprovalRuleController
         }
 
         return to_route('cumpu.approval-rules.index');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function payload(Request $request): array
-    {
-        return [
-            'app_key' => $request->string('app_key')->toString(),
-            'resource_key' => $request->string('resource_key')->toString(),
-            'action_key' => $request->string('action_key')->toString(),
-            'enabled' => $request->boolean('enabled', false),
-            'role_id' => $request->has('role_id')
-                ? $request->integer('role_id')
-                : $request->integer('step_role_id'),
-            'step_label' => $request->string('step_label')->toString(),
-        ];
     }
 }

@@ -10,7 +10,9 @@ import {
     index as cumpuApprovalsInboxRoute,
     myRequests as cumpuApprovalsMyRequestsRoute,
     show as cumpuApprovalsShowRoute,
+    all as cumpuApprovalsAllRoute,
 } from '@/routes/cumpu/approvals';
+import { index as cumpuApprovalReportsRoute } from '@/routes/cumpu/approvals/reports';
 import { dashboard as demoDashboard } from '@/routes/demo';
 import { edit as editAccount } from '@/routes/settings/account';
 import { index as accessMatrixRoute } from '@/routes/tyanc/access-matrix';
@@ -346,6 +348,16 @@ export function useAppNavigation() {
         { title: __('Approval rules'), href: cumpuApprovalRulesRoute() },
     ]);
 
+    const cumpuAllApprovalsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('All approvals'), href: cumpuApprovalsAllRoute() },
+    ]);
+
+    const cumpuApprovalReportsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('Approval reports'), href: cumpuApprovalReportsRoute() },
+    ]);
+
     const cumpuApprovalShowBreadcrumbs = (
         backLabel: string,
         backHref: string,
@@ -396,6 +408,8 @@ export function useAppNavigation() {
         cumpuInboxBreadcrumbs,
         cumpuMyRequestsBreadcrumbs,
         cumpuApprovalRulesBreadcrumbs,
+        cumpuAllApprovalsBreadcrumbs,
+        cumpuApprovalReportsBreadcrumbs,
         cumpuApprovalShowBreadcrumbs,
     };
 }

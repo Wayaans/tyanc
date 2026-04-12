@@ -42,6 +42,8 @@ final class ApprovalRule extends Model
         'enabled',
         'workflow_type',
         'conditions',
+        'reminder_after_minutes',
+        'escalation_after_minutes',
     ];
 
     /**
@@ -72,6 +74,8 @@ final class ApprovalRule extends Model
             'enabled' => 'boolean',
             'workflow_type' => 'string',
             'conditions' => 'array',
+            'reminder_after_minutes' => 'integer',
+            'escalation_after_minutes' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

@@ -126,7 +126,10 @@ final readonly class RejectRequest
                 'reviewer',
                 'cancelledBy',
                 'subject',
+                'rule.steps.role',
                 'assignments.assignee',
+                'assignments.completedBy',
+                'assignments.step.role',
             ]);
         });
     }

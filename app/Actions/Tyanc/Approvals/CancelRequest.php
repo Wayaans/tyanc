@@ -80,7 +80,10 @@ final readonly class CancelRequest
                 'reviewer',
                 'cancelledBy',
                 'subject',
+                'rule.steps.role',
                 'assignments.assignee',
+                'assignments.completedBy',
+                'assignments.step.role',
             ]);
         });
     }

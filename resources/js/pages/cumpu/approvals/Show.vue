@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import {
+    ArrowLeft,
+    ArrowRightLeft,
+    ChevronDown,
+    ChevronUp,
+} from 'lucide-vue-next';
 import { ref } from 'vue';
 import ApprovalActivityHistory from '@/components/cumpu/approvals/ApprovalActivityHistory.vue';
 import ApprovalAssignmentsCard from '@/components/cumpu/approvals/ApprovalAssignmentsCard.vue';
+import ApprovalReassignDialog from '@/components/cumpu/approvals/ApprovalReassignDialog.vue';
+import ApprovalStatusBadge from '@/components/cumpu/approvals/ApprovalStatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,8 +26,8 @@ import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { approve, cancel, reject } from '@/routes/cumpu/approvals';
-import type { ActivityRow, ApprovalRequestRow, ApprovalStatus } from '@/types';
-import type { ApprovalAssignmentRow } from '@/types/cumpu';
+import type { ActivityRow, ApprovalRequestRow } from '@/types';
+import type { ApprovalAssignmentRow, ReassignOption } from '@/types/cumpu';
 
 const props = defineProps<{
     approval: ApprovalRequestRow;
@@ -30,6 +37,7 @@ const props = defineProps<{
         label: string;
         href: string;
     };
+    reassignOptions?: ReassignOption[];
 }>();
 
 const { __ } = useTranslations();
@@ -47,58 +55,6 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
     timeStyle: 'short',
 });
 
-type StatusConfig = {
-    label: string;
-    badgeClass: string;
-};
-
-const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
-    draft: {
-        label: 'Draft',
-        badgeClass:
-            'border-zinc-500/20 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-    },
-    pending: {
-        label: 'Pending',
-        badgeClass:
-            'border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-    },
-    in_review: {
-        label: 'In review',
-        badgeClass:
-            'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-    },
-    approved: {
-        label: 'Approved',
-        badgeClass:
-            'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    },
-    rejected: {
-        label: 'Rejected',
-        badgeClass:
-            'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400',
-    },
-    cancelled: {
-        label: 'Cancelled',
-        badgeClass:
-            'border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-    },
-    expired: {
-        label: 'Expired',
-        badgeClass:
-            'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    },
-    superseded: {
-        label: 'Superseded',
-        badgeClass:
-            'border-stone-500/20 bg-stone-500/10 text-stone-700 dark:text-stone-300',
-    },
-};
-
-function statusConfig(status: ApprovalStatus): StatusConfig {
-    return statusConfigs[status] ?? statusConfigs.pending;
-}
-
 function hasContent(obj: Record<string, unknown> | null | undefined): boolean {
     return obj !== null && obj !== undefined && Object.keys(obj).length > 0;
 }
@@ -112,6 +68,7 @@ const isSubmitting = ref(false);
 const snapshotOpen = ref(false);
 const beforePayloadOpen = ref(false);
 const afterPayloadOpen = ref(false);
+const reassignDialogOpen = ref(false);
 
 function submitApprove() {
     isSubmitting.value = true;
@@ -192,17 +149,9 @@ function goBack() {
                         <!-- Identity -->
                         <div class="min-w-0 flex-1 space-y-3">
                             <div class="flex flex-wrap items-center gap-2">
-                                <Badge
-                                    variant="outline"
-                                    :class="`rounded-full text-xs ${statusConfig(props.approval.status).badgeClass}`"
-                                >
-                                    {{
-                                        __(
-                                            statusConfig(props.approval.status)
-                                                .label,
-                                        )
-                                    }}
-                                </Badge>
+                                <ApprovalStatusBadge
+                                    :status="props.approval.status"
+                                />
                                 <Badge
                                     variant="secondary"
                                     class="rounded-full text-xs"
@@ -527,9 +476,50 @@ function goBack() {
                 <!-- Right: workflow + history -->
                 <div class="space-y-5">
                     <ApprovalAssignmentsCard :assignments="props.assignments" />
+
+                    <!-- Reassign action (only when permitted) -->
+                    <div
+                        v-if="
+                            props.approval.can_reassign &&
+                            props.reassignOptions?.length
+                        "
+                        class="rounded-2xl border border-sidebar-border/70 bg-background/90 px-5 py-4"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <p class="text-sm font-medium text-foreground">
+                                    {{ __('Reassign') }}
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    {{
+                                        __(
+                                            'Redirect pending steps to different reviewers.',
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                class="shrink-0 gap-1.5"
+                                @click="reassignDialogOpen = true"
+                            >
+                                <ArrowRightLeft class="size-3.5" />
+                                {{ __('Reassign') }}
+                            </Button>
+                        </div>
+                    </div>
+
                     <ApprovalActivityHistory :history="props.history" />
                 </div>
             </div>
         </div>
     </AppLayout>
+
+    <!-- Reassign dialog -->
+    <ApprovalReassignDialog
+        v-model:open="reassignDialogOpen"
+        :request="props.approval"
+        :reassign-options="props.reassignOptions ?? []"
+    />
 </template>

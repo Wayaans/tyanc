@@ -125,13 +125,75 @@ function confirmDelete() {
 
                 <!-- Reviewer role -->
                 <p class="truncate text-sm text-foreground">
-                    {{ rule.step_role_name ?? __('—') }}
+                    {{
+                        rule.workflow_type === 'multi'
+                            ? __(':n roles', {
+                                  n: String(rule.steps?.length ?? 0),
+                              })
+                            : (rule.step_role_name ?? __('—'))
+                    }}
                 </p>
 
                 <!-- Workflow -->
-                <p class="text-sm text-muted-foreground">
-                    {{ rule.step_label ?? rule.workflow_type }}
-                </p>
+                <div class="space-y-0.5">
+                    <p class="text-sm text-muted-foreground">
+                        {{
+                            rule.workflow_type === 'multi'
+                                ? __(':n steps', {
+                                      n: String(rule.steps?.length ?? 0),
+                                  })
+                                : (rule.step_label ?? rule.workflow_type)
+                        }}
+                    </p>
+                    <div
+                        v-if="
+                            rule.workflow_type === 'multi' && rule.steps?.length
+                        "
+                        class="flex flex-wrap gap-1"
+                    >
+                        <span
+                            v-for="step in rule.steps"
+                            :key="step.order"
+                            class="rounded-full bg-sidebar/30 px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                            {{
+                                step.label ||
+                                step.role_name ||
+                                `Step ${step.order}`
+                            }}
+                        </span>
+                    </div>
+                    <p
+                        v-if="
+                            rule.reminder_after_minutes ||
+                            rule.escalation_after_minutes
+                        "
+                        class="text-xs text-muted-foreground"
+                    >
+                        <span v-if="rule.reminder_after_minutes">
+                            {{
+                                __('Reminder: :n min', {
+                                    n: String(rule.reminder_after_minutes),
+                                })
+                            }}
+                        </span>
+                        <span
+                            v-if="
+                                rule.reminder_after_minutes &&
+                                rule.escalation_after_minutes
+                            "
+                        >
+                            ·
+                        </span>
+                        <span v-if="rule.escalation_after_minutes">
+                            {{
+                                __('Escalate: :n min', {
+                                    n: String(rule.escalation_after_minutes),
+                                })
+                            }}
+                        </span>
+                    </p>
+                </div>
 
                 <!-- Enabled -->
                 <div class="flex items-center">

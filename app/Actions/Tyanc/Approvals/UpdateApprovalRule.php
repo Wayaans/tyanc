@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateApprovalRule
 {
+    public function __construct(private SyncApprovalRuleSteps $syncSteps) {}
+
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -32,8 +34,12 @@ final readonly class UpdateApprovalRule
             'resource_key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
             'action_key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
             'enabled' => ['sometimes', 'boolean'],
-            'role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
-            'step_label' => ['nullable', 'string', 'max:120'],
+            'workflow_type' => ['required', 'string', Rule::in([ApprovalRule::WorkflowSingle, ApprovalRule::WorkflowMulti])],
+            'steps' => ['required', 'array', 'min:1'],
+            'steps.*.role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
+            'steps.*.label' => ['nullable', 'string', 'max:120'],
+            'reminder_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
+            'escalation_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
         ]);
 
         $validator->after(function ($validator) use ($attributes, $approvalRule): void {
@@ -50,7 +56,7 @@ final readonly class UpdateApprovalRule
             }
         });
 
-        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, role_id: int, step_label?: string|null} $validated */
+        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, workflow_type: string, steps: list<array{role_id: int, label?: string|null}>, reminder_after_minutes?: int|null, escalation_after_minutes?: int|null} $validated */
         $validated = $validator->validate();
         $permissionName = $this->permissionName($validated);
 
@@ -67,20 +73,12 @@ final readonly class UpdateApprovalRule
                 'action_key' => $validated['action_key'],
                 'permission_name' => $permissionName,
                 'enabled' => (bool) ($validated['enabled'] ?? false),
-                'workflow_type' => ApprovalRule::WorkflowSingle,
+                'workflow_type' => $validated['workflow_type'],
+                'reminder_after_minutes' => $validated['reminder_after_minutes'] ?? null,
+                'escalation_after_minutes' => $validated['escalation_after_minutes'] ?? null,
             ])->save();
 
-            $approvalRule->steps()->updateOrCreate(
-                ['step_order' => 1],
-                [
-                    'role_id' => $validated['role_id'],
-                    'label' => $this->nullableString($validated['step_label'] ?? null),
-                ],
-            );
-
-            $approvalRule->steps()
-                ->where('step_order', '!=', 1)
-                ->delete();
+            $approvalRule = $this->syncSteps->handle($approvalRule, $validated['steps']);
 
             activity('approvals')
                 ->performedOn($approvalRule)
@@ -91,7 +89,7 @@ final readonly class UpdateApprovalRule
                 ])
                 ->log('Approval rule updated');
 
-            return $approvalRule->fresh('steps.role');
+            return $approvalRule;
         });
     }
 
@@ -111,16 +109,5 @@ final readonly class UpdateApprovalRule
         $permissionName = PermissionKey::make($appKey, $resourceKey, $actionKey);
 
         return PermissionKey::existsInSource($permissionName) ? $permissionName : null;
-    }
-
-    private function nullableString(mixed $value): ?string
-    {
-        if (! is_string($value)) {
-            return null;
-        }
-
-        $value = mb_trim($value);
-
-        return $value === '' ? null : $value;
     }
 }

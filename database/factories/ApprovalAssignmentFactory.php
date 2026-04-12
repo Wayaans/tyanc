@@ -23,6 +23,9 @@ final class ApprovalAssignmentFactory extends Factory
         return [
             'approval_request_id' => ApprovalRequest::factory(),
             'approval_rule_step_id' => ApprovalRuleStep::factory(),
+            'step_order_snapshot' => 1,
+            'step_label_snapshot' => fake()->words(2, true),
+            'role_name_snapshot' => 'Approver',
             'assigned_to_id' => User::factory(),
             'status' => ApprovalAssignment::StatusPending,
             'completed_by_id' => null,

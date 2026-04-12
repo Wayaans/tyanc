@@ -25,9 +25,12 @@ final readonly class ListApprovalRules
      *     permission_name: string,
      *     enabled: bool,
      *     workflow_type: string,
+     *     reminder_after_minutes: int|null,
+     *     escalation_after_minutes: int|null,
      *     step_role_id: int|null,
      *     step_role_name: string|null,
-     *     step_label: string|null
+     *     step_label: string|null,
+     *     steps: list<array{order: int, role_id: int|null, role_name: string|null, label: string|null}>
      * }>
      */
     public function handle(User $actor): array
@@ -44,8 +47,8 @@ final readonly class ListApprovalRules
             ->orderBy('action_key')
             ->get()
             ->map(function (ApprovalRule $rule): array {
-                /** @var ApprovalRuleStep|null $step */
-                $step = $rule->steps->sortBy('step_order')->first();
+                /** @var ApprovalRuleStep|null $firstStep */
+                $firstStep = $rule->steps->sortBy('step_order')->first();
 
                 return [
                     'id' => (string) $rule->id,
@@ -58,9 +61,21 @@ final readonly class ListApprovalRules
                     'permission_name' => (string) $rule->permission_name,
                     'enabled' => $rule->enabled,
                     'workflow_type' => (string) $rule->workflow_type,
-                    'step_role_id' => $step?->role_id,
-                    'step_role_name' => $step?->role?->name,
-                    'step_label' => $step?->label,
+                    'reminder_after_minutes' => is_numeric($rule->reminder_after_minutes) ? (int) $rule->reminder_after_minutes : null,
+                    'escalation_after_minutes' => is_numeric($rule->escalation_after_minutes) ? (int) $rule->escalation_after_minutes : null,
+                    'step_role_id' => $firstStep?->role_id,
+                    'step_role_name' => $firstStep?->role?->name,
+                    'step_label' => $firstStep?->label,
+                    'steps' => $rule->steps
+                        ->sortBy('step_order')
+                        ->map(fn (ApprovalRuleStep $step): array => [
+                            'order' => $step->step_order,
+                            'role_id' => $step->role_id,
+                            'role_name' => $step->role?->name,
+                            'label' => $step->label,
+                        ])
+                        ->values()
+                        ->all(),
                 ];
             })
             ->all();

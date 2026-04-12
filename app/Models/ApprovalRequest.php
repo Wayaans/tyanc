@@ -75,6 +75,9 @@ final class ApprovalRequest extends Model
         'cancelled_at',
         'expires_at',
         'superseded_at',
+        'last_reassigned_at',
+        'last_reminded_at',
+        'escalated_at',
     ];
 
     /**
@@ -172,6 +175,9 @@ final class ApprovalRequest extends Model
             'cancelled_at' => 'datetime',
             'expires_at' => 'datetime',
             'superseded_at' => 'datetime',
+            'last_reassigned_at' => 'datetime',
+            'last_reminded_at' => 'datetime',
+            'escalated_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

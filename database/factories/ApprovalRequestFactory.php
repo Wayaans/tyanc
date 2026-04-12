@@ -50,6 +50,9 @@ final class ApprovalRequestFactory extends Factory
             'cancelled_at' => null,
             'expires_at' => null,
             'superseded_at' => null,
+            'last_reassigned_at' => null,
+            'last_reminded_at' => null,
+            'escalated_at' => null,
         ];
     }
 

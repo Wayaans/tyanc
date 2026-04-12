@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Cumpu;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Approvals\FindOverdueApprovals;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
@@ -18,13 +19,17 @@ use Inertia\Response;
 
 final readonly class DashboardController
 {
-    public function show(Request $request, #[CurrentUser] User $user): Response|JsonResponse
-    {
+    public function show(
+        Request $request,
+        #[CurrentUser] User $user,
+        FindOverdueApprovals $overdueApprovals,
+    ): Response|JsonResponse {
         $permissionAccess = resolve(PermissionResourceAccess::class);
+        $canViewAll = $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'viewany'));
 
         $payload = [
             'summary' => [
-                'pending_inbox_count' => $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'viewany'))
+                'pending_inbox_count' => $canViewAll
                     ? ApprovalRequest::query()
                         ->whereHas('assignments', fn ($query) => $query
                             ->where('assigned_to_id', $user->id)
@@ -40,11 +45,21 @@ final readonly class DashboardController
                 'enabled_rule_count' => $permissionAccess->handle($user, PermissionKey::cumpu('approval_rules', 'viewany'))
                     ? ApprovalRule::query()->where('enabled', true)->count()
                     : 0,
+                'all_pending_count' => $canViewAll
+                    ? ApprovalRequest::query()
+                        ->whereIn('status', ApprovalRequest::activeStatuses())
+                        ->count()
+                    : 0,
+                'overdue_count' => $permissionAccess->handle($user, PermissionKey::cumpu('reports', 'viewany'))
+                    ? $overdueApprovals->handle()->count()
+                    : 0,
             ],
             'abilities' => [
-                'viewInbox' => $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'viewany')),
+                'viewInbox' => $canViewAll,
                 'viewMyRequests' => $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'view')),
                 'manageRules' => $permissionAccess->handle($user, PermissionKey::cumpu('approval_rules', 'viewany')),
+                'viewAll' => $canViewAll,
+                'viewReports' => $permissionAccess->handle($user, PermissionKey::cumpu('reports', 'viewany')),
             ],
         ];
 

@@ -105,6 +105,18 @@ return [
                     'permission' => PermissionKey::cumpu('approvals', 'viewany'),
                 ],
                 [
+                    'title' => 'All approvals',
+                    'icon' => 'clipboard-list',
+                    'route' => 'cumpu.approvals.all',
+                    'permission' => PermissionKey::cumpu('approvals', 'viewany'),
+                ],
+                [
+                    'title' => 'Reports',
+                    'icon' => 'chart-column',
+                    'route' => 'cumpu.approvals.reports.index',
+                    'permission' => PermissionKey::cumpu('reports', 'viewany'),
+                ],
+                [
                     'title' => 'Approval rules',
                     'icon' => 'settings-2',
                     'route' => 'cumpu.approval-rules.index',
