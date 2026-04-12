@@ -193,6 +193,16 @@ function confirmDelete() {
                             }}
                         </span>
                     </p>
+                    <p
+                        v-if="rule.grant_validity_minutes"
+                        class="flex items-center gap-1 text-xs text-muted-foreground"
+                    >
+                        {{
+                            __('Grant valid: :n min', {
+                                n: String(rule.grant_validity_minutes),
+                            })
+                        }}
+                    </p>
                 </div>
 
                 <!-- Enabled -->

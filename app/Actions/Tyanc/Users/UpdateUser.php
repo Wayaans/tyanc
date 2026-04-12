@@ -4,175 +4,161 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Users;
 
-use App\Actions\UpdateUser as UpdateManagedUser;
-use App\Data\Tyanc\Users\UserFormData;
+use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Models\ApprovalRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\UploadedFile;
 
 final readonly class UpdateUser
 {
-    public function __construct(private UpdateManagedUser $users) {}
+    public function __construct(
+        private SubmitGovernedAction $governedActions,
+        private PrepareUserUpdate $prepareUserUpdate,
+        private PersistUserUpdate $persistUserUpdate,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $attributes
+     * @return array{executed: bool, result: mixed, approval: ApprovalRequest|null, bypassed: bool}
      */
-    public function handle(User $actor, User $user, array $attributes): User
+    public function handle(User $actor, User $user, array $attributes): array
     {
-        Gate::forUser($actor)->authorize('update', $user);
+        $payload = $this->prepareUserUpdate->handle($actor, $user, $attributes);
+        $requestNote = $this->nullableString($payload['request_note'] ?? null);
 
-        return DB::transaction(function () use ($actor, $user, $attributes): User {
-            $roles = $this->names($attributes['roles'] ?? []);
-            $permissions = $this->names($attributes['permissions'] ?? []);
-            $before = UserFormData::fromModel($user->fresh(['roles', 'permissions']))->toArray();
-
-            $this->assertAssignableRoles($actor, $roles);
-            $this->assertReservedRoleConstraints($actor, $user, $roles);
-            $this->assertReservedUserIntegrity($user, $roles, $permissions);
-            $this->assertPermissionScope($actor, $permissions);
-
-            $updatedUser = $this->users->handle($user, $attributes);
-
-            if (is_string($attributes['password'] ?? null) && mb_trim($attributes['password']) !== '') {
-                $updatedUser->forceFill([
-                    'password' => $attributes['password'],
-                ])->save();
-            }
-
-            $updatedUser->syncRoles($roles);
-            $updatedUser->syncPermissions($permissions);
-            $updatedUser->loadMissing('roles', 'permissions');
-
-            activity('users')
-                ->performedOn($updatedUser)
-                ->causedBy($actor)
-                ->event('updated')
-                ->withProperties([
-                    'old' => $before,
-                    'attributes' => UserFormData::fromModel($updatedUser)->toArray(),
-                ])
-                ->log('User updated');
-
-            return $updatedUser;
-        });
+        return $this->governedActions->handle(
+            actor: $actor,
+            permissionName: PermissionKey::tyanc('users', 'update'),
+            subject: $user,
+            context: [
+                ...$payload,
+                'request_note' => $requestNote,
+                'changed_fields' => $this->changedFields($user, $payload),
+                'target_role_levels' => $this->targetRoleLevels($payload['roles'] ?? []),
+            ],
+            definition: [
+                'execute' => fn (): User => $this->persistUserUpdate->handle($actor, $user, $payload),
+                'proposal' => [
+                    'request_note' => $requestNote,
+                    'payload' => [
+                        'action_label' => __('Update user'),
+                        'subject_label' => $user->approvalSubjectLabel(),
+                    ],
+                    'subject_snapshot' => $user->approvalSubjectSnapshot(),
+                ],
+            ],
+        );
     }
 
     /**
+     * @param  array<string, mixed>  $attributes
      * @return list<string>
      */
-    private function names(mixed $values): array
+    private function changedFields(User $user, array $attributes): array
     {
-        if (! is_array($values)) {
+        $user->loadMissing('roles', 'permissions');
+
+        $hasAvatarUpload = ($attributes['avatar'] ?? null) instanceof UploadedFile;
+        $changedFields = collect();
+
+        if (($attributes['name'] ?? $user->name) !== $user->name) {
+            $changedFields->push('name');
+        }
+
+        if (($attributes['username'] ?? $user->username) !== $user->username) {
+            $changedFields->push('username');
+        }
+
+        if (($attributes['email'] ?? $user->email) !== $user->email) {
+            $changedFields->push('email');
+        }
+
+        if (($attributes['status'] ?? $user->status->value) !== $user->status->value) {
+            $changedFields->push('status');
+        }
+
+        if (($attributes['locale'] ?? $user->locale) !== $user->locale) {
+            $changedFields->push('locale');
+        }
+
+        if (($attributes['timezone'] ?? $user->timezone) !== $user->timezone) {
+            $changedFields->push('timezone');
+        }
+
+        $nextRoles = collect($attributes['roles'] ?? $user->roles->pluck('name')->all())
+            ->filter(fn (mixed $role): bool => is_string($role) && $role !== '')
+            ->sort()
+            ->values()
+            ->all();
+
+        $currentRoles = $user->roles->pluck('name')->filter()->sort()->values()->all();
+
+        if ($nextRoles !== $currentRoles) {
+            $changedFields->push('roles');
+        }
+
+        $nextPermissions = collect($attributes['permissions'] ?? $user->permissions->pluck('name')->all())
+            ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
+            ->sort()
+            ->values()
+            ->all();
+
+        $currentPermissions = $user->permissions->pluck('name')->filter()->sort()->values()->all();
+
+        if ($nextPermissions !== $currentPermissions) {
+            $changedFields->push('permissions');
+        }
+
+        if ($hasAvatarUpload || ((bool) ($attributes['remove_avatar'] ?? false) && $user->avatar !== null)) {
+            $changedFields->push('avatar');
+        }
+
+        if (is_string($attributes['password'] ?? null) && mb_trim($attributes['password']) !== '') {
+            $changedFields->push('password');
+        }
+
+        return $changedFields->unique()->values()->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function targetRoleLevels(mixed $roles): array
+    {
+        if (! is_array($roles) || $roles === []) {
             return [];
         }
 
-        return Collection::make($values)
-            ->filter(fn (mixed $value): bool => is_string($value) && mb_trim($value) !== '')
-            ->map(fn (string $value): string => mb_trim($value))
+        $roleNames = collect($roles)
+            ->filter(fn (mixed $role): bool => is_string($role) && mb_trim($role) !== '')
+            ->map(fn (string $role): string => mb_trim($role))
             ->unique()
+            ->values()
+            ->all();
+
+        if ($roleNames === []) {
+            return [];
+        }
+
+        return Role::query()
+            ->whereIn('name', $roleNames)
+            ->pluck('level')
+            ->filter(fn (mixed $level): bool => is_numeric($level))
+            ->map(fn (mixed $level): int => (int) $level)
             ->values()
             ->all();
     }
 
-    /**
-     * @param  list<string>  $roles
-     */
-    private function assertAssignableRoles(User $actor, array $roles): void
+    private function nullableString(mixed $value): ?string
     {
-        if ($roles === [] || $actor->hasRole(config('tyanc.reserved_roles.super_admin'))) {
-            return;
+        if (! is_string($value)) {
+            return null;
         }
 
-        $actor->loadMissing('roles');
+        $value = mb_trim($value);
 
-        $actingLevel = $actor->roles->max('level');
-
-        if (! is_numeric($actingLevel)) {
-            return;
-        }
-
-        $highestRequestedLevel = Role::query()
-            ->whereIn('name', $roles)
-            ->max('level');
-
-        if (is_numeric($highestRequestedLevel) && (int) $highestRequestedLevel >= (int) $actingLevel) {
-            throw new AuthorizationException(__('You cannot assign roles at or above your own level.'));
-        }
-    }
-
-    /**
-     * @param  list<string>  $roles
-     */
-    private function assertReservedRoleConstraints(User $actor, User $user, array $roles): void
-    {
-        $superAdminRole = (string) config('tyanc.reserved_roles.super_admin');
-
-        if (! in_array($superAdminRole, $roles, true)) {
-            return;
-        }
-
-        if (! $actor->hasRole($superAdminRole)) {
-            throw new AuthorizationException(__('Only the reserved super admin user may assign the super admin role.'));
-        }
-
-        if ($user->reserved_key !== 'super_admin') {
-            throw new AuthorizationException(__('The super admin role may only be assigned to the reserved Supa Manuse user.'));
-        }
-    }
-
-    /**
-     * @param  list<string>  $roles
-     * @param  list<string>  $permissions
-     */
-    private function assertReservedUserIntegrity(User $user, array $roles, array $permissions): void
-    {
-        if (! $user->isReserved()) {
-            return;
-        }
-
-        $requiredRoles = match ($user->reserved_key) {
-            'super_admin' => [(string) config('tyanc.reserved_roles.super_admin')],
-            'admin' => [(string) config('tyanc.reserved_roles.admin')],
-            default => [],
-        };
-
-        sort($roles);
-        sort($requiredRoles);
-
-        if ($requiredRoles !== [] && $roles !== $requiredRoles) {
-            throw new AuthorizationException(__('Reserved users must keep their reserved role assignment.'));
-        }
-
-        if ($user->reserved_key === 'super_admin' && $permissions !== []) {
-            throw new AuthorizationException(__('The reserved super admin user may not receive direct permissions.'));
-        }
-    }
-
-    /**
-     * @param  list<string>  $permissions
-     */
-    private function assertPermissionScope(User $actor, array $permissions): void
-    {
-        if ($permissions === [] || $actor->hasRole(config('tyanc.reserved_roles.super_admin'))) {
-            return;
-        }
-
-        if ($actor->hasPermissionTo(PermissionKey::tyanc('users', 'manage')) || $actor->hasPermissionTo(PermissionKey::tyanc('permissions', 'manage'))) {
-            return;
-        }
-
-        $allowedPermissions = $actor->getAllPermissions()->pluck('name')->values();
-
-        $unauthorizedPermissions = Collection::make($permissions)
-            ->reject(fn (string $permission): bool => $allowedPermissions->contains($permission))
-            ->values();
-
-        if ($unauthorizedPermissions->isNotEmpty()) {
-            throw new AuthorizationException(__('You cannot grant permissions outside your own scope.'));
-        }
+        return $value === '' ? null : $value;
     }
 }

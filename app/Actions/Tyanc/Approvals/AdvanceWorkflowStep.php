@@ -69,6 +69,8 @@ final readonly class AdvanceWorkflowStep
             'status' => ApprovalRequest::StatusInReview,
         ])->save();
 
+        $completedStep = $currentStepAssignments->first();
+
         activity('approvals')
             ->performedOn($approvalRequest->subject ?? $approvalRequest)
             ->causedBy($actor)
@@ -76,7 +78,9 @@ final readonly class AdvanceWorkflowStep
             ->withProperties([
                 'approval_request_id' => (string) $approvalRequest->id,
                 'completed_step_order' => $currentStepOrder,
+                'completed_step_label' => $completedStep?->step_label_snapshot,
                 'next_step_order' => $nextStep->step_order,
+                'next_step_label' => $nextStep->label,
                 'review_note' => $reviewNote,
             ])
             ->log('Approval step advanced');
@@ -89,6 +93,7 @@ final readonly class AdvanceWorkflowStep
             'requester',
             'reviewer',
             'cancelledBy',
+            'consumedBy',
             'subject',
             'rule.steps.role',
             'assignments.assignee',

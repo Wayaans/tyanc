@@ -29,12 +29,13 @@ final readonly class ListApprovalReports
      *     query: DataTableQueryData,
      *     filters: array{date_from: string, date_to: string, status: string, app_key: string, escalated: bool, reassigned: bool, overdue: bool},
      *     appOptions: list<array{value: string, label: string}>,
-     *     summary: array{total: int, pending: int, in_review: int, approved: int, rejected: int, cancelled: int, overdue: int, escalated: int, reassigned: int}
+     *     summary: array{total: int, pending: int, in_review: int, approved: int, consumed: int, rejected: int, cancelled: int, expired: int, overdue: int, escalated: int, reassigned: int}
      * }
      */
     public function handle(User $actor, Request $request): array
     {
         $this->authorizeView($actor);
+        ApprovalRequest::expirePastDueGrants();
 
         $tableQuery = DataTableQueryData::fromRequest(
             request: $request,
@@ -110,7 +111,7 @@ final readonly class ListApprovalReports
                 ->filter()
                 ->map(fn (string $appKey): array => [
                     'value' => $appKey,
-                    'label' => $appKey,
+                    'label' => PermissionKey::appLabel($appKey),
                 ])
                 ->values()
                 ->all(),
@@ -119,8 +120,10 @@ final readonly class ListApprovalReports
                 'pending' => $summaryRows->where('status', ApprovalRequest::StatusPending)->count(),
                 'in_review' => $summaryRows->where('status', ApprovalRequest::StatusInReview)->count(),
                 'approved' => $summaryRows->where('status', ApprovalRequest::StatusApproved)->count(),
+                'consumed' => $summaryRows->where('status', ApprovalRequest::StatusConsumed)->count(),
                 'rejected' => $summaryRows->where('status', ApprovalRequest::StatusRejected)->count(),
                 'cancelled' => $summaryRows->where('status', ApprovalRequest::StatusCancelled)->count(),
+                'expired' => $summaryRows->where('status', ApprovalRequest::StatusExpired)->count(),
                 'overdue' => $summaryRows->where('is_overdue', true)->count(),
                 'escalated' => $summaryRows->where('is_escalated', true)->count(),
                 'reassigned' => $summaryRows->where('is_reassigned', true)->count(),
@@ -134,6 +137,7 @@ final readonly class ListApprovalReports
     public function rows(User $actor, Request $request, ?array $overdueIds = null): Collection
     {
         $this->authorizeView($actor);
+        ApprovalRequest::expirePastDueGrants();
 
         $resolvedOverdueIds = $overdueIds ?? $this->overdueApprovals->handle()->pluck('id')->all();
 
@@ -162,6 +166,7 @@ final readonly class ListApprovalReports
             subject: ApprovalRequest::query()->with([
                 'requester',
                 'reviewer',
+                'consumedBy',
                 'rule.steps.role',
                 'assignments.assignee',
                 'assignments.step.role',
@@ -212,6 +217,9 @@ final readonly class ListApprovalReports
                     ->where('name', 'like', sprintf('%%%s%%', $search))
                     ->orWhere('email', 'like', sprintf('%%%s%%', $search)))
                 ->orWhereHas('reviewer', fn (Builder $reviewerQuery) => $reviewerQuery
+                    ->where('name', 'like', sprintf('%%%s%%', $search))
+                    ->orWhere('email', 'like', sprintf('%%%s%%', $search)))
+                ->orWhereHas('consumedBy', fn (Builder $consumerQuery) => $consumerQuery
                     ->where('name', 'like', sprintf('%%%s%%', $search))
                     ->orWhere('email', 'like', sprintf('%%%s%%', $search)));
         });

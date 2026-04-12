@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Tyanc\Rbac;
 
+use App\Data\Cumpu\Approvals\GovernedActionStateData;
 use App\Models\Role;
 use Carbon\CarbonInterface;
 use Spatie\LaravelData\Data;
@@ -25,9 +26,10 @@ final class RoleData extends Data
         public array $permissions,
         public string $created_at,
         public string $updated_at,
+        public ?GovernedActionStateData $update_approval_state = null,
     ) {}
 
-    public static function fromModel(Role $role): self
+    public static function fromModel(Role $role, ?GovernedActionStateData $updateApprovalState = null): self
     {
         $role->loadMissing('permissions');
 
@@ -43,6 +45,7 @@ final class RoleData extends Data
             permissions: $role->permissions->pluck('name')->sort()->values()->all(),
             created_at: $role->created_at instanceof CarbonInterface ? $role->created_at->toIso8601String() : now()->toIso8601String(),
             updated_at: $role->updated_at instanceof CarbonInterface ? $role->updated_at->toIso8601String() : now()->toIso8601String(),
+            update_approval_state: $updateApprovalState,
         );
     }
 }

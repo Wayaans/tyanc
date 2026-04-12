@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Actions\Tyanc\Approvals\ExpireApprovalGrants;
+use Carbon\CarbonInterface;
 use Database\Factories\ApprovalRequestFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 final class ApprovalRequest extends Model
@@ -19,8 +20,6 @@ final class ApprovalRequest extends Model
     use HasFactory;
 
     use HasUuids;
-
-    public const string StatusDraft = 'draft';
 
     public const string StatusPending = 'pending';
 
@@ -34,7 +33,7 @@ final class ApprovalRequest extends Model
 
     public const string StatusExpired = 'expired';
 
-    public const string StatusSuperseded = 'superseded';
+    public const string StatusConsumed = 'consumed';
 
     /**
      * @var bool
@@ -61,19 +60,16 @@ final class ApprovalRequest extends Model
         'requested_by_id',
         'reviewed_by_id',
         'cancelled_by_id',
-        'previous_request_id',
-        'superseded_by_id',
+        'consumed_by_id',
         'request_note',
         'review_note',
         'payload',
         'subject_snapshot',
-        'before_payload',
-        'after_payload',
-        'impact_summary',
         'requested_at',
         'reviewed_at',
         'cancelled_at',
         'expires_at',
+        'consumed_at',
         'superseded_at',
         'last_reassigned_at',
         'last_reminded_at',
@@ -90,12 +86,59 @@ final class ApprovalRequest extends Model
     /**
      * @return list<string>
      */
-    public static function activeStatuses(): array
+    public static function reviewableStatuses(): array
     {
         return [
             self::StatusPending,
             self::StatusInReview,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function blockingStatuses(): array
+    {
+        return [
+            ...self::reviewableStatuses(),
+            self::StatusApproved,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function consumableStatuses(): array
+    {
+        return [
+            self::StatusApproved,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function terminalStatuses(): array
+    {
+        return [
+            self::StatusRejected,
+            self::StatusCancelled,
+            self::StatusExpired,
+            self::StatusConsumed,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function activeStatuses(): array
+    {
+        return self::reviewableStatuses();
+    }
+
+    public static function expirePastDueGrants(?CarbonInterface $referenceTime = null): int
+    {
+        return resolve(ExpireApprovalGrants::class)->handle($referenceTime);
     }
 
     public function subject(): MorphTo
@@ -118,14 +161,14 @@ final class ApprovalRequest extends Model
         return $this->belongsTo(User::class, 'cancelled_by_id');
     }
 
+    public function consumedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'consumed_by_id');
+    }
+
     public function rule(): BelongsTo
     {
         return $this->belongsTo(ApprovalRule::class, 'rule_id');
-    }
-
-    public function actionRecord(): HasOne
-    {
-        return $this->hasOne(ApprovalAction::class, 'approval_request_id');
     }
 
     public function assignments(): HasMany
@@ -133,14 +176,28 @@ final class ApprovalRequest extends Model
         return $this->hasMany(ApprovalAssignment::class, 'approval_request_id');
     }
 
-    public function previousRequest(): BelongsTo
+    public function effectiveStatus(?CarbonInterface $referenceTime = null): string
     {
-        return $this->belongsTo(self::class, 'previous_request_id');
+        return $this->grantHasExpired($referenceTime)
+            ? self::StatusExpired
+            : (string) $this->status;
     }
 
-    public function supersededBy(): BelongsTo
+    public function grantHasExpired(?CarbonInterface $referenceTime = null): bool
     {
-        return $this->belongsTo(self::class, 'superseded_by_id');
+        if ((string) $this->status !== self::StatusApproved) {
+            return false;
+        }
+
+        return $this->expires_at instanceof CarbonInterface
+            && $this->expires_at->lte($referenceTime?->copy() ?? now());
+    }
+
+    public function isGrantConsumable(?CarbonInterface $referenceTime = null): bool
+    {
+        return in_array((string) $this->status, self::consumableStatuses(), true)
+            && ! $this->grantHasExpired($referenceTime)
+            && $this->consumed_at === null;
     }
 
     /**
@@ -161,19 +218,16 @@ final class ApprovalRequest extends Model
             'requested_by_id' => 'string',
             'reviewed_by_id' => 'string',
             'cancelled_by_id' => 'string',
-            'previous_request_id' => 'string',
-            'superseded_by_id' => 'string',
+            'consumed_by_id' => 'string',
             'request_note' => 'string',
             'review_note' => 'string',
             'payload' => 'array',
             'subject_snapshot' => 'array',
-            'before_payload' => 'array',
-            'after_payload' => 'array',
-            'impact_summary' => 'string',
             'requested_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'expires_at' => 'datetime',
+            'consumed_at' => 'datetime',
             'superseded_at' => 'datetime',
             'last_reassigned_at' => 'datetime',
             'last_reminded_at' => 'datetime',

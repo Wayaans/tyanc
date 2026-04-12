@@ -8,6 +8,7 @@
 
 # App/Actions guidelines
 
+- Dont add any comments when writing code unles very important, and when you do, be very concise
 - This application uses the Action pattern and prefers for much logic to live in reusable and composable Action classes.
 - Actions live in `app/Actions`, they are named based on what they do, with no suffix.
 - Actions will be called from many different places: jobs, commands, HTTP requests, API requests, MCP requests, and more.
@@ -16,7 +17,7 @@
 - Create new actions with `php artisan make:action "{name}" --no-interaction`
 - Wrap complex operations in `DB::transaction()` within actions when multiple models are involved.
 - Some actions won't require dependencies via `__construct` and they can use just the `handle()` method.
-- After every implementation, run `composer lint` and `composer test:types`
+- After every implementation, run `composer lint`
 - SOLID Principles and clean code skills
 - Use reviewer for any request to review, audit, critique, assess, check, validate, or do a final pass on work — including UI/UX, frontend, accessibility, and design-system work.
 - Use designer for creating, changing, polishing, or implementing UI/UX/frontend code.

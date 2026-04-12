@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { CheckCircle2 } from 'lucide-vue-next';
 import { computed } from 'vue';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import Heading from '@/components/Heading.vue';
 import AppearancePreview from '@/components/tyanc/settings/AppearancePreview.vue';
 import AppearanceSheet from '@/components/tyanc/settings/AppearanceSheet.vue';
@@ -10,6 +13,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import TyancSettingsLayout from '@/layouts/tyanc/settings/Layout.vue';
 import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/tyanc/settings/appearance';
+import type { ApprovalContext } from '@/types/cumpu';
 
 type Option = { value: string; label: string };
 type FontFamily = { value: string; label: string; stack: string };
@@ -31,6 +35,8 @@ type Props = {
     fontFamilies: FontFamily[];
     sidebarVariants: Option[];
     spacingDensities: SpacingDensity[];
+    approvalContext?: ApprovalContext | null;
+    status?: string | null;
 };
 
 const props = defineProps<Props>();
@@ -69,6 +75,23 @@ const currentSidebarLabel = computed(
         <h1 class="sr-only">{{ __('App Appearance settings') }}</h1>
 
         <TyancSettingsLayout>
+            <!-- Status feedback -->
+            <div
+                v-if="props.status"
+                class="flex items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/[0.07]"
+            >
+                <CheckCircle2
+                    class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                />
+                <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                    {{ props.status }}
+                </p>
+            </div>
+
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
             <div class="space-y-6">
                 <div class="flex items-start justify-between gap-4">
                     <Heading
@@ -86,6 +109,7 @@ const currentSidebarLabel = computed(
                         :font-families="props.fontFamilies"
                         :sidebar-variants="props.sidebarVariants"
                         :spacing-densities="props.spacingDensities"
+                        :approval-context="props.approvalContext"
                     />
                 </div>
 
@@ -190,6 +214,10 @@ const currentSidebarLabel = computed(
                     </dl>
                 </div>
             </div>
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
         </TyancSettingsLayout>
     </AppLayout>
 </template>

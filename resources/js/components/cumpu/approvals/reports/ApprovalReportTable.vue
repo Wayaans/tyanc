@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { AlertTriangle, ArrowRightLeft, Clock } from 'lucide-vue-next';
+import {
+    AlertTriangle,
+    ArrowRightLeft,
+    Clock,
+    KeyRound,
+    PackageCheck,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import ApprovalStatusBadge from '@/components/cumpu/approvals/ApprovalStatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +105,54 @@ const hasRows = computed(() => props.rows.length > 0);
                             {{ row.requested_by_name }}
                         </span>
                     </div>
+                    <!-- Reviewed by -->
+                    <p
+                        v-if="row.reviewed_by_name"
+                        class="text-xs text-muted-foreground"
+                    >
+                        {{ __('Reviewed by') }}
+                        <span class="font-medium text-foreground">{{
+                            row.reviewed_by_name
+                        }}</span>
+                    </p>
+                    <!-- Consumed by (grant used) -->
+                    <p
+                        v-if="row.consumed_by_name"
+                        class="text-xs text-violet-700 dark:text-violet-400"
+                    >
+                        {{ __('Used by') }}
+                        <span class="font-medium">{{
+                            row.consumed_by_name
+                        }}</span>
+                        <span v-if="row.consumed_at">
+                            ·
+                            {{
+                                dateFormatter.format(new Date(row.consumed_at))
+                            }}</span
+                        >
+                    </p>
+                    <!-- Grant expiry (when approved and usable) -->
+                    <p
+                        v-if="row.is_grant_usable && row.expires_at"
+                        class="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400"
+                    >
+                        <KeyRound class="size-3" />
+                        {{ __('Expires') }}:
+                        {{ dateFormatter.format(new Date(row.expires_at)) }}
+                    </p>
+                    <!-- Grant expired -->
+                    <p
+                        v-else-if="
+                            row.expires_at &&
+                            !row.is_grant_usable &&
+                            row.consumed_at === null
+                        "
+                        class="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400"
+                    >
+                        <KeyRound class="size-3" />
+                        {{ __('Expired') }}:
+                        {{ dateFormatter.format(new Date(row.expires_at)) }}
+                    </p>
                 </div>
 
                 <!-- Status -->

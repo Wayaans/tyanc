@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Models\ApprovalAction;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
-use App\Models\ImportRun;
 use App\Models\User;
 use App\Notifications\ApprovalRejectedNotification;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 final readonly class RejectRequest
@@ -41,11 +38,11 @@ final readonly class RejectRequest
         return DB::transaction(function () use ($actor, $approvalRequest, $attributes, $isSuperAdmin): ApprovalRequest {
             /** @var ApprovalRequest $lockedRequest */
             $lockedRequest = ApprovalRequest::query()
-                ->with(['subject', 'actionRecord', 'requester'])
+                ->with(['subject', 'requester'])
                 ->lockForUpdate()
                 ->findOrFail($approvalRequest->id);
 
-            if (! in_array($lockedRequest->status, ApprovalRequest::activeStatuses(), true)) {
+            if (! in_array($lockedRequest->status, ApprovalRequest::reviewableStatuses(), true)) {
                 throw new RuntimeException(__('This approval request has already been reviewed.'));
             }
 
@@ -56,8 +53,6 @@ final readonly class RejectRequest
                 ->first();
 
             $hasAssignments = $lockedRequest->assignments()->lockForUpdate()->exists();
-            $isLegacyImportRequest = ! $lockedRequest->actionRecord instanceof ApprovalAction
-                && $lockedRequest->subject instanceof ImportRun;
 
             throw_if(
                 ! $isSuperAdmin
@@ -68,14 +63,15 @@ final readonly class RejectRequest
 
             throw_if(
                 ! $isSuperAdmin
-                && ! $hasAssignments
-                && ! $isLegacyImportRequest,
+                && ! $hasAssignments,
                 AuthorizationException::class,
             );
 
+            $reviewNote = $this->nullableString($attributes['review_note'] ?? null);
+
             $lockedRequest->forceFill([
                 'status' => ApprovalRequest::StatusRejected,
-                'review_note' => $this->nullableString($attributes['review_note'] ?? null),
+                'review_note' => $reviewNote,
                 'reviewed_by_id' => $actor->id,
                 'reviewed_at' => now(),
             ])->save();
@@ -95,25 +91,13 @@ final readonly class RejectRequest
                     'updated_at' => now(),
                 ]);
 
-            $stagedFilePath = data_get($lockedRequest->actionRecord?->payload, 'staged_file_path');
-            if (is_string($stagedFilePath) && $stagedFilePath !== '') {
-                Storage::disk('local')->delete($stagedFilePath);
-            }
-
-            if (! $lockedRequest->actionRecord instanceof ApprovalAction && $lockedRequest->subject instanceof ImportRun) {
-                $lockedRequest->subject->forceFill([
-                    'status' => ImportRun::StatusFailed,
-                    'failure_message' => __('Import request was rejected.'),
-                    'finished_at' => now(),
-                ])->save();
-            }
-
             activity('approvals')
                 ->performedOn($lockedRequest->subject ?? $lockedRequest)
                 ->causedBy($actor)
                 ->event('rejected')
                 ->withProperties([
                     'approval_request_id' => (string) $lockedRequest->id,
+                    'review_note' => $reviewNote,
                 ])
                 ->log('Approval rejected');
 
@@ -125,6 +109,7 @@ final readonly class RejectRequest
                 'requester',
                 'reviewer',
                 'cancelledBy',
+                'consumedBy',
                 'subject',
                 'rule.steps.role',
                 'assignments.assignee',

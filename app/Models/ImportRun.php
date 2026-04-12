@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\Approvals\ApprovalSubject;
+use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\ImportRunFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-final class ImportRun extends Model implements HasMedia
+final class ImportRun extends Model implements ApprovalSubject, HasMedia
 {
     /** @use HasFactory<ImportRunFactory> */
     use HasFactory;
 
     use HasUuids;
+    use InteractsWithApprovals;
     use InteractsWithMedia;
 
     public const string SourceFileCollection = 'source_file';
@@ -68,14 +70,22 @@ final class ImportRun extends Model implements HasMedia
         'processed_rows' => 0,
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
-    public function approvalRequests(): MorphMany
+    public function approvalAppKey(): string
     {
-        return $this->morphMany(ApprovalRequest::class, 'subject');
+        return 'tyanc';
+    }
+
+    public function approvalResourceKey(): string
+    {
+        return 'users';
     }
 
     public function registerMediaCollections(): void

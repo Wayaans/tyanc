@@ -5,27 +5,20 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Imports;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Actions\Tyanc\Approvals\ApplyUsersImportApproval;
-use App\Actions\Tyanc\Approvals\CreateApprovalProposal;
-use App\Actions\Tyanc\Approvals\ResolveApprovalRule;
-use App\Actions\Tyanc\Approvals\ShouldBypassApproval;
+use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
 use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Data\Tyanc\Imports\ImportRunData;
-use App\Models\ApprovalRule;
+use App\Models\ApprovalRequest;
+use App\Models\ImportRun;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Throwable;
 
 final readonly class SubmitUsersImport
 {
     public function __construct(
-        private ResolveApprovalRule $rules,
-        private ShouldBypassApproval $bypassApproval,
-        private CreateApprovalProposal $approvalRequests,
+        private SubmitGovernedAction $governedActions,
         private QueueUsersImport $imports,
     ) {}
 
@@ -41,74 +34,66 @@ final readonly class SubmitUsersImport
             AuthorizationException::class,
         );
 
-        $rule = $this->rules->handle($actor, $permission, context: [
-            'file_name' => $file->getClientOriginalName(),
-        ]);
+        $fileName = $file->getClientOriginalName();
+        $subjectLabel = $fileName !== '' ? $fileName : (string) __('Users import');
 
-        if (! $rule instanceof ApprovalRule || $this->bypassApproval->handle($actor, $rule)) {
-            $importRun = $this->imports->handle($actor, $file);
-
-            return [
-                'executed' => true,
-                'import' => ImportRunData::fromModel($importRun),
-                'approval' => null,
-            ];
-        }
-
-        $stagedPath = $this->stageFile($file);
-
-        try {
-            $approvalRequest = $this->approvalRequests->handle(
-                actor: $actor,
-                rule: $rule,
-                permissionName: $permission,
-                subject: null,
-                attributes: [
-                    'request_note' => $requestNote,
-                    'impact_summary' => __('Import file :file for user processing.', [
-                        'file' => $file->getClientOriginalName(),
-                    ]),
+        $submission = $this->governedActions->handle(
+            actor: $actor,
+            permissionName: $permission,
+            context: [
+                'file_name' => $subjectLabel,
+                'mime_type' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+                'request_note' => $requestNote,
+            ],
+            definition: [
+                'execute' => fn (): ImportRun => $this->imports->handle(
+                    actor: $actor,
+                    file: $file,
+                    originalName: $subjectLabel,
+                ),
+                'proposal' => [
+                    'request_note' => $this->nullableString($requestNote),
                     'payload' => [
                         'action_label' => __('Users import'),
-                        'subject_label' => $file->getClientOriginalName(),
-                        'action_url' => route('cumpu.approvals.my-requests', absolute: false),
+                        'subject_label' => $subjectLabel,
                     ],
-                    'after_payload' => [
-                        'file_name' => $file->getClientOriginalName(),
+                    'subject_snapshot' => [
+                        'file_name' => $subjectLabel,
                         'mime_type' => $file->getClientMimeType(),
                         'size' => $file->getSize(),
                     ],
-                    'handler' => ApplyUsersImportApproval::class,
-                    'action_payload' => [
-                        'staged_file_path' => $stagedPath,
-                        'original_name' => $file->getClientOriginalName(),
-                    ],
                 ],
-            );
-        } catch (Throwable $throwable) {
-            Storage::disk('local')->delete($stagedPath);
+            ],
+        );
 
-            throw $throwable;
-        }
+        /** @var ImportRun|null $importRun */
+        $importRun = $submission['result'] instanceof ImportRun
+            ? $submission['result']
+            : null;
+
+        /** @var ApprovalRequest|null $approvalRequest */
+        $approvalRequest = $submission['approval'] instanceof ApprovalRequest
+            ? $submission['approval']
+            : null;
 
         return [
-            'executed' => false,
-            'import' => null,
-            'approval' => ApprovalRequestData::fromModel($approvalRequest, $actor),
+            'executed' => (bool) $submission['executed'],
+            'import' => $importRun instanceof ImportRun ? ImportRunData::fromModel($importRun) : null,
+            'approval' => $approvalRequest instanceof ApprovalRequest
+                ? ApprovalRequestData::fromModel($approvalRequest, $actor)
+                : null,
         ];
     }
 
-    private function stageFile(UploadedFile $file): string
+    private function nullableString(mixed $value): ?string
     {
-        $safeFileName = Str::of($file->getClientOriginalName())
-            ->replaceMatches('/[^A-Za-z0-9._-]+/', '-')
-            ->trim('-')
-            ->value();
+        if (! is_string($value)) {
+            return null;
+        }
 
-        return Storage::disk('local')->putFileAs(
-            'approvals/imports',
-            $file,
-            Str::uuid()->toString().'_'.$safeFileName,
-        );
+        $value = mb_trim($value);
+
+        return $value === '' ? null : $value;
     }
 }

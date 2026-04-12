@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Tyanc\Approvals;
 
+use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRuleStep;
@@ -31,14 +32,18 @@ final class ApprovalReportRowData extends Data
         public string $subject_name,
         public ?string $requested_by_name,
         public ?string $reviewed_by_name,
+        public ?string $consumed_by_name,
         public array $current_assignee_names,
         public ?string $current_step_label,
         public ?int $current_step_order,
         public bool $is_overdue,
         public bool $is_reassigned,
         public bool $is_escalated,
+        public bool $is_grant_usable,
         public string $requested_at,
         public ?string $reviewed_at,
+        public ?string $expires_at,
+        public ?string $consumed_at,
         public ?string $escalated_at,
         public ?string $last_reassigned_at,
         public ?float $turnaround_hours,
@@ -49,6 +54,8 @@ final class ApprovalReportRowData extends Data
         $approvalRequest->loadMissing([
             'requester',
             'reviewer',
+            'consumedBy',
+            'subject',
             'assignments.assignee',
             'assignments.step.role',
         ]);
@@ -69,10 +76,11 @@ final class ApprovalReportRowData extends Data
             resource_key: $approvalRequest->resource_key,
             action_key: $approvalRequest->action_key,
             action_label: self::actionLabel($approvalRequest),
-            status: (string) $approvalRequest->status,
+            status: $approvalRequest->effectiveStatus(),
             subject_name: self::subjectName($approvalRequest),
             requested_by_name: $approvalRequest->requester instanceof User ? $approvalRequest->requester->name : null,
             reviewed_by_name: $approvalRequest->reviewer instanceof User ? $approvalRequest->reviewer->name : null,
+            consumed_by_name: $approvalRequest->consumedBy instanceof User ? $approvalRequest->consumedBy->name : null,
             current_assignee_names: $currentStepAssignments
                 ->map(fn (ApprovalAssignment $assignment): string => (string) ($assignment->assignee?->name ?? __('Unknown')))
                 ->unique()
@@ -83,8 +91,11 @@ final class ApprovalReportRowData extends Data
             is_overdue: $isOverdue,
             is_reassigned: $approvalRequest->last_reassigned_at !== null,
             is_escalated: $approvalRequest->escalated_at !== null,
+            is_grant_usable: $approvalRequest->isGrantConsumable(),
             requested_at: $approvalRequest->requested_at?->toIso8601String() ?? now()->toIso8601String(),
             reviewed_at: $approvalRequest->reviewed_at?->toIso8601String(),
+            expires_at: $approvalRequest->expires_at?->toIso8601String(),
+            consumed_at: $approvalRequest->consumed_at?->toIso8601String(),
             escalated_at: $approvalRequest->escalated_at?->toIso8601String(),
             last_reassigned_at: $approvalRequest->last_reassigned_at?->toIso8601String(),
             turnaround_hours: self::turnaroundHours($approvalRequest),
@@ -124,6 +135,10 @@ final class ApprovalReportRowData extends Data
 
         if (is_string($label) && $label !== '') {
             return $label;
+        }
+
+        if ($approvalRequest->subject instanceof ApprovalSubject) {
+            return $approvalRequest->subject->approvalSubjectLabel();
         }
 
         return __('Approval request');

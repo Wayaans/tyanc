@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\App;
+use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
 use App\Models\Permission;
@@ -14,6 +15,7 @@ use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\Models\Activity;
 
 function cumpuPermission(string $name): Permission
 {
@@ -68,6 +70,190 @@ it('registers cumpu as a standalone app and renders its workspace routes', funct
             ->where('permissionOptions.apps.1.value', 'cumpu'));
 });
 
+it('supports dedicated cumpu navigation permissions and keeps approval rule options focused on governable actions', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $user = cumpuUser([
+        PermissionKey::cumpu('dashboard', 'viewany'),
+        PermissionKey::cumpu('my_requests', 'viewany'),
+        PermissionKey::cumpu('approval_inbox', 'viewany'),
+        PermissionKey::cumpu('all_approvals', 'viewany'),
+        PermissionKey::cumpu('approval_rules', 'viewany'),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('cumpu.dashboard'))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('cumpu.approvals.my-requests'))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('cumpu.approvals.index'))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('cumpu.approvals.all'))
+        ->assertOk();
+
+    $response = $this->actingAs($user)
+        ->getJson(route('cumpu.approval-rules.index'))
+        ->assertOk();
+
+    expect(collect($response->json('permissionOptions.resources.cumpu'))->pluck('value')->all())
+        ->toBe(['approvals', 'reports', 'approval_rules']);
+});
+
+it('allows approval detail access from dedicated cumpu page permissions', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $requester = cumpuUser([
+        PermissionKey::cumpu('my_requests', 'viewany'),
+    ]);
+
+    $reviewerRole = Role::query()->create([
+        'name' => 'Cumpu Page Permission Reviewers',
+        'guard_name' => 'web',
+        'level' => 70,
+    ]);
+
+    $reviewer = cumpuUser([
+        PermissionKey::cumpu('approval_inbox', 'viewany'),
+    ]);
+    $reviewer->assignRole($reviewerRole);
+
+    $approvalRule = ApprovalRule::factory()
+        ->forPermission(PermissionKey::tyanc('users', 'import'))
+        ->enabled()
+        ->create();
+
+    $step = $approvalRule->steps()->create([
+        'role_id' => $reviewerRole->id,
+        'step_order' => 1,
+        'label' => 'Page permission review',
+    ]);
+
+    $approvalRequest = ApprovalRequest::factory()
+        ->for($approvalRule, 'rule')
+        ->create([
+            'requested_by_id' => $requester->id,
+        ]);
+
+    $approvalRequest->assignments()->create([
+        'approval_rule_step_id' => $step->id,
+        'step_order_snapshot' => 1,
+        'step_label_snapshot' => 'Page permission review',
+        'role_name_snapshot' => $reviewerRole->name,
+        'assigned_to_id' => $reviewer->id,
+        'status' => ApprovalAssignment::StatusPending,
+    ]);
+
+    $this->actingAs($requester)
+        ->get(route('cumpu.approvals.show', $approvalRequest))
+        ->assertOk();
+
+    $this->actingAs($reviewer)
+        ->get(route('cumpu.approvals.show', $approvalRequest))
+        ->assertOk();
+
+    $outsider = cumpuUser([
+        PermissionKey::cumpu('approval_inbox', 'viewany'),
+    ]);
+
+    $this->actingAs($outsider)
+        ->get(route('cumpu.approvals.show', $approvalRequest))
+        ->assertForbidden();
+});
+
+it('shows grant lifecycle metrics and recent queues on the cumpu dashboard', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $user = cumpuUser([
+        PermissionKey::cumpu('dashboard', 'viewany'),
+        PermissionKey::cumpu('my_requests', 'viewany'),
+        PermissionKey::cumpu('approval_inbox', 'viewany'),
+        PermissionKey::cumpu('all_approvals', 'viewany'),
+        PermissionKey::cumpu('reports', 'viewany'),
+    ]);
+
+    $reviewerRole = Role::query()->create([
+        'name' => 'Cumpu Dashboard Reviewers',
+        'guard_name' => 'web',
+        'level' => 70,
+    ]);
+
+    $approvalRule = ApprovalRule::factory()
+        ->forPermission(PermissionKey::tyanc('users', 'import'))
+        ->enabled()
+        ->create();
+
+    $step = $approvalRule->steps()->create([
+        'role_id' => $reviewerRole->id,
+        'step_order' => 1,
+        'label' => 'Dashboard review',
+    ]);
+
+    $inboxApproval = ApprovalRequest::factory()
+        ->for($approvalRule, 'rule')
+        ->create([
+            'requested_by_id' => User::factory(),
+            'requested_at' => now()->subMinutes(5),
+        ]);
+
+    $inboxApproval->assignments()->create([
+        'approval_rule_step_id' => $step->id,
+        'step_order_snapshot' => 1,
+        'step_label_snapshot' => 'Dashboard review',
+        'role_name_snapshot' => $reviewerRole->name,
+        'assigned_to_id' => $user->id,
+        'status' => ApprovalAssignment::StatusPending,
+    ]);
+
+    $readyApproval = ApprovalRequest::factory()
+        ->for($approvalRule, 'rule')
+        ->approved()
+        ->create([
+            'requested_by_id' => $user->id,
+            'requested_at' => now()->subMinutes(10),
+            'expires_at' => now()->addHour(),
+        ]);
+
+    ApprovalRequest::factory()
+        ->for($approvalRule, 'rule')
+        ->consumed()
+        ->create([
+            'requested_by_id' => $user->id,
+            'requested_at' => now()->subMinutes(20),
+            'consumed_by_id' => $user->id,
+            'consumed_at' => now()->subMinutes(2),
+        ]);
+
+    $expiredApproval = ApprovalRequest::factory()
+        ->for($approvalRule, 'rule')
+        ->approved()
+        ->create([
+            'requested_by_id' => $user->id,
+            'requested_at' => now()->subMinutes(30),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('cumpu.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('summary.pending_inbox_count', 1)
+        ->assertJsonPath('summary.my_request_count', 3)
+        ->assertJsonPath('summary.ready_to_retry_count', 1)
+        ->assertJsonPath('summary.consumed_count', 1)
+        ->assertJsonPath('summary.expired_count', 1)
+        ->assertJsonPath('summary.all_pending_count', 1)
+        ->assertJsonPath('recentInbox.0.id', $inboxApproval->id)
+        ->assertJsonPath('recentMyRequests.0.id', $readyApproval->id)
+        ->assertJsonPath('recentMyRequests.2.id', $expiredApproval->id);
+
+    expect($expiredApproval->fresh()->status)->toBe(ApprovalRequest::StatusExpired);
+});
+
 it('allows legacy tyanc approval permission holders to access the redirected cumpu inbox', function (): void {
     $this->seed(AppRegistrySeeder::class);
 
@@ -116,6 +302,7 @@ it('manages approval rules through cumpu', function (): void {
             'resource_key' => 'users',
             'action_key' => 'import',
             'step_role_id' => $approverRole->id,
+            'grant_validity_minutes' => 90,
             'enabled' => true,
         ])
         ->assertCreated();
@@ -133,6 +320,7 @@ it('manages approval rules through cumpu', function (): void {
             'resource_key' => 'users',
             'action_key' => 'import',
             'step_role_id' => $approverRole->id,
+            'grant_validity_minutes' => 180,
             'enabled' => false,
         ])
         ->assertOk();
@@ -230,6 +418,30 @@ it('renders approval request detail history and protects the request view', func
         ->assertForbidden();
 });
 
+it('marks expired grants in approval history when the request detail is opened', function (): void {
+    $requester = cumpuUser([
+        PermissionKey::cumpu('approvals', 'view'),
+    ]);
+
+    $approvalRequest = ApprovalRequest::factory()
+        ->approved()
+        ->create([
+            'requested_by_id' => $requester->id,
+            'expires_at' => now()->subMinute(),
+        ]);
+
+    expect(Activity::query()->where('event', 'expired')->exists())->toBeFalse();
+
+    $this->actingAs($requester)
+        ->getJson(route('cumpu.approvals.show', $approvalRequest))
+        ->assertOk()
+        ->assertJsonPath('approval.status', ApprovalRequest::StatusExpired)
+        ->assertJsonPath('history.0.event', 'expired');
+
+    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusExpired)
+        ->and(Activity::query()->where('event', 'expired')->count())->toBe(1);
+});
+
 it('applies tyanc user import approval only when a cumpu-managed rule enables it', function (): void {
     Storage::fake('public');
     Storage::fake('local');
@@ -277,6 +489,7 @@ it('applies tyanc user import approval only when a cumpu-managed rule enables it
             'resource_key' => 'users',
             'action_key' => 'import',
             'step_role_id' => $reviewerRole->id,
+            'grant_validity_minutes' => 60,
             'enabled' => true,
         ])
         ->assertCreated();
@@ -288,6 +501,7 @@ it('applies tyanc user import approval only when a cumpu-managed rule enables it
                 32,
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ),
+            'request_note' => 'Please review this import request.',
         ])
         ->assertStatus(202)
         ->assertJsonPath('executed', false)

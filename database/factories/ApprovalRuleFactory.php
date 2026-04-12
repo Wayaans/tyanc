@@ -27,6 +27,7 @@ final class ApprovalRuleFactory extends Factory
             'enabled' => false,
             'workflow_type' => ApprovalRule::WorkflowSingle,
             'conditions' => null,
+            'grant_validity_minutes' => 1440,
             'reminder_after_minutes' => null,
             'escalation_after_minutes' => null,
         ];

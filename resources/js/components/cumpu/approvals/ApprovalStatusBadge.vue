@@ -16,11 +16,6 @@ type StatusConfig = {
 };
 
 const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
-    draft: {
-        label: 'Draft',
-        badgeClass:
-            'border-zinc-500/20 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-    },
     pending: {
         label: 'Pending',
         badgeClass:
@@ -51,10 +46,10 @@ const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
         badgeClass:
             'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
     },
-    superseded: {
-        label: 'Superseded',
+    consumed: {
+        label: 'Consumed',
         badgeClass:
-            'border-stone-500/20 bg-stone-500/10 text-stone-700 dark:text-stone-300',
+            'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
     },
 };
 
@@ -64,7 +59,7 @@ const config = statusConfigs[props.status] ?? statusConfigs.pending;
 <template>
     <Badge
         variant="outline"
-        :class="`rounded-full ${props.size === 'sm' ? 'text-xs' : 'text-xs'} ${config.badgeClass}`"
+        :class="`rounded-full text-xs ${config.badgeClass}`"
     >
         {{ __(config.label) }}
     </Badge>

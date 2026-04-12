@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notification;
 
 final class ApprovalReassignedNotification extends Notification
 {
+    use FormatsApprovalNotificationPayload;
     use Queueable;
 
     public function __construct(private readonly ApprovalRequest $approvalRequest) {}
@@ -27,23 +28,14 @@ final class ApprovalReassignedNotification extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            'kind' => 'approval-reassigned',
-            'title' => __('Approval reassigned'),
-            'body' => __('An approval request for :subject has been reassigned to you.', [
-                'subject' => $this->subjectLabel(),
+        return $this->approvalNotificationPayload(
+            kind: 'approval-reassigned',
+            title: __('Approval reassigned'),
+            body: __('This request was reassigned to you. If approved, the requester can retry :action for :subject once.', [
+                'action' => $this->actionLabel($this->approvalRequest),
+                'subject' => $this->subjectLabel($this->approvalRequest),
             ]),
-            'action_label' => __('Open request'),
-            'action_url' => route('cumpu.approvals.show', $this->approvalRequest, absolute: false),
-        ];
-    }
-
-    private function subjectLabel(): string
-    {
-        $label = data_get($this->approvalRequest->payload, 'subject_label');
-
-        return is_string($label) && $label !== ''
-            ? $label
-            : __('Approval request');
+            approvalRequest: $this->approvalRequest,
+        );
     }
 }

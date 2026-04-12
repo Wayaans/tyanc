@@ -112,10 +112,13 @@ it('submits import requests for approval and lists them in the cumpu inbox and m
     Notification::assertSentTo(
         $reviewer,
         NewApprovalRequestedNotification::class,
-        fn (NewApprovalRequestedNotification $notification): bool => data_get(
-            $notification->toArray($reviewer),
-            'action_url',
-        ) === route('cumpu.approvals.show', $approvalRequest, absolute: false),
+        function (NewApprovalRequestedNotification $notification) use ($reviewer, $approvalRequest): bool {
+            $payload = $notification->toArray($reviewer);
+
+            return data_get($payload, 'action_url') === route('cumpu.approvals.show', $approvalRequest, absolute: false)
+                && data_get($payload, 'approval_status') === ApprovalRequest::StatusPending
+                && str_contains((string) data_get($payload, 'body'), 'retry Users import for users.xlsx once');
+        },
     );
 
     $this->actingAs($reviewer)
@@ -217,10 +220,10 @@ it('approves an import request and queues the import after approval', function (
             32,
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ),
+        'request_note' => 'Please queue this import after approval.',
     ])->assertStatus(202);
 
     $approvalRequest = ApprovalRequest::query()->firstOrFail();
-    $stagedFilePath = (string) data_get($approvalRequest->actionRecord?->payload, 'staged_file_path');
 
     Queue::fake();
 
@@ -231,25 +234,44 @@ it('approves an import request and queues the import after approval', function (
         ->assertOk()
         ->assertJsonPath('approval.status', ApprovalRequest::StatusApproved);
 
-    $importRun = ImportRun::query()->firstOrFail();
-
-    expect($approvalRequest->fresh()->subject_id)->toBe($importRun->id)
-        ->and($importRun->status)->toBe(ImportRun::StatusQueued);
+    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusApproved)
+        ->and($approvalRequest->fresh()->expires_at)->not->toBeNull()
+        ->and(ImportRun::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('approvals/imports'))->toBe([]);
 
     Notification::assertSentTo(
         $requester,
         ApprovalApprovedNotification::class,
-        fn (ApprovalApprovedNotification $notification): bool => data_get(
-            $notification->toArray($requester),
-            'action_url',
-        ) === route('cumpu.approvals.show', $approvalRequest, absolute: false),
+        function (ApprovalApprovedNotification $notification) use ($requester, $approvalRequest): bool {
+            $payload = $notification->toArray($requester);
+
+            return data_get($payload, 'action_url') === route('cumpu.approvals.show', $approvalRequest, absolute: false)
+                && data_get($payload, 'approval_status') === ApprovalRequest::StatusApproved
+                && data_get($payload, 'title') === 'Approval grant issued'
+                && str_contains((string) data_get($payload, 'body'), 'Retry Users import for users.xlsx once before the grant expires.');
+        },
     );
 
-    Storage::disk('local')->assertMissing($stagedFilePath);
+    $this->actingAs($requester)
+        ->postJson(route('tyanc.users.import.store'), [
+            'file' => UploadedFile::fake()->create(
+                'users-approved.xlsx',
+                32,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ),
+        ])
+        ->assertCreated()
+        ->assertJsonPath('executed', true)
+        ->assertJsonPath('approval', null)
+        ->assertJsonPath('import.status', ImportRun::StatusQueued);
+
+    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusConsumed)
+        ->and(ImportRun::query()->count())->toBe(1);
+
     Queue::assertPushed(ProcessUsersImport::class);
 });
 
-it('allows requesters to cancel pending approval requests and removes staged files', function (): void {
+it('allows requesters to cancel pending approval requests without relying on staged files', function (): void {
     Storage::fake('public');
     Storage::fake('local');
     config()->set('tyanc.features.imports_enabled', true);
@@ -278,10 +300,12 @@ it('allows requesters to cancel pending approval requests and removes staged fil
             32,
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ),
+        'request_note' => 'Please hold this import for review.',
     ])->assertStatus(202);
 
     $approvalRequest = ApprovalRequest::query()->firstOrFail();
-    $stagedFilePath = (string) data_get($approvalRequest->actionRecord?->payload, 'staged_file_path');
+
+    expect(Storage::disk('local')->allFiles('approvals/imports'))->toBe([]);
 
     $this->actingAs($requester)
         ->patchJson(route('cumpu.approvals.cancel', $approvalRequest))
@@ -290,6 +314,4 @@ it('allows requesters to cancel pending approval requests and removes staged fil
 
     expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusCancelled)
         ->and(ImportRun::query()->count())->toBe(0);
-
-    Storage::disk('local')->assertMissing($stagedFilePath);
 });

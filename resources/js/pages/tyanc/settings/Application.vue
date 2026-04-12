@@ -2,6 +2,8 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppSettingsController from '@/actions/App/Http/Controllers/Tyanc/Settings/AppSettingsController';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -15,6 +17,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import TyancSettingsLayout from '@/layouts/tyanc/settings/Layout.vue';
 import { useTranslations } from '@/lib/translations';
 import { edit } from '@/routes/tyanc/settings/application';
+import type { ApprovalContext } from '@/types/cumpu';
 
 type Settings = {
     app_name: string;
@@ -29,6 +32,7 @@ type Settings = {
 
 type Props = {
     settings: Settings;
+    approvalContext?: ApprovalContext | null;
 };
 
 const props = defineProps<Props>();
@@ -47,6 +51,10 @@ const { __ } = useTranslations();
         <h1 class="sr-only">{{ __('Application settings') }}</h1>
 
         <TyancSettingsLayout>
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
             <Form
                 v-bind="AppSettingsController.update.form()"
                 :options="{ preserveScroll: true }"
@@ -159,6 +167,10 @@ const { __ } = useTranslations();
                     :recently-successful="recentlySuccessful"
                 />
             </Form>
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
         </TyancSettingsLayout>
     </AppLayout>
 </template>

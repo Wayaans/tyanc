@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Data\Tyanc\Messaging\ConversationData;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class ListConversations
 {
@@ -28,7 +29,10 @@ final readonly class ListConversations
      */
     public function handle(User $actor, ?string $selectedConversationId = null, bool $archived = false): array
     {
-        Gate::forUser($actor)->authorize(PermissionKey::tyanc('messages', 'viewany'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'viewany')),
+            AuthorizationException::class,
+        );
 
         $conversations = $this->conversationQuery($actor, $archived)
             ->with(['participants', 'latestMessage.sender'])

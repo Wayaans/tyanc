@@ -2,7 +2,7 @@
 
 This file is the working contract for AI agents building in Tyanc.
 
-Follow the existing architecture. Do not create a parallel structure, a new naming system, or a different data flow unless the current one clearly cannot support the feature.
+Follow the current architecture. Do not create a parallel structure, a new naming system, or a second data flow unless the existing one clearly cannot support the feature.
 
 ## What Tyanc is
 
@@ -21,9 +21,13 @@ Tyanc provides the shared platform layer first:
 - admin shell and app switcher
 - approvals, notifications, files, messaging, and activity foundations
 
-The `tyanc` app is the control plane.
+The platform has three clear roles:
 
-Future business apps such as ERP or Tasks plug into the same platform and live under their own route prefixes. Tyanc stays responsible for cross-app governance.
+- `tyanc`: the control plane for users, roles, permissions, app access, page access, and platform settings
+- `cumpu`: the cross-app approval workspace and approval-rule manager
+- business apps such as `erp` or `tasks`: the domain apps that own their own routes, pages, actions, and UI
+
+Future business apps plug into the same platform and live under their own route prefixes. Tyanc stays responsible for cross-app governance.
 
 ## Route topology
 
@@ -32,6 +36,7 @@ Keep these boundaries clear:
 - `/` and auth routes: public entry, login, register, password reset, verification
 - `/settings/*`: personal user-owned settings such as account, password, preferences, and 2FA
 - `/{admin-prefix}/*`: the Tyanc control plane, `/tyanc/*` by default
+- `/cumpu/*`: the approval workspace
 - `/{app-prefix}/*`: business apps such as `/erp/*` or `/tasks/*`
 - `/{demo-prefix}/*`: sandbox only, `/demo/*` by default, not real business logic
 - API surface: configured by `config('tyanc.api_domain')` and `config('tyanc.api_prefix')`, `api/v1` by default
@@ -53,17 +58,29 @@ Examples:
 - approval infrastructure
 - platform-wide activity log
 
+### Put it in `cumpu` when the feature is about approval operations
+
+Examples:
+
+- approval inbox
+- my requests
+- all approvals
+- approval reports
+- approval rule management
+- approval workflow review, reassignment, reminders, escalations, and history
+
 ### Put it in the app namespace when the feature is app-specific
 
 Examples:
 
 - ERP orders, products, purchasing, inventory
 - Tasks boards, sprints, checklists
-- Any route, page, controller, action, or component that belongs to one business app
+- any route, page, controller, action, or component that belongs to one business app
 
 ### Do not mix them
 
 If the feature belongs to ERP, do not build it under `Tyanc` just because Tyanc already exists.
+If the feature is about reviewing or administering approvals, it belongs in `Cumpu`.
 If the feature governs ERP access, registration, or permissions, then it belongs to `Tyanc`.
 
 ## File placement rules
@@ -80,6 +97,18 @@ Keep Tyanc governance code inside the Tyanc namespaces and folders.
 - Inertia pages: `resources/js/pages/tyanc/...`
 - Shared Tyanc UI: `resources/js/components/tyanc/...`
 - Frontend route helpers: `resources/js/routes/tyanc/...`
+
+### Cumpu approval-workspace code
+
+Keep approval workspace code inside the Cumpu namespaces and folders.
+
+- Routes: `routes/cumpu.php`
+- Controllers: `app/Http/Controllers/Cumpu/...`
+- Actions: `app/Actions/Tyanc/Approvals/...` for approval domain logic, and `app/Http/Controllers/Cumpu/...` for workspace delivery
+- Data objects: `app/Data/Cumpu/...` and `app/Data/Tyanc/Approvals/...` where the existing structure already uses them
+- Inertia pages: `resources/js/pages/cumpu/...`
+- Shared Cumpu UI: `resources/js/components/cumpu/...`
+- Frontend route helpers: `resources/js/routes/cumpu/...`
 
 ### New app code
 
@@ -98,6 +127,7 @@ If the app key is `erp`, keep the code under `erp` everywhere it makes sense.
 
 Do not place ERP pages inside `resources/js/pages/tyanc/...`.
 Do not place ERP backend logic inside `app/Actions/Tyanc/...` unless the work is truly about governance of the ERP app.
+Do not place ERP approval review pages inside ERP if the feature is really part of the shared approval workspace.
 
 ## Naming and routing conventions
 
@@ -180,14 +210,35 @@ For a real first-party app, use this order.
 
 1. Pick a stable app key such as `erp` or `tasks`.
 2. Use the same value for `permission_namespace` unless there is a strong reason not to.
-3. Add the app entry to `config/sidebar-menu.php`.
-4. Add the app resources and actions to `config/permission-sot.php`.
+3. Add the app and its real resources to `config/permission-sot.php`.
+4. Add the app entry and menu structure to `config/sidebar-menu.php`.
 5. Add the route group in `routes/web.php` and create `routes/{app}.php`.
 6. Create backend code inside the app namespace.
 7. Create frontend pages and components inside the app namespace.
-8. Seed or sync the app registry so the app exists in `apps` and `app_pages`.
-9. Sync permissions into the database.
-10. Add tests for the new behavior.
+8. Seed the app registry and app pages with `php artisan db:seed --class=AppRegistrySeeder --no-interaction`.
+9. Sync permissions into the database with `php artisan tyanc:permissions-sync --no-interaction`.
+10. If frontend route helpers changed, run `php artisan wayfinder:generate --no-interaction`.
+11. Add tests for the new behavior.
+
+For real coded apps, treat `config/sidebar-menu.php` as the registry seed source. `AppRegistrySeeder` and `SyncAppPages` derive `app_pages` from it, so do not treat the database registry as a second source of truth.
+
+### Permission checklist for new apps
+
+When you add a new app, permissions are part of the app contract, not cleanup work.
+
+In `config/permission-sot.php`:
+
+- add the app under `apps`
+- add every real resource the app owns
+- add every action the app needs on those resources
+- make sure every non-null `permission` used in `config/sidebar-menu.php` exists here too
+- if you introduce a new action verb such as `publish`, `cancel`, `submit`, or `close`, add it to the top-level `actions` map first
+- if a policy ability should resolve to that new action, add it to `policy_abilities`
+- if `manage` should imply that new action, add it to `manage_implies`
+
+Important warning:
+
+If you add routes and sidebar config but forget `config/permission-sot.php` or forget to sync permissions, the app may exist in the registry and still feel broken. App visibility, page access, role assignment, and approval-rule options all depend on the permission source of truth being complete.
 
 ### Important note
 
@@ -239,6 +290,35 @@ Examples:
 Use `App\Support\Permissions\PermissionKey` to build and resolve permission names.
 Do not scatter raw strings everywhere.
 
+### Two kinds of permission resources
+
+Treat these as different jobs.
+
+#### 1. Navigation or page-access resources
+
+These exist so Tyanc can decide whether a user can see or open a page.
+Examples:
+
+- `cumpu.approval_inbox.viewany`
+- `cumpu.all_approvals.viewany`
+- `cumpu.my_requests.viewany`
+- dashboards and other page-level entry points
+
+Some of these resources are marked `navigation_only` in `config/permission-sot.php`.
+That means they are still real permissions for navigation, page access, and role assignment, but they are not the right resources for governed business actions. In normal Cumpu flows, the approval-rule picker excludes them from approval-rule targeting.
+
+#### 2. Real domain resources
+
+These exist for actual business capabilities and mutations.
+Examples:
+
+- `tyanc.users.update`
+- `tyanc.users.delete`
+- `erp.orders.cancel`
+- `tasks.boards.archive`
+
+If an action should be governable by approval, it must exist on a real domain resource.
+
 ### Reserved roles
 
 Tyanc has reserved roles configured in `config/tyanc.php`:
@@ -258,6 +338,67 @@ RBAC governance stays in Tyanc:
 - `/tyanc/access-matrix`
 
 Do not create a separate role-permission management screen inside each business app unless the product explicitly needs a Tyanc-governed surface there.
+
+## Approval model and governed actions
+
+Approval in Tyanc is a gate-and-grant system.
+
+That means:
+
+- the original domain action stays responsible for the real mutation
+- the action is blocked before mutation when approval is required
+- the requester provides a reason
+- Cumpu reviewers review the request in the approval workspace
+- after final approval, the same requester retries the same action once on the same subject before expiry
+- the grant is consumed atomically on successful use
+
+Do not design new approval work as deferred payload replay by default.
+Do not store executable mutation payloads or build a second mutation engine unless a future explicit exception truly needs it.
+For file-backed flows, prefer re-run or re-upload after approval instead of staged replay.
+
+### Approval attaches to the real resource action
+
+If a business action needs approval, keep the governed permission on the original resource action.
+
+Correct examples:
+
+- `tyanc.users.update`
+- `tyanc.users.delete`
+- `erp.orders.cancel`
+- `tasks.boards.archive`
+
+Reviewer permissions stay in Cumpu:
+
+- `cumpu.approvals.approve`
+- `cumpu.approvals.reject`
+- `cumpu.approval_rules.create`
+
+Important distinction:
+
+Needing approval does not rename the governed permission.
+If deleting an ERP order needs approval, the governed action is still `erp.orders.delete`.
+The reviewer uses Cumpu permissions to approve the request, but the domain action being governed is still `erp.orders.delete`.
+
+### Correct way to make an action approval-governed
+
+When an action may need approval:
+
+1. define the action on the real resource in `config/permission-sot.php`
+2. keep the domain mutation inside the app's own Action class
+3. call `SubmitGovernedAction` from that domain action
+4. pass a live `execute` closure and proposal metadata such as `request_note`, action label, subject label, and subject snapshot
+5. let Cumpu own the rule, inbox, review, and grant lifecycle
+
+Use approval rules to govern real action permissions that already exist in the source of truth.
+`StoreApprovalRule` and `UpdateApprovalRule` only accept valid governed actions from that source.
+
+### What not to do for approval
+
+- Do not create a fake resource like `erp.order_approvals` just to make `erp.orders.delete` approvable.
+- Do not move ERP or Tasks mutation logic into Cumpu.
+- Do not expect `navigation_only` resources to appear in the normal approval-rule options.
+- Do not treat `cumpu.approvals.approve` as the governed business permission.
+- Do not invent a second approval architecture beside `SubmitGovernedAction` unless the product explicitly needs a special-case flow.
 
 ## App access, page access, and action access
 
@@ -279,8 +420,10 @@ That means:
 - unauthorized apps should not appear in the app switcher
 - unauthorized pages should not appear in the sidebar
 - direct URL access must still be blocked server-side
+- approval should govern real actions, not replace app or page access
 
 If you add a page, keep its permission and registry metadata in sync.
+If you add a governed action, keep its permission source and approval-rule eligibility in sync.
 
 ## Data flow rules
 
@@ -294,6 +437,7 @@ Follow the current Laravel and Inertia architecture.
 - Use `DB::transaction()` for multi-model changes.
 - Use Form Requests or explicit validation where that pattern already fits.
 - Prefer policies and shared permission helpers over inline authorization logic.
+- Keep approval orchestration in the domain action path by calling `SubmitGovernedAction`, not by moving domain mutations into controllers.
 
 ### Data transformation
 
@@ -310,6 +454,7 @@ Use data objects as the typed boundary.
 - Use the existing DataTable stack for list pages.
 - Use `@/routes/...` and `@/actions/...` helpers. Do not hardcode URLs when Wayfinder helpers exist.
 - Keep app-specific components under the app folder.
+- For governed actions, use the existing approval-state and approval-reason dialog patterns instead of inventing another request flow.
 
 ## Menu and navigation rules
 
@@ -320,8 +465,9 @@ When you add or change a navigable page:
 
 1. add or update the route
 2. add or update the sidebar config
-3. make sure page permissions are correct
-4. make sure registry syncing still reflects the change
+3. make sure the sidebar `permission` exists in `config/permission-sot.php` when it is not `null`
+4. make sure page permissions are correct
+5. make sure registry syncing still reflects the change
 
 Do not add hidden routes with unrelated file placement unless there is a clear reason.
 
@@ -370,8 +516,10 @@ For implementation work:
 
 - add or update Pest tests
 - run the minimum relevant tests
+- if `config/permission-sot.php` changed, run `php artisan tyanc:permissions-sync --no-interaction`
+- if `config/sidebar-menu.php` changed, reseed or resync app registry pages with `php artisan db:seed --class=AppRegistrySeeder --no-interaction`
 - if PHP files changed, format with Pint
-- if frontend route usage changed, keep Wayfinder-generated helpers aligned
+- if frontend route usage changed, keep Wayfinder-generated helpers aligned and run `php artisan wayfinder:generate --no-interaction` when needed
 - keep translations and UI labels consistent
 
 ## Do not do these things
@@ -382,10 +530,16 @@ For implementation work:
 - Do not hardcode frontend URLs when generated route helpers exist.
 - Do not place app files in unrelated folders just because they are convenient.
 - Do not use `demo` as a shortcut for unfinished real features.
+- Do not create approval rules for fake resources when the real governed action belongs to an existing resource.
+- Do not build new approval work around replaying stored mutation payloads by default.
 - Do not create a new architectural pattern when the project already has one.
 
 ## Short version
 
 If the work is platform governance, put it in `tyanc`.
+If the work is approval operations, put the workspace in `cumpu`.
 If the work is app-specific, keep everything inside that app's route prefix, namespaces, pages, and components.
-Register the app first. Define permissions in config first. Keep routes, sidebar config, registry pages, and permissions in sync.
+
+When adding a new app, define permissions early, keep `permission_namespace` aligned with the app key, keep sidebar config and registry pages aligned, seed the app registry, and sync permissions.
+
+When adding approval, govern the real resource action, use `SubmitGovernedAction`, and let Cumpu review and grant the action. Do not invent a fake approval resource or a second replay engine.

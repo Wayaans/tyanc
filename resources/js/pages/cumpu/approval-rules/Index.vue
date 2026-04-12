@@ -58,7 +58,7 @@ function openEditDialog(rule: ApprovalRule) {
                     <p class="text-sm text-muted-foreground">
                         {{
                             __(
-                                'Define which actions require sign-off before taking effect and who reviews them.',
+                                "Define which actions require sign-off before taking effect. When approved, a one-time grant is issued — the requester must retry the action within the grant's validity window.",
                             )
                         }}
                     </p>

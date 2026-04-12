@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import {
+    ChevronDown,
+    ChevronUp,
+    KeyRound,
+    PackageCheck,
+} from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,8 +40,6 @@ const { __ } = useTranslations();
 const reviewNote = ref('');
 const isSubmitting = ref(false);
 const snapshotOpen = ref(false);
-const beforePayloadOpen = ref(false);
-const afterPayloadOpen = ref(false);
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -49,11 +52,6 @@ type StatusConfig = {
 };
 
 const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
-    draft: {
-        label: 'Draft',
-        badgeClass:
-            'border-zinc-500/20 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-    },
     pending: {
         label: 'Pending',
         badgeClass:
@@ -84,10 +82,10 @@ const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
         badgeClass:
             'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
     },
-    superseded: {
-        label: 'Superseded',
+    consumed: {
+        label: 'Consumed',
         badgeClass:
-            'border-stone-500/20 bg-stone-500/10 text-stone-700 dark:text-stone-300',
+            'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
     },
 };
 
@@ -108,8 +106,6 @@ watch(open, (isOpen) => {
         reviewNote.value = '';
         isSubmitting.value = false;
         snapshotOpen.value = false;
-        beforePayloadOpen.value = false;
-        afterPayloadOpen.value = false;
     }
 });
 
@@ -204,17 +200,166 @@ function submitCancel() {
                     </Badge>
                 </div>
 
-                <!-- Impact summary -->
+                <!-- Grant lifecycle flow -->
                 <div
-                    v-if="props.request.impact_summary"
-                    class="rounded-xl border border-sidebar-border/70 bg-sidebar/20 px-4 py-3"
+                    v-if="
+                        props.request.status === 'approved' ||
+                        props.request.status === 'consumed' ||
+                        props.request.status === 'expired' ||
+                        props.request.is_grant_usable ||
+                        props.request.is_grant_expired
+                    "
+                    class="overflow-hidden rounded-xl border border-sidebar-border/70"
                 >
-                    <p class="text-xs font-medium text-muted-foreground">
-                        {{ __('Impact summary') }}
-                    </p>
-                    <p class="mt-0.5 text-sm text-foreground">
-                        {{ props.request.impact_summary }}
-                    </p>
+                    <div class="border-b border-sidebar-border/70 px-3 py-2">
+                        <p
+                            class="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                        >
+                            {{ __('Grant lifecycle') }}
+                        </p>
+                    </div>
+                    <ol class="flex flex-col gap-0 px-3 py-2.5">
+                        <!-- Issued -->
+                        <li class="flex items-start gap-2.5">
+                            <div
+                                class="relative mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30"
+                            >
+                                <KeyRound
+                                    class="size-2.5 text-emerald-600 dark:text-emerald-400"
+                                />
+                                <div
+                                    v-if="
+                                        props.request.status === 'consumed' ||
+                                        props.request.status === 'expired' ||
+                                        props.request.is_grant_expired
+                                    "
+                                    class="absolute top-5 left-[9px] h-5 w-0.5 bg-emerald-200 dark:bg-emerald-800/60"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1 pb-3">
+                                <p
+                                    class="text-sm font-medium text-emerald-800 dark:text-emerald-300"
+                                >
+                                    {{ __('Grant issued') }}
+                                </p>
+                                <p
+                                    v-if="props.request.expires_at"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    {{ __('Valid until') }}:
+                                    {{
+                                        dateFormatter.format(
+                                            new Date(props.request.expires_at),
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        </li>
+
+                        <!-- Awaiting retry -->
+                        <li
+                            v-if="props.request.is_grant_usable"
+                            class="flex items-start gap-2.5"
+                        >
+                            <div
+                                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-400/40"
+                            >
+                                <span
+                                    class="size-1.5 animate-pulse rounded-full bg-emerald-500"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="text-sm font-medium text-emerald-700 dark:text-emerald-400"
+                                >
+                                    {{ __('Waiting for requester to retry') }}
+                                </p>
+                            </div>
+                        </li>
+
+                        <!-- Consumed -->
+                        <li
+                            v-else-if="props.request.status === 'consumed'"
+                            class="flex items-start gap-2.5"
+                        >
+                            <div
+                                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-500/15 ring-1 ring-violet-500/30"
+                            >
+                                <PackageCheck
+                                    class="size-2.5 text-violet-600 dark:text-violet-400"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="text-sm font-medium text-violet-800 dark:text-violet-300"
+                                >
+                                    {{ __('Grant consumed') }}
+                                </p>
+                                <p
+                                    v-if="
+                                        props.request.consumed_by_name ||
+                                        props.request.consumed_at
+                                    "
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    <span
+                                        v-if="props.request.consumed_by_name"
+                                        >{{
+                                            props.request.consumed_by_name
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="
+                                            props.request.consumed_by_name &&
+                                            props.request.consumed_at
+                                        "
+                                        class="mx-1"
+                                        aria-hidden="true"
+                                        >·</span
+                                    >
+                                    <span v-if="props.request.consumed_at">{{
+                                        dateFormatter.format(
+                                            new Date(props.request.consumed_at),
+                                        )
+                                    }}</span>
+                                </p>
+                            </div>
+                        </li>
+
+                        <!-- Expired -->
+                        <li
+                            v-else-if="
+                                props.request.status === 'expired' ||
+                                props.request.is_grant_expired
+                            "
+                            class="flex items-start gap-2.5"
+                        >
+                            <div
+                                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/30"
+                            >
+                                <KeyRound
+                                    class="size-2.5 text-amber-600 dark:text-amber-400"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="text-sm font-medium text-amber-800 dark:text-amber-300"
+                                >
+                                    {{ __('Grant expired') }}
+                                </p>
+                                <p
+                                    v-if="props.request.expires_at"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    {{
+                                        dateFormatter.format(
+                                            new Date(props.request.expires_at),
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        </li>
+                    </ol>
                 </div>
 
                 <!-- Requester block -->
@@ -262,19 +407,27 @@ function submitCancel() {
                     </div>
                 </div>
 
-                <!-- Request note -->
-                <div v-if="props.request.request_note" class="space-y-1">
-                    <p class="text-xs font-medium text-muted-foreground">
-                        {{ __('Request note') }}
-                    </p>
+                <!-- Requester's reason -->
+                <div v-if="props.request.request_note" class="space-y-1.5">
+                    <div class="flex items-baseline gap-1.5">
+                        <p class="text-sm font-semibold text-foreground">
+                            {{ __('Reason for this request') }}
+                        </p>
+                        <p
+                            v-if="props.request.requested_by_name"
+                            class="text-xs text-muted-foreground"
+                        >
+                            – {{ props.request.requested_by_name }}
+                        </p>
+                    </div>
                     <p
-                        class="rounded-lg border border-sidebar-border/70 bg-sidebar/10 px-3 py-2 text-sm text-foreground"
+                        class="rounded-lg border border-sidebar-border/70 bg-sidebar/10 px-3 py-2.5 text-sm leading-relaxed text-foreground"
                     >
                         {{ props.request.request_note }}
                     </p>
                 </div>
 
-                <!-- Review note (already set) -->
+                <!-- Review note (already set, read-only) -->
                 <div
                     v-if="
                         props.request.review_note &&
@@ -301,7 +454,14 @@ function submitCancel() {
                     <CollapsibleTrigger
                         class="flex w-full items-center justify-between rounded-lg border border-sidebar-border/70 bg-sidebar/10 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
                     >
-                        {{ __('Subject snapshot') }}
+                        <span>
+                            {{ __('Snapshot at request time') }}
+                            <span
+                                class="ml-1 font-normal text-muted-foreground"
+                            >
+                                – {{ __('subject state when submitted') }}
+                            </span>
+                        </span>
                         <component
                             :is="snapshotOpen ? ChevronUp : ChevronDown"
                             class="size-3.5 shrink-0 text-muted-foreground"
@@ -316,65 +476,6 @@ function submitCancel() {
                         >
                     </CollapsibleContent>
                 </Collapsible>
-
-                <!-- Before / after payloads -->
-                <div
-                    v-if="
-                        hasContent(props.request.before_payload) ||
-                        hasContent(props.request.after_payload)
-                    "
-                    class="space-y-2"
-                >
-                    <Separator />
-
-                    <Collapsible
-                        v-if="hasContent(props.request.before_payload)"
-                        v-model:open="beforePayloadOpen"
-                    >
-                        <CollapsibleTrigger
-                            class="flex w-full items-center justify-between rounded-lg border border-sidebar-border/70 bg-sidebar/10 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
-                        >
-                            {{ __('Before') }}
-                            <component
-                                :is="
-                                    beforePayloadOpen ? ChevronUp : ChevronDown
-                                "
-                                class="size-3.5 shrink-0 text-muted-foreground"
-                            />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <pre
-                                class="mt-1 overflow-x-auto rounded-lg border border-sidebar-border/70 bg-sidebar/10 p-3 text-xs text-muted-foreground"
-                                >{{
-                                    formatJson(props.request.before_payload!)
-                                }}</pre
-                            >
-                        </CollapsibleContent>
-                    </Collapsible>
-
-                    <Collapsible
-                        v-if="hasContent(props.request.after_payload)"
-                        v-model:open="afterPayloadOpen"
-                    >
-                        <CollapsibleTrigger
-                            class="flex w-full items-center justify-between rounded-lg border border-sidebar-border/70 bg-sidebar/10 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
-                        >
-                            {{ __('After') }}
-                            <component
-                                :is="afterPayloadOpen ? ChevronUp : ChevronDown"
-                                class="size-3.5 shrink-0 text-muted-foreground"
-                            />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <pre
-                                class="mt-1 overflow-x-auto rounded-lg border border-sidebar-border/70 bg-sidebar/10 p-3 text-xs text-muted-foreground"
-                                >{{
-                                    formatJson(props.request.after_payload!)
-                                }}</pre
-                            >
-                        </CollapsibleContent>
-                    </Collapsible>
-                </div>
 
                 <!-- Review note input (only when reviewer can decide) -->
                 <div
@@ -392,8 +493,18 @@ function submitCancel() {
                         id="cumpu-approval-review-note"
                         v-model="reviewNote"
                         :placeholder="__('Add a note for the requester…')"
-                        rows="3"
+                        :rows="3"
                     />
+                    <p
+                        v-if="props.request.can_approve"
+                        class="text-xs text-muted-foreground"
+                    >
+                        {{
+                            __(
+                                'Approving issues a one-time grant. The requester must retry the action to consume it.',
+                            )
+                        }}
+                    </p>
                 </div>
             </div>
 
@@ -432,7 +543,11 @@ function submitCancel() {
                     class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                     @click="submitApprove"
                 >
-                    {{ isSubmitting ? __('Saving…') : __('Approve') }}
+                    {{
+                        isSubmitting
+                            ? __('Saving…')
+                            : __('Approve & issue grant')
+                    }}
                 </Button>
             </DialogFooter>
         </DialogScrollContent>

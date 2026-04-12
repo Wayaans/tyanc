@@ -28,7 +28,7 @@ final readonly class ListApprovalRequestHistory
                     })
                     ->orWhere('properties->approval_request_id', (string) $approvalRequest->getKey());
             })
-            ->latest('created_at')
+            ->oldest('created_at')
             ->get()
             ->map(fn (Activity $activity): ActivityLogEntryData => ActivityLogEntryData::fromModel($activity))
             ->all();

@@ -49,12 +49,12 @@ function resolveStepConfig(status: string): StepConfig {
             };
         case 'pending':
             return {
-                label: 'Pending',
+                label: 'Awaiting review',
                 icon: Clock,
                 iconClass: 'text-sky-500 dark:text-sky-400',
                 badgeClass:
                     'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-                lineClass: 'bg-sky-200 dark:bg-sky-800',
+                lineClass: 'bg-border',
             };
         default:
             return {
@@ -73,6 +73,27 @@ const sortedAssignments = computed(() =>
         (a, b) => (a.step_order ?? 0) - (b.step_order ?? 0),
     ),
 );
+
+const completedCount = computed(
+    () =>
+        sortedAssignments.value.filter((a) => a.status === 'completed').length,
+);
+
+const totalCount = computed(() => sortedAssignments.value.length);
+
+const progressLabel = computed(() => {
+    if (totalCount.value === 0) {
+        return null;
+    }
+    if (completedCount.value === totalCount.value) {
+        return __('All steps completed');
+    }
+    return `${completedCount.value} / ${totalCount.value} ${__('steps completed')}`;
+});
+
+const firstPendingIndex = computed(() =>
+    sortedAssignments.value.findIndex((a) => a.status === 'pending'),
+);
 </script>
 
 <template>
@@ -84,8 +105,27 @@ const sortedAssignments = computed(() =>
         >
             <Users class="size-3.5 shrink-0 text-muted-foreground" />
             <h2 class="text-sm font-semibold text-foreground">
-                {{ __('Workflow steps') }}
+                {{ __('Workflow progress') }}
             </h2>
+            <span
+                v-if="progressLabel"
+                class="ml-auto text-xs text-muted-foreground tabular-nums"
+            >
+                {{ progressLabel }}
+            </span>
+        </div>
+
+        <!-- Progress bar -->
+        <div v-if="totalCount > 0" class="h-1 bg-sidebar-border/40">
+            <div
+                class="h-full bg-emerald-500 transition-all"
+                :style="{
+                    width:
+                        totalCount > 0
+                            ? `${(completedCount / totalCount) * 100}%`
+                            : '0%',
+                }"
+            />
         </div>
 
         <div
@@ -116,7 +156,10 @@ const sortedAssignments = computed(() =>
                 <!-- Step icon -->
                 <div
                     :class="[
-                        'relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-background bg-sidebar/40 shadow-sm',
+                        'relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-background shadow-sm',
+                        index === firstPendingIndex
+                            ? 'bg-sky-500/20 ring-2 ring-sky-400/50 ring-offset-1 ring-offset-background'
+                            : 'bg-sidebar/40',
                         resolveStepConfig(assignment.status).iconClass,
                     ]"
                 >
@@ -148,6 +191,13 @@ const sortedAssignments = computed(() =>
                         >
                             {{ __(resolveStepConfig(assignment.status).label) }}
                         </Badge>
+
+                        <span
+                            v-if="index === firstPendingIndex"
+                            class="text-xs font-medium text-sky-600 dark:text-sky-400"
+                        >
+                            {{ __('← current') }}
+                        </span>
                     </div>
 
                     <p
@@ -174,7 +224,7 @@ const sortedAssignments = computed(() =>
                         v-if="assignment.completed_by_name"
                         class="text-xs text-muted-foreground"
                     >
-                        {{ __('Completed by') }}:
+                        {{ __('Decided by') }}:
                         <span class="font-medium text-foreground">{{
                             assignment.completed_by_name
                         }}</span>
@@ -193,7 +243,7 @@ const sortedAssignments = computed(() =>
                             v-if="assignment.completed_at"
                             class="text-xs text-muted-foreground"
                         >
-                            {{ __('Completed') }}:
+                            {{ __('Decided') }}:
                             {{
                                 dateFormatter.format(
                                     new Date(assignment.completed_at),

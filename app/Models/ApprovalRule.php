@@ -42,6 +42,7 @@ final class ApprovalRule extends Model
         'enabled',
         'workflow_type',
         'conditions',
+        'grant_validity_minutes',
         'reminder_after_minutes',
         'escalation_after_minutes',
     ];
@@ -52,6 +53,7 @@ final class ApprovalRule extends Model
     protected $attributes = [
         'enabled' => false,
         'workflow_type' => self::WorkflowSingle,
+        'grant_validity_minutes' => 1440,
     ];
 
     public function steps(): HasMany
@@ -74,6 +76,7 @@ final class ApprovalRule extends Model
             'enabled' => 'boolean',
             'workflow_type' => 'string',
             'conditions' => 'array',
+            'grant_validity_minutes' => 'integer',
             'reminder_after_minutes' => 'integer',
             'escalation_after_minutes' => 'integer',
             'created_at' => 'datetime',

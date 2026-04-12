@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
 use App\Actions\Tyanc\Permissions\ResolvePermissionOptions;
 use App\Actions\Tyanc\Roles\AssignPermissionsToRole;
 use App\Actions\Tyanc\Roles\DeleteRole;
@@ -11,10 +12,12 @@ use App\Actions\Tyanc\Roles\ListRoles;
 use App\Actions\Tyanc\Roles\StoreRole;
 use App\Actions\Tyanc\Roles\UpdateRole;
 use App\Data\Tables\DataTableQueryData;
+use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Http\Requests\Tyanc\AssignRolePermissionsRequest;
 use App\Http\Requests\Tyanc\StoreRoleRequest;
 use App\Http\Requests\Tyanc\UpdateRoleRequest;
+use App\Models\ApprovalRequest;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -31,6 +34,7 @@ final readonly class RoleController
         #[CurrentUser] User $user,
         ListRoles $action,
         ResolvePermissionOptions $permissionOptions,
+        ResolveApprovalContext $approvalContext,
     ): Response|JsonResponse {
         $payload = [
             'rolesTable' => $action->handle(
@@ -43,7 +47,15 @@ final readonly class RoleController
                     allowedColumns: ['name', 'level', 'permission_count', 'user_count', 'created_at'],
                 ),
             ),
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: __('Roles'),
+                appKey: 'tyanc',
+                resourceKey: 'roles',
+                actionKeys: ['create', 'update', 'delete'],
+            ),
             'permissionOptions' => $permissionOptions->handle(),
+            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -55,7 +67,9 @@ final readonly class RoleController
 
     public function store(StoreRoleRequest $request, #[CurrentUser] User $user, StoreRole $action): RedirectResponse|JsonResponse
     {
-        $role = $action->handle($user, $request->validated());
+        /** @var array{name: string, level: int} $validated */
+        $validated = $request->validated();
+        $role = $action->handle($user, $validated);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -68,11 +82,27 @@ final readonly class RoleController
 
     public function update(UpdateRoleRequest $request, #[CurrentUser] User $user, Role $role, UpdateRole $action): RedirectResponse|JsonResponse
     {
-        $role = $action->handle($user, $role, $request->validated());
+        /** @var array{name: string, level: int, request_note?: string|null} $validated */
+        $validated = $request->validated();
+        $submission = $action->handle($user, $role, $validated);
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'executed' => false,
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $user),
+                ], 202);
+            }
+
+            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+        }
+
+        /** @var Role $updatedRole */
+        $updatedRole = $submission['result'];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'role' => RoleData::fromModel($role),
+                'role' => RoleData::fromModel($updatedRole),
             ]);
         }
 

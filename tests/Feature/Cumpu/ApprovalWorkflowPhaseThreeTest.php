@@ -6,6 +6,7 @@ use App\Jobs\ProcessUsersImport;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
+use App\Models\ImportRun;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -69,6 +70,7 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
             'action_key' => 'import',
             'workflow_type' => ApprovalRule::WorkflowMulti,
             'enabled' => true,
+            'grant_validity_minutes' => 90,
             'reminder_after_minutes' => 30,
             'escalation_after_minutes' => 60,
             'steps' => [
@@ -83,6 +85,7 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
         ->firstOrFail();
 
     expect($approvalRule->workflow_type)->toBe(ApprovalRule::WorkflowMulti)
+        ->and($approvalRule->grant_validity_minutes)->toBe(90)
         ->and($approvalRule->reminder_after_minutes)->toBe(30)
         ->and($approvalRule->escalation_after_minutes)->toBe(60)
         ->and($approvalRule->steps()->count())->toBe(2)
@@ -98,6 +101,7 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
             'action_key' => 'import',
             'workflow_type' => ApprovalRule::WorkflowSingle,
             'enabled' => false,
+            'grant_validity_minutes' => 180,
             'reminder_after_minutes' => null,
             'escalation_after_minutes' => 120,
             'steps' => [
@@ -108,6 +112,7 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
 
     expect($approvalRule->fresh()->workflow_type)->toBe(ApprovalRule::WorkflowSingle)
         ->and($approvalRule->fresh()->enabled)->toBeFalse()
+        ->and($approvalRule->fresh()->grant_validity_minutes)->toBe(180)
         ->and($approvalRule->fresh()->steps()->count())->toBe(1)
         ->and($approvalRule->fresh()->steps()->firstOrFail()->label)->toBe('Single final review');
 
@@ -197,7 +202,24 @@ it('advances multi-step approvals in order and completes the governed action onl
         ->assertOk()
         ->assertJsonPath('approval.status', ApprovalRequest::StatusApproved);
 
-    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusApproved);
+    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusApproved)
+        ->and($approvalRequest->fresh()->expires_at)->not->toBeNull()
+        ->and(ImportRun::query()->count())->toBe(0);
+
+    $this->actingAs($requester)
+        ->postJson(route('tyanc.users.import.store'), [
+            'file' => UploadedFile::fake()->create(
+                'phase-three-users-retry.xlsx',
+                32,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ),
+        ])
+        ->assertCreated()
+        ->assertJsonPath('executed', true)
+        ->assertJsonPath('approval', null)
+        ->assertJsonPath('import.status', ImportRun::StatusQueued);
+
+    expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusConsumed);
     Queue::assertPushed(ProcessUsersImport::class);
 });
 
@@ -245,6 +267,7 @@ it('reassigns the active step to another eligible approver and blocks the previo
                 32,
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ),
+            'request_note' => 'Please review this reassigned import.',
         ])
         ->assertStatus(202);
 
@@ -272,7 +295,16 @@ it('reassigns the active step to another eligible approver and blocks the previo
         ->and($approvalRequest->assignments()->where('status', ApprovalAssignment::StatusPending)->firstOrFail()->assigned_to_id)->toBe($secondApprover->id)
         ->and($approvalRequest->assignments()->where('status', ApprovalAssignment::StatusCancelled)->count())->toBe(1);
 
-    Notification::assertSentTo($secondApprover, ApprovalReassignedNotification::class);
+    Notification::assertSentTo(
+        $secondApprover,
+        ApprovalReassignedNotification::class,
+        function (ApprovalReassignedNotification $notification) use ($secondApprover, $approvalRequest): bool {
+            $payload = $notification->toArray($secondApprover);
+
+            return data_get($payload, 'action_url') === route('cumpu.approvals.show', $approvalRequest, absolute: false)
+                && str_contains((string) data_get($payload, 'body'), 'This request was reassigned to you.');
+        },
+    );
 
     $this->actingAs($firstApprover)
         ->patchJson(route('cumpu.approvals.approve', $approvalRequest), [

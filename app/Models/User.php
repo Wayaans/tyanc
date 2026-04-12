@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\Approvals\ApprovalSubject;
 use App\Enums\UserStatus;
+use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -16,13 +18,14 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
-final class User extends Authenticatable implements HasLocalePreference
+final class User extends Authenticatable implements ApprovalSubject, HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasRoles;
     use HasUuids;
+    use InteractsWithApprovals;
     use Notifiable;
     use SoftDeletes;
     use TwoFactorAuthenticatable;
@@ -60,9 +63,48 @@ final class User extends Authenticatable implements HasLocalePreference
         'two_factor_recovery_codes',
     ];
 
+    /**
+     * @return HasOne<UserPreference, $this>
+     */
     public function preference(): HasOne
     {
         return $this->hasOne(UserPreference::class);
+    }
+
+    public function approvalAppKey(): string
+    {
+        return 'tyanc';
+    }
+
+    public function approvalResourceKey(): string
+    {
+        return 'users';
+    }
+
+    public function approvalSubjectLabel(): string
+    {
+        return $this->name !== '' ? $this->name : $this->email;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function approvalSubjectSnapshot(): array
+    {
+        $this->loadMissing('roles', 'permissions');
+
+        return [
+            'id' => (string) $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'username' => $this->username,
+            'avatar' => $this->avatar,
+            'status' => $this->status->value,
+            'locale' => $this->locale,
+            'timezone' => $this->timezone,
+            'roles' => $this->roles->pluck('name')->filter()->sort()->values()->all(),
+            'permissions' => $this->permissions->pluck('name')->filter()->sort()->values()->all(),
+        ];
     }
 
     public function preferredLocale(): string

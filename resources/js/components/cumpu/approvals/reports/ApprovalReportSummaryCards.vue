@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import {
-    AlertTriangle,
-    ArrowRightLeft,
+    Ban,
     CheckCircle2,
     Clock,
-    TrendingDown,
+    Eye,
+    LayoutList,
+    PackageCheck,
+    Timer,
     XCircle,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -23,14 +25,21 @@ const cards = computed(() => [
         key: 'total',
         label: __('Total'),
         value: props.summary.total,
-        icon: Clock,
+        icon: LayoutList,
         iconClass: 'text-muted-foreground',
     },
     {
-        key: 'pending_review',
-        label: __('Active'),
-        value: props.summary.pending + props.summary.in_review,
+        key: 'pending',
+        label: __('Pending'),
+        value: props.summary.pending,
         icon: Clock,
+        iconClass: 'text-amber-500',
+    },
+    {
+        key: 'in_review',
+        label: __('In review'),
+        value: props.summary.in_review,
+        icon: Eye,
         iconClass: 'text-sky-500',
     },
     {
@@ -41,6 +50,13 @@ const cards = computed(() => [
         iconClass: 'text-emerald-600',
     },
     {
+        key: 'consumed',
+        label: __('Consumed'),
+        value: props.summary.consumed,
+        icon: PackageCheck,
+        iconClass: 'text-violet-500',
+    },
+    {
         key: 'rejected',
         label: __('Rejected'),
         value: props.summary.rejected,
@@ -48,31 +64,24 @@ const cards = computed(() => [
         iconClass: 'text-red-500',
     },
     {
-        key: 'overdue',
-        label: __('Overdue'),
-        value: props.summary.overdue,
-        icon: TrendingDown,
-        iconClass: 'text-amber-500',
+        key: 'cancelled',
+        label: __('Cancelled'),
+        value: props.summary.cancelled,
+        icon: Ban,
+        iconClass: 'text-slate-500',
     },
     {
-        key: 'escalated',
-        label: __('Escalated'),
-        value: props.summary.escalated,
-        icon: AlertTriangle,
-        iconClass: 'text-amber-500',
-    },
-    {
-        key: 'reassigned',
-        label: __('Reassigned'),
-        value: props.summary.reassigned,
-        icon: ArrowRightLeft,
-        iconClass: 'text-violet-500',
+        key: 'expired',
+        label: __('Expired'),
+        value: props.summary.expired,
+        icon: Timer,
+        iconClass: 'text-orange-500',
     },
 ]);
 </script>
 
 <template>
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <Card
             v-for="card in cards"
             :key="card.key"

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Data\Tyanc\Messaging\ConversationParticipantData;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class ListMessageContacts
 {
@@ -16,7 +16,7 @@ final readonly class ListMessageContacts
      */
     public function handle(User $actor): array
     {
-        if (! Gate::forUser($actor)->allows(PermissionKey::tyanc('messages', 'viewany'))) {
+        if (! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'viewany'))) {
             return [];
         }
 

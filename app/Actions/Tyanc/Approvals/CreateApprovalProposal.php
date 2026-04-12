@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Approvals;
 
+use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
@@ -13,6 +14,7 @@ use App\Notifications\NewApprovalRequestedNotification;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final readonly class CreateApprovalProposal
@@ -29,6 +31,7 @@ final readonly class CreateApprovalProposal
         ?Model $subject = null,
         array $attributes = [],
     ): ApprovalRequest {
+        ApprovalRequest::expirePastDueGrants();
         $rule->loadMissing(['steps.role']);
 
         /** @var ApprovalRuleStep|null $step */
@@ -56,7 +59,15 @@ final readonly class CreateApprovalProposal
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $rule, $permissionName, $subject, $attributes, $approvers, $step, $parsed): ApprovalRequest {
+        $requestNote = $this->nullableString($attributes['request_note'] ?? null);
+
+        if ($requestNote === null) {
+            throw ValidationException::withMessages([
+                'request_note' => __('Provide a reason before requesting approval.'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($actor, $rule, $permissionName, $subject, $attributes, $approvers, $step, $parsed, $requestNote): ApprovalRequest {
             ApprovalRule::query()->whereKey($rule->id)->lockForUpdate()->first();
 
             if ($subject instanceof Model && $subject->getKey() !== null) {
@@ -68,7 +79,7 @@ final readonly class CreateApprovalProposal
                 User::query()->whereKey($actor->id)->lockForUpdate()->first();
             }
 
-            $this->ensureNoActiveRequest($actor, $permissionName, $subject, true);
+            $this->ensureNoBlockingRequest($actor, $permissionName, $subject, true);
 
             $approvalRequest = ApprovalRequest::query()->create([
                 'rule_id' => $rule->id,
@@ -80,22 +91,10 @@ final readonly class CreateApprovalProposal
                 'subject_type' => $subject?->getMorphClass(),
                 'subject_id' => is_scalar($subject?->getKey()) ? (string) $subject?->getKey() : null,
                 'requested_by_id' => $actor->id,
-                'request_note' => $this->nullableString($attributes['request_note'] ?? null),
-                'payload' => is_array($attributes['payload'] ?? null) ? $attributes['payload'] : null,
-                'subject_snapshot' => $this->arrayOrNull($attributes['subject_snapshot'] ?? ($subject?->toArray() ?? null)),
-                'before_payload' => $this->arrayOrNull($attributes['before_payload'] ?? null),
-                'after_payload' => $this->arrayOrNull($attributes['after_payload'] ?? null),
-                'impact_summary' => $this->nullableString($attributes['impact_summary'] ?? null),
-                'previous_request_id' => is_string($attributes['previous_request_id'] ?? null)
-                    ? $attributes['previous_request_id']
-                    : null,
-                'expires_at' => $attributes['expires_at'] ?? null,
+                'request_note' => $requestNote,
+                'payload' => $this->proposalPayload($attributes, $permissionName, $subject),
+                'subject_snapshot' => $this->arrayOrNull($attributes['subject_snapshot'] ?? $this->subjectSnapshot($subject)),
                 'requested_at' => now(),
-            ]);
-
-            $approvalRequest->actionRecord()->create([
-                'handler' => (string) $attributes['handler'],
-                'payload' => is_array($attributes['action_payload'] ?? null) ? $attributes['action_payload'] : null,
             ]);
 
             $approvers->each(function (User $approver) use ($approvalRequest, $step): void {
@@ -127,19 +126,32 @@ final readonly class CreateApprovalProposal
                 'requester',
                 'reviewer',
                 'cancelledBy',
+                'consumedBy',
                 'subject',
                 'rule.steps.role',
-                'actionRecord',
                 'assignments.assignee',
             ]);
         });
     }
 
-    private function ensureNoActiveRequest(User $actor, string $permissionName, ?Model $subject, bool $lock = false): void
+    private function ensureNoBlockingRequest(User $actor, string $permissionName, ?Model $subject, bool $lock = false): void
     {
         $query = ApprovalRequest::query()
+            ->where('requested_by_id', $actor->id)
             ->where('action', $permissionName)
-            ->whereIn('status', ApprovalRequest::activeStatuses());
+            ->where(function ($builder): void {
+                $builder
+                    ->whereIn('status', ApprovalRequest::reviewableStatuses())
+                    ->orWhere(function ($approvedBuilder): void {
+                        $approvedBuilder
+                            ->whereIn('status', ApprovalRequest::consumableStatuses())
+                            ->where(function ($grantBuilder): void {
+                                $grantBuilder
+                                    ->whereNull('expires_at')
+                                    ->orWhere('expires_at', '>', now());
+                            });
+                    });
+            });
 
         if ($lock) {
             $query->lockForUpdate();
@@ -148,19 +160,38 @@ final readonly class CreateApprovalProposal
         if ($subject instanceof Model) {
             $query
                 ->where('subject_type', $subject->getMorphClass())
-                ->where('subject_id', $subject->getKey());
+                ->where('subject_id', (string) $subject->getKey());
         } else {
             $query
                 ->whereNull('subject_type')
-                ->whereNull('subject_id')
-                ->where('requested_by_id', $actor->id);
+                ->whereNull('subject_id');
         }
 
         if ($query->exists()) {
             throw ValidationException::withMessages([
-                'approval' => __('An approval request for this action is already pending.'),
+                'approval' => __('An approval request for this action is already active.'),
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array{action_label: string, subject_label: string}
+     */
+    private function proposalPayload(array $attributes, string $permissionName, ?Model $subject): array
+    {
+        $payload = is_array($attributes['payload'] ?? null) ? $attributes['payload'] : [];
+
+        $actionLabel = $this->nullableString($payload['action_label'] ?? null)
+            ?? Str::of($permissionName)->replace(['.', '_'], ' ')->title()->value();
+        $subjectLabel = $this->nullableString($payload['subject_label'] ?? null)
+            ?? $this->subjectLabel($subject)
+            ?? __('Approval request');
+
+        return [
+            'action_label' => $actionLabel,
+            'subject_label' => $subjectLabel,
+        ];
     }
 
     /**
@@ -169,6 +200,31 @@ final readonly class CreateApprovalProposal
     private function arrayOrNull(mixed $value): ?array
     {
         return is_array($value) ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function subjectSnapshot(?Model $subject): ?array
+    {
+        if ($subject instanceof ApprovalSubject) {
+            return $subject->approvalSubjectSnapshot();
+        }
+
+        return $subject?->toArray();
+    }
+
+    private function subjectLabel(?Model $subject): ?string
+    {
+        if ($subject instanceof ApprovalSubject) {
+            return $subject->approvalSubjectLabel();
+        }
+
+        if ($subject instanceof Model && $subject->getKey() !== null) {
+            return sprintf('%s #%s', class_basename($subject), (string) $subject->getKey());
+        }
+
+        return null;
     }
 
     private function nullableString(mixed $value): ?string

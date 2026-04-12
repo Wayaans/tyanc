@@ -28,8 +28,11 @@ final readonly class ImportController
             return response()->json($payload, $payload['executed'] ? 201 : 202);
         }
 
-        return $payload['executed']
-            ? to_route('tyanc.users.index')
-            : to_route('cumpu.approvals.my-requests');
+        return to_route('tyanc.users.index')->with(
+            'status',
+            $payload['executed']
+                ? __('Users import queued.')
+                : __('Approval request submitted. Upload the file again after it is approved.'),
+        );
     }
 }

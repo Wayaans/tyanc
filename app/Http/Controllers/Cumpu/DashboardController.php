@@ -6,12 +6,14 @@ namespace App\Http\Controllers\Cumpu;
 
 use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Approvals\FindOverdueApprovals;
+use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,25 +26,53 @@ final readonly class DashboardController
         #[CurrentUser] User $user,
         FindOverdueApprovals $overdueApprovals,
     ): Response|JsonResponse {
+        ApprovalRequest::expirePastDueGrants();
+
         $permissionAccess = resolve(PermissionResourceAccess::class);
-        $canViewAll = $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'viewany'));
+        $canViewInbox = $permissionAccess->handle($user, PermissionKey::cumpu('approval_inbox', 'viewany'));
+        $canViewMyRequests = $permissionAccess->handle($user, PermissionKey::cumpu('my_requests', 'viewany'));
+        $canManageRules = $permissionAccess->handle($user, PermissionKey::cumpu('approval_rules', 'viewany'));
+        $canViewAll = $permissionAccess->handle($user, PermissionKey::cumpu('all_approvals', 'viewany'));
+        $canViewReports = $permissionAccess->handle($user, PermissionKey::cumpu('reports', 'viewany'));
 
         $payload = [
             'summary' => [
-                'pending_inbox_count' => $canViewAll
+                'pending_inbox_count' => $canViewInbox
                     ? ApprovalRequest::query()
-                        ->whereHas('assignments', fn ($query) => $query
+                        ->whereHas('assignments', fn (Builder $query) => $query
                             ->where('assigned_to_id', $user->id)
                             ->where('status', ApprovalAssignment::StatusPending))
                         ->whereIn('status', ApprovalRequest::activeStatuses())
                         ->count()
                     : 0,
-                'my_request_count' => $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'view'))
+                'my_request_count' => $canViewMyRequests
                     ? ApprovalRequest::query()
                         ->where('requested_by_id', $user->id)
                         ->count()
                     : 0,
-                'enabled_rule_count' => $permissionAccess->handle($user, PermissionKey::cumpu('approval_rules', 'viewany'))
+                'ready_to_retry_count' => $canViewMyRequests
+                    ? ApprovalRequest::query()
+                        ->where('requested_by_id', $user->id)
+                        ->where('status', ApprovalRequest::StatusApproved)
+                        ->whereNull('consumed_at')
+                        ->where(fn (Builder $query) => $query
+                            ->whereNull('expires_at')
+                            ->orWhere('expires_at', '>', now()))
+                        ->count()
+                    : 0,
+                'consumed_count' => $canViewMyRequests
+                    ? ApprovalRequest::query()
+                        ->where('requested_by_id', $user->id)
+                        ->where('status', ApprovalRequest::StatusConsumed)
+                        ->count()
+                    : 0,
+                'expired_count' => $canViewMyRequests
+                    ? ApprovalRequest::query()
+                        ->where('requested_by_id', $user->id)
+                        ->where('status', ApprovalRequest::StatusExpired)
+                        ->count()
+                    : 0,
+                'enabled_rule_count' => $canManageRules
                     ? ApprovalRule::query()->where('enabled', true)->count()
                     : 0,
                 'all_pending_count' => $canViewAll
@@ -50,17 +80,19 @@ final readonly class DashboardController
                         ->whereIn('status', ApprovalRequest::activeStatuses())
                         ->count()
                     : 0,
-                'overdue_count' => $permissionAccess->handle($user, PermissionKey::cumpu('reports', 'viewany'))
+                'overdue_count' => $canViewReports
                     ? $overdueApprovals->handle()->count()
                     : 0,
             ],
             'abilities' => [
-                'viewInbox' => $canViewAll,
-                'viewMyRequests' => $permissionAccess->handle($user, PermissionKey::cumpu('approvals', 'view')),
-                'manageRules' => $permissionAccess->handle($user, PermissionKey::cumpu('approval_rules', 'viewany')),
+                'viewInbox' => $canViewInbox,
+                'viewMyRequests' => $canViewMyRequests,
+                'manageRules' => $canManageRules,
                 'viewAll' => $canViewAll,
-                'viewReports' => $permissionAccess->handle($user, PermissionKey::cumpu('reports', 'viewany')),
+                'viewReports' => $canViewReports,
             ],
+            'recentInbox' => $canViewInbox ? $this->recentInbox($user) : [],
+            'recentMyRequests' => $canViewMyRequests ? $this->recentMyRequests($user) : [],
         ];
 
         if ($request->wantsJson()) {
@@ -68,5 +100,51 @@ final readonly class DashboardController
         }
 
         return Inertia::render('cumpu/Dashboard', $payload);
+    }
+
+    /**
+     * @return list<ApprovalRequestData>
+     */
+    private function recentInbox(User $user): array
+    {
+        return $this->dashboardQuery()
+            ->whereHas('assignments', fn (Builder $query) => $query
+                ->where('assigned_to_id', $user->id)
+                ->where('status', ApprovalAssignment::StatusPending))
+            ->whereIn('status', ApprovalRequest::reviewableStatuses())
+            ->latest('requested_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $user))
+            ->all();
+    }
+
+    /**
+     * @return list<ApprovalRequestData>
+     */
+    private function recentMyRequests(User $user): array
+    {
+        return $this->dashboardQuery()
+            ->where('requested_by_id', $user->id)
+            ->latest('requested_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $user))
+            ->all();
+    }
+
+    private function dashboardQuery(): Builder
+    {
+        return ApprovalRequest::query()->with([
+            'requester',
+            'reviewer',
+            'cancelledBy',
+            'subject',
+            'rule.steps.role',
+            'consumedBy',
+            'assignments.assignee',
+            'assignments.completedBy',
+            'assignments.step.role',
+        ]);
     }
 }

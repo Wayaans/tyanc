@@ -67,6 +67,7 @@ const defaultForm = (): ApprovalRuleFormPayload => ({
     action_key: '',
     permission_name: '',
     workflow_type: 'single',
+    grant_validity_minutes: 1440,
     steps: [makeDefaultStep(1)],
     reminder_after_minutes: null,
     escalation_after_minutes: null,
@@ -118,6 +119,7 @@ watch(
                 action_key: rule.action_key,
                 permission_name: rule.permission_name,
                 workflow_type: rule.workflow_type,
+                grant_validity_minutes: rule.grant_validity_minutes,
                 steps,
                 reminder_after_minutes: rule.reminder_after_minutes,
                 escalation_after_minutes: rule.escalation_after_minutes,
@@ -614,6 +616,41 @@ function submit() {
                                 :error="errors.escalation_after_minutes"
                             />
                         </div>
+                    </div>
+
+                    <!-- Grant validity -->
+                    <div class="grid gap-1.5">
+                        <Label
+                            for="grant-validity-minutes"
+                            class="text-xs text-muted-foreground"
+                        >
+                            {{ __('Grant validity (minutes)') }}
+                        </Label>
+                        <Input
+                            id="grant-validity-minutes"
+                            :model-value="
+                                form.grant_validity_minutes !== null
+                                    ? String(form.grant_validity_minutes)
+                                    : ''
+                            "
+                            type="number"
+                            min="5"
+                            class="h-8 text-sm"
+                            :placeholder="__('e.g. 1440')"
+                            @update:model-value="
+                                form.grant_validity_minutes = $event
+                                    ? Number($event)
+                                    : null
+                            "
+                        />
+                        <FormFieldSupport
+                            :hint="
+                                __(
+                                    'How long the one-time grant stays valid after approval. The requester must retry the action within this window to consume it.',
+                                )
+                            "
+                            :error="errors.grant_validity_minutes"
+                        />
                     </div>
                 </div>
 

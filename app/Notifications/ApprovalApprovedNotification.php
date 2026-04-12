@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notification;
 
 final class ApprovalApprovedNotification extends Notification
 {
+    use FormatsApprovalNotificationPayload;
     use Queueable;
 
     public function __construct(private readonly ApprovalRequest $approvalRequest) {}
@@ -27,23 +28,22 @@ final class ApprovalApprovedNotification extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            'kind' => 'approval-approved',
-            'title' => __('Approval approved'),
-            'body' => __('Your approval request for :subject was approved.', [
-                'subject' => $this->subjectLabel(),
-            ]),
-            'action_label' => __('Open request'),
-            'action_url' => route('cumpu.approvals.show', $this->approvalRequest, absolute: false),
-        ];
-    }
+        $actionLabel = $this->actionLabel($this->approvalRequest);
+        $subjectLabel = $this->subjectLabel($this->approvalRequest);
 
-    private function subjectLabel(): string
-    {
-        $label = data_get($this->approvalRequest->payload, 'subject_label');
-
-        return is_string($label) && $label !== ''
-            ? $label
-            : __('Approval request');
+        return $this->approvalNotificationPayload(
+            kind: 'approval-approved',
+            title: __('Approval grant issued'),
+            body: $this->approvalRequest->expires_at === null
+                ? __('Your request was approved. Retry :action for :subject once.', [
+                    'action' => $actionLabel,
+                    'subject' => $subjectLabel,
+                ])
+                : __('Your request was approved. Retry :action for :subject once before the grant expires.', [
+                    'action' => $actionLabel,
+                    'subject' => $subjectLabel,
+                ]),
+            approvalRequest: $this->approvalRequest,
+        );
     }
 }

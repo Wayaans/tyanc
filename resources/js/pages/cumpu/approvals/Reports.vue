@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Download, Filter, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import ApprovalReportSummaryCards from '@/components/cumpu/approvals/reports/ApprovalReportSummaryCards.vue';
 import ApprovalReportTable from '@/components/cumpu/approvals/reports/ApprovalReportTable.vue';
 import DatePickerField from '@/components/DatePickerField.vue';
@@ -51,15 +51,20 @@ const props = defineProps<{
 const { __ } = useTranslations();
 const { cumpuApprovalReportsBreadcrumbs } = useAppNavigation();
 
-const localFilters = ref<ReportFilters>({
-    date_from: props.filters?.date_from ?? '',
-    date_to: props.filters?.date_to ?? '',
-    status: props.filters?.status ?? '',
-    app_key: props.filters?.app_key ?? '',
-    escalated: props.filters?.escalated ?? false,
-    reassigned: props.filters?.reassigned ?? false,
-    overdue: props.filters?.overdue ?? false,
-});
+function makeFilters(filters?: Partial<ReportFilters>): ReportFilters {
+    return {
+        date_from: filters?.date_from ?? '',
+        date_to: filters?.date_to ?? '',
+        status: filters?.status ?? '',
+        app_key: filters?.app_key ?? '',
+        escalated: filters?.escalated ?? false,
+        reassigned: filters?.reassigned ?? false,
+        overdue: filters?.overdue ?? false,
+    };
+}
+
+const localFilters = ref<ReportFilters>(makeFilters(props.filters));
+const suppressWatchers = ref(false);
 
 const isDirty = computed(() =>
     Object.values(localFilters.value).some((v) => Boolean(v)),
@@ -118,6 +123,19 @@ function applyFilters(page = 1) {
 }
 
 watch(
+    () => props.filters,
+    (filters) => {
+        suppressWatchers.value = true;
+        localFilters.value = makeFilters(filters);
+
+        void nextTick(() => {
+            suppressWatchers.value = false;
+        });
+    },
+    { deep: true },
+);
+
+watch(
     () => [
         localFilters.value.status,
         localFilters.value.app_key,
@@ -125,28 +143,35 @@ watch(
         localFilters.value.reassigned,
         localFilters.value.overdue,
     ],
-    () => applyFilters(),
+    () => {
+        if (suppressWatchers.value) {
+            return;
+        }
+
+        applyFilters();
+    },
 );
 
 watch(
     () => [localFilters.value.date_from, localFilters.value.date_to],
     () => {
+        if (suppressWatchers.value) {
+            return;
+        }
+
         clearPendingDateApply();
         searchTimeout = setTimeout(() => applyFilters(), 400);
     },
 );
 
 function resetFilters() {
-    localFilters.value = {
-        date_from: '',
-        date_to: '',
-        status: '',
-        app_key: '',
-        escalated: false,
-        reassigned: false,
-        overdue: false,
-    };
+    suppressWatchers.value = true;
+    localFilters.value = makeFilters();
     applyFilters();
+
+    void nextTick(() => {
+        suppressWatchers.value = false;
+    });
 }
 
 function handlePageChange(page: number) {
@@ -193,144 +218,156 @@ const exportUrl = computed(() => {
 
             <!-- Filters bar -->
             <div
-                class="flex flex-wrap items-center gap-3 rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
+                class="rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
             >
-                <div class="flex items-center gap-1.5 text-muted-foreground">
-                    <Filter class="size-3.5" />
-                    <span class="text-xs font-medium">{{ __('Filters') }}</span>
-                </div>
+                <div class="overflow-x-auto">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex shrink-0 items-center gap-1.5 text-muted-foreground"
+                        >
+                            <Filter class="size-3.5" />
+                            <span class="text-xs font-medium">{{
+                                __('Filters')
+                            }}</span>
+                        </div>
 
-                <!-- Date from/to -->
-                <div class="flex items-center gap-2">
-                    <DatePickerField
-                        :model-value="localFilters.date_from || null"
-                        class="h-9 w-40"
-                        @update:model-value="
-                            localFilters.date_from = $event ?? ''
-                        "
-                    />
-                    <span class="text-xs text-muted-foreground">–</span>
-                    <DatePickerField
-                        :model-value="localFilters.date_to || null"
-                        class="h-9 w-40"
-                        @update:model-value="
-                            localFilters.date_to = $event ?? ''
-                        "
-                    />
-                </div>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <DatePickerField
+                                :model-value="localFilters.date_from || null"
+                                class="h-9 w-36"
+                                @update:model-value="
+                                    localFilters.date_from = $event ?? ''
+                                "
+                            />
+                            <span class="text-xs text-muted-foreground">–</span>
+                            <DatePickerField
+                                :model-value="localFilters.date_to || null"
+                                class="h-9 w-36"
+                                @update:model-value="
+                                    localFilters.date_to = $event ?? ''
+                                "
+                            />
+                        </div>
 
-                <!-- Status -->
-                <div class="w-36">
-                    <Select
-                        :model-value="localFilters.status"
-                        @update:model-value="
-                            localFilters.status =
-                                $event === '_all' ? '' : String($event)
-                        "
-                    >
-                        <SelectTrigger class="h-9 text-sm">
-                            <SelectValue :placeholder="__('Status')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="_all">{{
-                                __('All')
-                            }}</SelectItem>
-                            <SelectItem value="pending">{{
-                                __('Pending')
-                            }}</SelectItem>
-                            <SelectItem value="in_review">{{
-                                __('In review')
-                            }}</SelectItem>
-                            <SelectItem value="approved">{{
-                                __('Approved')
-                            }}</SelectItem>
-                            <SelectItem value="rejected">{{
-                                __('Rejected')
-                            }}</SelectItem>
-                            <SelectItem value="cancelled">{{
-                                __('Cancelled')
-                            }}</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <!-- App -->
-                <div
-                    v-if="props.appOptions && props.appOptions.length > 0"
-                    class="w-36"
-                >
-                    <Select
-                        :model-value="localFilters.app_key"
-                        @update:model-value="
-                            localFilters.app_key =
-                                $event === '_all' ? '' : String($event)
-                        "
-                    >
-                        <SelectTrigger class="h-9 text-sm">
-                            <SelectValue :placeholder="__('App')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="_all">{{
-                                __('All apps')
-                            }}</SelectItem>
-                            <SelectItem
-                                v-for="app in props.appOptions"
-                                :key="app.value"
-                                :value="app.value"
-                            >
-                                {{ app.label }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <!-- Flags -->
-                <div class="flex items-center gap-4">
-                    <label class="flex cursor-pointer items-center gap-1.5">
-                        <Checkbox
-                            :model-value="localFilters.overdue"
+                        <Select
+                            :model-value="localFilters.status"
                             @update:model-value="
-                                localFilters.overdue = Boolean($event)
+                                localFilters.status =
+                                    $event === '_all' ? '' : String($event)
                             "
-                        />
-                        <span class="text-xs text-muted-foreground">{{
-                            __('Overdue')
-                        }}</span>
-                    </label>
-                    <label class="flex cursor-pointer items-center gap-1.5">
-                        <Checkbox
-                            :model-value="localFilters.escalated"
-                            @update:model-value="
-                                localFilters.escalated = Boolean($event)
-                            "
-                        />
-                        <span class="text-xs text-muted-foreground">{{
-                            __('Escalated')
-                        }}</span>
-                    </label>
-                    <label class="flex cursor-pointer items-center gap-1.5">
-                        <Checkbox
-                            :model-value="localFilters.reassigned"
-                            @update:model-value="
-                                localFilters.reassigned = Boolean($event)
-                            "
-                        />
-                        <span class="text-xs text-muted-foreground">{{
-                            __('Reassigned')
-                        }}</span>
-                    </label>
-                </div>
+                        >
+                            <SelectTrigger class="h-9 w-44 shrink-0 text-sm">
+                                <SelectValue :placeholder="__('Status')" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="_all">{{
+                                    __('All')
+                                }}</SelectItem>
+                                <SelectItem value="pending">{{
+                                    __('Pending')
+                                }}</SelectItem>
+                                <SelectItem value="in_review">{{
+                                    __('In review')
+                                }}</SelectItem>
+                                <SelectItem value="approved">{{
+                                    __('Approved – grant ready')
+                                }}</SelectItem>
+                                <SelectItem value="consumed">{{
+                                    __('Consumed – grant used')
+                                }}</SelectItem>
+                                <SelectItem value="rejected">{{
+                                    __('Rejected')
+                                }}</SelectItem>
+                                <SelectItem value="cancelled">{{
+                                    __('Cancelled')
+                                }}</SelectItem>
+                                <SelectItem value="expired">{{
+                                    __('Expired')
+                                }}</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                <Button
-                    v-if="isDirty"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    @click="resetFilters"
-                >
-                    <X class="size-3" />
-                    {{ __('Clear') }}
-                </Button>
+                        <Select
+                            v-if="
+                                props.appOptions && props.appOptions.length > 0
+                            "
+                            :model-value="localFilters.app_key"
+                            @update:model-value="
+                                localFilters.app_key =
+                                    $event === '_all' ? '' : String($event)
+                            "
+                        >
+                            <SelectTrigger class="h-9 w-32 shrink-0 text-sm">
+                                <SelectValue :placeholder="__('App')" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="_all">{{
+                                    __('All apps')
+                                }}</SelectItem>
+                                <SelectItem
+                                    v-for="app in props.appOptions"
+                                    :key="app.value"
+                                    :value="app.value"
+                                >
+                                    {{ app.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <div class="mx-0.5 h-4 w-px shrink-0 bg-border" />
+
+                        <label
+                            class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                        >
+                            <Checkbox
+                                :model-value="localFilters.overdue"
+                                @update:model-value="
+                                    localFilters.overdue = Boolean($event)
+                                "
+                            />
+                            <span class="text-xs text-muted-foreground">{{
+                                __('Overdue')
+                            }}</span>
+                        </label>
+                        <label
+                            class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                        >
+                            <Checkbox
+                                :model-value="localFilters.escalated"
+                                @update:model-value="
+                                    localFilters.escalated = Boolean($event)
+                                "
+                            />
+                            <span class="text-xs text-muted-foreground">{{
+                                __('Escalated')
+                            }}</span>
+                        </label>
+                        <label
+                            class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                        >
+                            <Checkbox
+                                :model-value="localFilters.reassigned"
+                                @update:model-value="
+                                    localFilters.reassigned = Boolean($event)
+                                "
+                            />
+                            <span class="text-xs text-muted-foreground">{{
+                                __('Reassigned')
+                            }}</span>
+                        </label>
+
+                        <Button
+                            v-if="isDirty"
+                            variant="ghost"
+                            size="sm"
+                            class="ml-auto h-9 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                            @click="resetFilters"
+                        >
+                            <X class="size-3" />
+                            {{ __('Clear') }}
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <!-- Report table -->

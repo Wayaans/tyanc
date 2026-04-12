@@ -31,6 +31,7 @@ final class StoreApprovalRuleRequest extends FormRequest
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
             'steps.*.label' => ['nullable', 'string', 'max:120'],
+            'grant_validity_minutes' => ['required', 'integer', 'min:5', 'max:10080'],
             'reminder_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
             'escalation_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
         ];
@@ -103,6 +104,7 @@ final class StoreApprovalRuleRequest extends FormRequest
             'enabled' => $this->boolean('enabled', false),
             'workflow_type' => $workflowType,
             'steps' => $normalizedSteps,
+            'grant_validity_minutes' => $this->filled('grant_validity_minutes') ? $this->integer('grant_validity_minutes') : null,
             'reminder_after_minutes' => $this->filled('reminder_after_minutes') ? $this->integer('reminder_after_minutes') : null,
             'escalation_after_minutes' => $this->filled('escalation_after_minutes') ? $this->integer('escalation_after_minutes') : null,
         ]);

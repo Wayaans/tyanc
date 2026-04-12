@@ -67,16 +67,39 @@ final readonly class PermissionResourceAccess
     {
         $parsed = PermissionKey::parse($permissionName);
 
-        if ($parsed === null || $parsed['app'] !== 'cumpu' || $parsed['resource'] !== 'approvals') {
+        if ($parsed === null || $parsed['app'] !== 'cumpu') {
             return [];
         }
 
-        return match ($parsed['action']) {
-            'view' => [
+        if ($parsed['resource'] === 'approvals') {
+            return match ($parsed['action']) {
+                'view' => [
+                    PermissionKey::tyanc('approvals', 'view'),
+                    PermissionKey::tyanc('approvals', 'viewany'),
+                ],
+                default => [PermissionKey::tyanc('approvals', $parsed['action'])],
+            };
+        }
+
+        return match ([$parsed['resource'], $parsed['action']]) {
+            ['dashboard', 'viewany'],
+            ['my_requests', 'viewany'],
+            ['my_requests', 'view'] => [
+                PermissionKey::cumpu('approvals', 'view'),
                 PermissionKey::tyanc('approvals', 'view'),
                 PermissionKey::tyanc('approvals', 'viewany'),
             ],
-            default => [PermissionKey::tyanc('approvals', $parsed['action'])],
+            ['approval_inbox', 'viewany'],
+            ['all_approvals', 'viewany'] => [
+                PermissionKey::cumpu('approvals', 'viewany'),
+                PermissionKey::tyanc('approvals', 'viewany'),
+            ],
+            ['approval_inbox', 'view'],
+            ['all_approvals', 'view'] => [
+                PermissionKey::cumpu('approvals', 'viewany'),
+                PermissionKey::tyanc('approvals', 'viewany'),
+            ],
+            default => [],
         };
     }
 

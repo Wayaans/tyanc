@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Data\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRuleStep;
@@ -18,10 +19,6 @@ use Spatie\LaravelData\Data;
 final class ApprovalRequestData extends Data
 {
     /**
-     * @param  array<string, mixed>|null  $payload
-     * @param  array<string, mixed>|null  $subject_snapshot
-     * @param  array<string, mixed>|null  $before_payload
-     * @param  array<string, mixed>|null  $after_payload
      * @param  list<string>  $pending_assignee_names
      */
     public function __construct(
@@ -42,11 +39,10 @@ final class ApprovalRequestData extends Data
         public ?string $requested_by_name,
         public ?string $reviewed_by_id,
         public ?string $reviewed_by_name,
+        public ?string $consumed_by_id,
+        public ?string $consumed_by_name,
         public ?array $payload,
         public ?array $subject_snapshot,
-        public ?array $before_payload,
-        public ?array $after_payload,
-        public ?string $impact_summary,
         public bool $is_assigned_to_actor,
         public array $pending_assignee_names,
         public ?string $current_step_label,
@@ -57,9 +53,13 @@ final class ApprovalRequestData extends Data
         public bool $can_reassign,
         public bool $is_reassigned,
         public bool $is_escalated,
+        public bool $is_grant_usable,
+        public bool $is_grant_expired,
         public string $requested_at,
         public ?string $reviewed_at,
         public ?string $cancelled_at,
+        public ?string $expires_at,
+        public ?string $consumed_at,
         public ?string $last_reassigned_at,
         public ?string $last_reminded_at,
         public ?string $escalated_at,
@@ -67,17 +67,19 @@ final class ApprovalRequestData extends Data
 
     public static function fromModel(ApprovalRequest $approvalRequest, ?User $actor = null): self
     {
-        $approvalRequest->loadMissing('requester', 'reviewer', 'subject', 'rule', 'assignments.assignee', 'assignments.step.role');
+        $approvalRequest->loadMissing('requester', 'reviewer', 'cancelledBy', 'consumedBy', 'subject', 'rule', 'assignments.assignee', 'assignments.step.role');
 
         $access = resolve(PermissionResourceAccess::class);
         $currentAssignments = self::currentStepAssignments($approvalRequest->assignments);
+        $effectiveStatus = $approvalRequest->effectiveStatus();
         $isAssignedToActor = $actor instanceof User
             && $currentAssignments->contains(fn (ApprovalAssignment $assignment): bool => $assignment->assigned_to_id === $actor->id
                 && $assignment->status === ApprovalAssignment::StatusPending);
         $isSuperAdmin = $actor instanceof User
             && $actor->hasRole((string) config('tyanc.reserved_roles.super_admin'));
+        $isReviewable = in_array($effectiveStatus, ApprovalRequest::reviewableStatuses(), true);
         $canReviewRequest = $actor instanceof User
-            && in_array($approvalRequest->status, ApprovalRequest::activeStatuses(), true)
+            && $isReviewable
             && ($isAssignedToActor || $isSuperAdmin)
             && $access->handle($actor, (string) $approvalRequest->action);
         $canManageApprovals = $actor instanceof User
@@ -87,7 +89,7 @@ final class ApprovalRequestData extends Data
             id: (string) $approvalRequest->id,
             action: (string) $approvalRequest->action,
             action_label: self::actionLabel($approvalRequest),
-            status: (string) $approvalRequest->status,
+            status: $effectiveStatus,
             app_key: $approvalRequest->app_key,
             resource_key: $approvalRequest->resource_key,
             action_key: $approvalRequest->action_key,
@@ -101,11 +103,10 @@ final class ApprovalRequestData extends Data
             requested_by_name: $approvalRequest->requester instanceof User ? $approvalRequest->requester->name : null,
             reviewed_by_id: $approvalRequest->reviewed_by_id,
             reviewed_by_name: $approvalRequest->reviewer instanceof User ? $approvalRequest->reviewer->name : null,
+            consumed_by_id: $approvalRequest->consumed_by_id,
+            consumed_by_name: $approvalRequest->consumedBy instanceof User ? $approvalRequest->consumedBy->name : null,
             payload: is_array($approvalRequest->payload) ? $approvalRequest->payload : null,
             subject_snapshot: is_array($approvalRequest->subject_snapshot) ? $approvalRequest->subject_snapshot : null,
-            before_payload: is_array($approvalRequest->before_payload) ? $approvalRequest->before_payload : null,
-            after_payload: is_array($approvalRequest->after_payload) ? $approvalRequest->after_payload : null,
-            impact_summary: $approvalRequest->impact_summary,
             is_assigned_to_actor: $isAssignedToActor,
             pending_assignee_names: $currentAssignments
                 ->map(fn (ApprovalAssignment $assignment): string => (string) ($assignment->assignee?->name ?? __('Unknown')))
@@ -122,16 +123,20 @@ final class ApprovalRequestData extends Data
                 && $access->handle($actor, PermissionKey::cumpu('approvals', 'reject')),
             can_cancel: $actor instanceof User
                 && $approvalRequest->requested_by_id === $actor->id
-                && in_array($approvalRequest->status, ApprovalRequest::activeStatuses(), true),
+                && $isReviewable,
             can_reassign: $actor instanceof User
-                && in_array($approvalRequest->status, ApprovalRequest::activeStatuses(), true)
+                && $isReviewable
                 && ($isAssignedToActor || $canManageApprovals || $isSuperAdmin)
                 && $approvalRequest->rule_id !== null,
             is_reassigned: $approvalRequest->last_reassigned_at !== null,
             is_escalated: $approvalRequest->escalated_at !== null,
+            is_grant_usable: $approvalRequest->isGrantConsumable(),
+            is_grant_expired: $approvalRequest->grantHasExpired(),
             requested_at: $approvalRequest->requested_at?->toIso8601String() ?? now()->toIso8601String(),
             reviewed_at: $approvalRequest->reviewed_at?->toIso8601String(),
             cancelled_at: $approvalRequest->cancelled_at?->toIso8601String(),
+            expires_at: $approvalRequest->expires_at?->toIso8601String(),
+            consumed_at: $approvalRequest->consumed_at?->toIso8601String(),
             last_reassigned_at: $approvalRequest->last_reassigned_at?->toIso8601String(),
             last_reminded_at: $approvalRequest->last_reminded_at?->toIso8601String(),
             escalated_at: $approvalRequest->escalated_at?->toIso8601String(),
@@ -158,6 +163,10 @@ final class ApprovalRequestData extends Data
 
         if (is_string($subjectLabel) && $subjectLabel !== '') {
             return $subjectLabel;
+        }
+
+        if ($approvalRequest->subject instanceof ApprovalSubject) {
+            return $approvalRequest->subject->approvalSubjectLabel();
         }
 
         if ($approvalRequest->subject instanceof ImportRun) {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc\Settings;
 
+use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
 use App\Actions\Tyanc\Settings\UpdateAppSettings;
 use App\Data\Settings\AppSettingsData;
 use App\Models\SettingsAsset;
@@ -14,20 +16,33 @@ use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final readonly class AppSettingsController
 {
-    public function edit(Request $request, AppSettings $settings): Response|JsonResponse
-    {
-        Gate::authorize(PermissionKey::tyanc('settings', 'manage'));
+    public function edit(
+        Request $request,
+        #[CurrentUser] User $user,
+        AppSettings $settings,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
+        abort_unless(
+            resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('settings', 'viewany')),
+            403,
+        );
 
         $payload = [
             'settings' => AppSettingsData::fromSettings(
                 $settings,
                 SettingsAsset::resolveForKey(SettingsAsset::GLOBAL_BRANDING_KEY),
+            ),
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: __('Application settings'),
+                appKey: 'tyanc',
+                resourceKey: 'settings',
+                actionKeys: ['update'],
             ),
         ];
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ApprovalListTable from '@/components/cumpu/approvals/ApprovalListTable.vue';
 import ApprovalOverviewFilters from '@/components/cumpu/approvals/ApprovalOverviewFilters.vue';
 import ApprovalReassignDialog from '@/components/cumpu/approvals/ApprovalReassignDialog.vue';
@@ -30,6 +30,19 @@ const selectedRequest = ref<ApprovalRequestRow | null>(null);
 const reassignDialogOpen = ref(false);
 const reassignTarget = ref<ApprovalRequestRow | null>(null);
 const resolvedReassignOptions = ref<ReassignOption[]>([]);
+
+const initialFilters = computed(() => {
+    const f = props.approvalsTable.query.filter ?? {};
+    return {
+        status: (f.status as string) ?? '',
+        app_key: (f.app_key as string) ?? '',
+        search: (f.search as string) ?? '',
+        assignee: (f.assignee as string) ?? '',
+        escalated: f.escalated === '1',
+        reassigned: f.reassigned === '1',
+        overdue: f.overdue === '1',
+    };
+});
 
 function openDrawer(request: ApprovalRequestRow) {
     selectedRequest.value = request;
@@ -97,6 +110,7 @@ async function openReassignFromDrawer(request: ApprovalRequestRow) {
                 :route="all"
                 :only="['approvalsTable']"
                 :app-options="props.appOptions"
+                :initial="initialFilters"
             />
 
             <!-- Table -->

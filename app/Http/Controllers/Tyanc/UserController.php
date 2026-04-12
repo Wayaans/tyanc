@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Tyanc;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
 use App\Actions\Tyanc\Users\DeleteUser;
 use App\Actions\Tyanc\Users\ListUsers;
 use App\Actions\Tyanc\Users\StoreUser;
@@ -38,12 +39,24 @@ use Inertia\Response;
 
 final readonly class UserController
 {
-    public function index(UserIndexRequest $request, #[CurrentUser] User $user, ListUsers $action): Response|JsonResponse
-    {
+    public function index(
+        UserIndexRequest $request,
+        #[CurrentUser] User $user,
+        ListUsers $action,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
         $payload = [
             'usersTable' => $action->handle($user, $request),
             'recentImports' => $this->recentImports(),
             'approvalRequests' => $this->approvalRequests($user),
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: __('Users import'),
+                appKey: 'tyanc',
+                resourceKey: 'users',
+                actionKeys: ['import'],
+                governedActionKeys: ['import'],
+            ),
             'abilities' => [
                 'import' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'import')),
                 'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('users', 'export')),
@@ -53,6 +66,7 @@ final readonly class UserController
                 'imports_enabled' => (bool) config('tyanc.features.imports_enabled', false),
                 'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
             ],
+            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -78,17 +92,31 @@ final readonly class UserController
         return Inertia::render('tyanc/users/Create', $payload);
     }
 
-    public function show(Request $request, #[CurrentUser] User $actor, User $user): Response|JsonResponse
-    {
+    public function show(
+        Request $request,
+        #[CurrentUser] User $actor,
+        User $user,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
         Gate::forUser($actor)->authorize('view', $user);
 
         $payload = [
             'user' => UserFormData::fromModel($user),
+            'approvalContext' => $approvalContext->handle(
+                actor: $actor,
+                scopeLabel: $user->name,
+                appKey: 'tyanc',
+                resourceKey: 'users',
+                subject: $user,
+                actionKeys: ['update', 'suspend', 'delete'],
+                governedActionKeys: ['update', 'delete'],
+            ),
             'abilities' => [
                 'update' => Gate::forUser($actor)->allows('update', $user),
                 'suspend' => Gate::forUser($actor)->allows('suspend', $user),
                 'delete' => ! $user->isDeleteProtected() && Gate::forUser($actor)->allows('delete', $user),
             ],
+            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -98,12 +126,26 @@ final readonly class UserController
         return Inertia::render('tyanc/users/Show', $payload);
     }
 
-    public function edit(Request $request, #[CurrentUser] User $actor, User $user): Response|JsonResponse
-    {
+    public function edit(
+        Request $request,
+        #[CurrentUser] User $actor,
+        User $user,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
         Gate::forUser($actor)->authorize('update', $user);
 
         $payload = [
             'user' => UserFormData::fromModel($user),
+            'approvalContext' => $approvalContext->handle(
+                actor: $actor,
+                scopeLabel: $user->name,
+                appKey: 'tyanc',
+                resourceKey: 'users',
+                subject: $user,
+                actionKeys: ['update', 'suspend', 'delete'],
+                governedActionKeys: ['update', 'delete'],
+            ),
+            'status' => $request->session()->get('status'),
             ...$this->formOptions(),
         ];
 
@@ -129,7 +171,21 @@ final readonly class UserController
 
     public function update(UpdateUserRequest $request, #[CurrentUser] User $actor, User $user, UpdateUser $action): RedirectResponse|JsonResponse
     {
-        $managedUser = $action->handle($actor, $user, $request->validated());
+        $submission = $action->handle($actor, $user, $request->validated());
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'executed' => false,
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $actor),
+                ], 202);
+            }
+
+            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+        }
+
+        /** @var User $managedUser */
+        $managedUser = $submission['result'];
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -142,7 +198,24 @@ final readonly class UserController
 
     public function suspend(Request $request, #[CurrentUser] User $actor, User $user, SuspendUser $action): RedirectResponse|JsonResponse
     {
-        $managedUser = $action->handle($actor, $user);
+        $validated = $request->validate([
+            'request_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $submission = $action->handle($actor, $user, $validated);
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $actor),
+                ], 202);
+            }
+
+            return to_route('tyanc.users.show', $user);
+        }
+
+        /** @var User $managedUser */
+        $managedUser = $submission['result'];
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -155,7 +228,22 @@ final readonly class UserController
 
     public function destroy(Request $request, #[CurrentUser] User $actor, User $user, DeleteUser $action): RedirectResponse|JsonResponse
     {
-        $action->handle($actor, $user);
+        $validated = $request->validate([
+            'request_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $submission = $action->handle($actor, $user, $validated);
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'executed' => false,
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $actor),
+                ], 202);
+            }
+
+            return back()->with('status', __('Approval request submitted. Retry the deletion after it is approved.'));
+        }
 
         if ($request->wantsJson()) {
             return response()->json(status: 204);
@@ -165,7 +253,7 @@ final readonly class UserController
     }
 
     /**
-     * @return list<ImportRunData>
+     * @return array<int, ImportRunData>
      */
     private function recentImports(): array
     {
@@ -180,7 +268,7 @@ final readonly class UserController
     }
 
     /**
-     * @return list<ApprovalRequestData>
+     * @return array<int, ApprovalRequestData>
      */
     private function approvalRequests(User $actor): array
     {

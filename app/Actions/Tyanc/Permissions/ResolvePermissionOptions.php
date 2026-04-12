@@ -17,7 +17,7 @@ final readonly class ResolvePermissionOptions
      *     actions: array<string, array<string, list<array{value: string, label: string, permission: string}>>>
      * }
      */
-    public function handle(): array
+    public function handle(bool $includeNavigationResources = true): array
     {
         $registeredApps = App::query()->pluck('label', 'key');
         $configuredApps = collect((array) config('permission-sot.apps', []));
@@ -33,16 +33,17 @@ final readonly class ResolvePermissionOptions
             ->all();
 
         $resources = $configuredApps
-            ->mapWithKeys(function (mixed $appConfig, string $appKey): array {
+            ->mapWithKeys(function (mixed $appConfig, string $appKey) use ($includeNavigationResources): array {
                 if (! is_array($appConfig)) {
                     return [];
                 }
 
                 return [
-                    $appKey => collect(PermissionKey::resourcesFor($appKey))
-                        ->map(fn (array $resource, string $resourceKey): array => [
+                    $appKey => collect((array) ($appConfig['resources'] ?? []))
+                        ->filter(fn (mixed $resourceConfig): bool => $this->shouldIncludeResource($resourceConfig, $includeNavigationResources))
+                        ->map(fn (mixed $resourceConfig, string $resourceKey): array => [
                             'value' => $resourceKey,
-                            'label' => $resource['label'],
+                            'label' => PermissionKey::resourceLabel($appKey, $resourceKey),
                         ])
                         ->values()
                         ->all(),
@@ -51,14 +52,16 @@ final readonly class ResolvePermissionOptions
             ->all();
 
         $actions = $configuredApps
-            ->mapWithKeys(function (mixed $appConfig, string $appKey): array {
+            ->mapWithKeys(function (mixed $appConfig, string $appKey) use ($includeNavigationResources): array {
                 if (! is_array($appConfig)) {
                     return [];
                 }
 
-                $resourceActions = collect(PermissionKey::resourcesFor($appKey))
-                    ->mapWithKeys(fn (array $resource, string $resourceKey): array => [
-                        $resourceKey => Collection::make($resource['actions'])
+                $resourceActions = collect((array) ($appConfig['resources'] ?? []))
+                    ->filter(fn (mixed $resourceConfig): bool => $this->shouldIncludeResource($resourceConfig, $includeNavigationResources))
+                    ->mapWithKeys(fn (mixed $resourceConfig, string $resourceKey): array => [
+                        $resourceKey => Collection::make((array) (is_array($resourceConfig) ? ($resourceConfig['actions'] ?? []) : []))
+                            ->filter(fn (mixed $action): bool => is_string($action) && $action !== '')
                             ->map(fn (string $action): array => [
                                 'value' => $action,
                                 'label' => PermissionKey::actionLabel($action),
@@ -78,5 +81,14 @@ final readonly class ResolvePermissionOptions
             'resources' => $resources,
             'actions' => $actions,
         ];
+    }
+
+    private function shouldIncludeResource(mixed $resourceConfig, bool $includeNavigationResources): bool
+    {
+        if (! is_array($resourceConfig)) {
+            return false;
+        }
+
+        return $includeNavigationResources || ! (bool) ($resourceConfig['navigation_only'] ?? false);
     }
 }

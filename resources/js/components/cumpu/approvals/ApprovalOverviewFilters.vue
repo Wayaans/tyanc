@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { Filter, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -42,21 +41,26 @@ const allStatuses: Array<{ value: ApprovalStatus | ''; label: string }> = [
     { value: '', label: 'All statuses' },
     { value: 'pending', label: 'Pending' },
     { value: 'in_review', label: 'In review' },
-    { value: 'approved', label: 'Approved' },
+    { value: 'approved', label: 'Approved – grant ready' },
+    { value: 'consumed', label: 'Consumed – grant used' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'cancelled', label: 'Cancelled' },
     { value: 'expired', label: 'Expired' },
 ];
 
-const filters = ref<FilterState>({
-    status: props.initial?.status ?? '',
-    app_key: props.initial?.app_key ?? '',
-    search: props.initial?.search ?? '',
-    assignee: props.initial?.assignee ?? '',
-    escalated: props.initial?.escalated ?? false,
-    reassigned: props.initial?.reassigned ?? false,
-    overdue: props.initial?.overdue ?? false,
-});
+function makeFilters(initial?: Partial<FilterState>): FilterState {
+    return {
+        status: initial?.status ?? '',
+        app_key: initial?.app_key ?? '',
+        search: initial?.search ?? '',
+        assignee: initial?.assignee ?? '',
+        escalated: initial?.escalated ?? false,
+        reassigned: initial?.reassigned ?? false,
+        overdue: initial?.overdue ?? false,
+    };
+}
+
+const filters = ref<FilterState>(makeFilters(props.initial));
 
 const isDirty = computed(
     () =>
@@ -70,6 +74,7 @@ const isDirty = computed(
 );
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+const suppressWatchers = ref(false);
 
 function applyFilters() {
     const query: Record<string, string> = {};
@@ -104,28 +109,46 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    filters.value = {
-        status: '',
-        app_key: '',
-        search: '',
-        assignee: '',
-        escalated: false,
-        reassigned: false,
-        overdue: false,
-    };
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+
+    suppressWatchers.value = true;
+    filters.value = makeFilters();
     applyFilters();
+
+    void nextTick(() => {
+        suppressWatchers.value = false;
+    });
 }
+
+watch(
+    () => props.initial,
+    (initial) => {
+        suppressWatchers.value = true;
+        filters.value = makeFilters(initial);
+
+        void nextTick(() => {
+            suppressWatchers.value = false;
+        });
+    },
+    { deep: true },
+);
 
 watch(
     () => filters.value.search,
     () => {
+        if (suppressWatchers.value) {
+            return;
+        }
+
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, 350);
     },
 );
-
 watch(
     () => [
         filters.value.status,
@@ -136,6 +159,10 @@ watch(
         filters.value.overdue,
     ],
     () => {
+        if (suppressWatchers.value) {
+            return;
+        }
+
         applyFilters();
     },
 );
@@ -143,124 +170,126 @@ watch(
 
 <template>
     <div
-        class="flex flex-wrap items-end gap-3 rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
+        class="rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
     >
-        <div class="flex items-center gap-1.5 text-muted-foreground">
-            <Filter class="size-3.5" />
-            <span class="text-xs font-medium">{{ __('Filters') }}</span>
-        </div>
+        <div class="overflow-x-auto">
+            <div class="flex items-center gap-2.5">
+                <div
+                    class="flex shrink-0 items-center gap-1.5 text-muted-foreground"
+                >
+                    <Filter class="size-3.5" />
+                    <span class="text-xs font-medium">{{ __('Filters') }}</span>
+                </div>
 
-        <!-- Search -->
-        <div class="min-w-40 flex-1">
-            <Input
-                v-model="filters.search"
-                :placeholder="__('Search by subject…')"
-                class="h-8 text-sm"
-            />
-        </div>
-
-        <!-- Status -->
-        <div class="w-36">
-            <Select
-                :model-value="filters.status"
-                @update:model-value="
-                    filters.status = ($event === '_all' ? '' : $event) as
-                        | ApprovalStatus
-                        | ''
-                "
-            >
-                <SelectTrigger class="h-8 text-sm">
-                    <SelectValue :placeholder="__('Status')" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem
-                        v-for="s in allStatuses"
-                        :key="s.value"
-                        :value="s.value === '' ? '_all' : s.value"
-                    >
-                        {{ __(s.label) }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
-
-        <!-- App filter -->
-        <div
-            v-if="props.appOptions && props.appOptions.length > 0"
-            class="w-36"
-        >
-            <Select
-                :model-value="filters.app_key"
-                @update:model-value="
-                    filters.app_key = $event === '_all' ? '' : $event
-                "
-            >
-                <SelectTrigger class="h-8 text-sm">
-                    <SelectValue :placeholder="__('App')" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="_all">{{ __('All apps') }}</SelectItem>
-                    <SelectItem
-                        v-for="app in props.appOptions"
-                        :key="app.value"
-                        :value="app.value"
-                    >
-                        {{ app.label }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
-
-        <!-- Assignee search -->
-        <div class="w-36">
-            <Input
-                v-model="filters.assignee"
-                :placeholder="__('Assignee…')"
-                class="h-8 text-sm"
-            />
-        </div>
-
-        <!-- Boolean flags -->
-        <div class="flex items-center gap-4">
-            <label class="flex cursor-pointer items-center gap-1.5">
-                <Checkbox
-                    :model-value="filters.escalated"
-                    @update:model-value="filters.escalated = Boolean($event)"
+                <Input
+                    v-model="filters.search"
+                    :placeholder="__('Search by subject…')"
+                    class="h-9 min-w-0 flex-1 text-sm"
                 />
-                <span class="text-xs text-muted-foreground">{{
-                    __('Escalated')
-                }}</span>
-            </label>
-            <label class="flex cursor-pointer items-center gap-1.5">
-                <Checkbox
-                    :model-value="filters.reassigned"
-                    @update:model-value="filters.reassigned = Boolean($event)"
-                />
-                <span class="text-xs text-muted-foreground">{{
-                    __('Reassigned')
-                }}</span>
-            </label>
-            <label class="flex cursor-pointer items-center gap-1.5">
-                <Checkbox
-                    :model-value="filters.overdue"
-                    @update:model-value="filters.overdue = Boolean($event)"
-                />
-                <span class="text-xs text-muted-foreground">{{
-                    __('Overdue')
-                }}</span>
-            </label>
-        </div>
 
-        <!-- Clear -->
-        <Button
-            v-if="isDirty"
-            variant="ghost"
-            size="sm"
-            class="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
-            @click="resetFilters"
-        >
-            <X class="size-3" />
-            {{ __('Clear') }}
-        </Button>
+                <Select
+                    :model-value="filters.status"
+                    @update:model-value="
+                        filters.status = ($event === '_all' ? '' : $event) as
+                            | ApprovalStatus
+                            | ''
+                    "
+                >
+                    <SelectTrigger class="h-9 w-44 shrink-0 text-sm">
+                        <SelectValue :placeholder="__('Status')" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem
+                            v-for="s in allStatuses"
+                            :key="s.value"
+                            :value="s.value === '' ? '_all' : s.value"
+                        >
+                            {{ __(s.label) }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select
+                    v-if="props.appOptions && props.appOptions.length > 0"
+                    :model-value="filters.app_key"
+                    @update:model-value="
+                        filters.app_key = $event === '_all' ? '' : $event
+                    "
+                >
+                    <SelectTrigger class="h-9 w-32 shrink-0 text-sm">
+                        <SelectValue :placeholder="__('App')" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="_all">{{
+                            __('All apps')
+                        }}</SelectItem>
+                        <SelectItem
+                            v-for="app in props.appOptions"
+                            :key="app.value"
+                            :value="app.value"
+                        >
+                            {{ app.label }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Input
+                    v-model="filters.assignee"
+                    :placeholder="__('Assignee…')"
+                    class="h-9 w-32 shrink-0 text-sm"
+                />
+
+                <div class="mx-0.5 h-4 w-px shrink-0 bg-border" />
+
+                <label
+                    class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                >
+                    <Checkbox
+                        :model-value="filters.overdue"
+                        @update:model-value="filters.overdue = Boolean($event)"
+                    />
+                    <span class="text-xs text-muted-foreground">{{
+                        __('Overdue')
+                    }}</span>
+                </label>
+                <label
+                    class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                >
+                    <Checkbox
+                        :model-value="filters.escalated"
+                        @update:model-value="
+                            filters.escalated = Boolean($event)
+                        "
+                    />
+                    <span class="text-xs text-muted-foreground">{{
+                        __('Escalated')
+                    }}</span>
+                </label>
+                <label
+                    class="flex shrink-0 cursor-pointer items-center gap-1.5"
+                >
+                    <Checkbox
+                        :model-value="filters.reassigned"
+                        @update:model-value="
+                            filters.reassigned = Boolean($event)
+                        "
+                    />
+                    <span class="text-xs text-muted-foreground">{{
+                        __('Reassigned')
+                    }}</span>
+                </label>
+
+                <Button
+                    v-if="isDirty"
+                    variant="ghost"
+                    size="sm"
+                    class="ml-auto h-9 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    @click="resetFilters"
+                >
+                    <X class="size-3" />
+                    {{ __('Clear') }}
+                </Button>
+            </div>
+        </div>
     </div>
 </template>

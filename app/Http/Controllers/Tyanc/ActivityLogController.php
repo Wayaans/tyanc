@@ -5,19 +5,20 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Tyanc;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
 use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Activity\ActivityLogEntryData;
 use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Activitylog\Models\Activity;
@@ -26,9 +27,15 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 final readonly class ActivityLogController
 {
-    public function index(Request $request, #[CurrentUser] User $user): Response|JsonResponse
-    {
-        Gate::forUser($user)->authorize(PermissionKey::tyanc('activity_log', 'view'));
+    public function index(
+        Request $request,
+        #[CurrentUser] User $user,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
+        throw_if(
+            ! $this->permissionAccess()->handle($user, PermissionKey::tyanc('activity_log', 'viewany')),
+            AuthorizationException::class,
+        );
 
         $tableQuery = DataTableQueryData::fromRequest(
             request: $request,
@@ -70,9 +77,16 @@ final readonly class ActivityLogController
                 'filters' => $this->filters(),
             ],
             'approvalRequests' => $this->approvalRequests($user),
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: __('Activity log'),
+                appKey: 'tyanc',
+                resourceKey: 'activity_log',
+                actionKeys: ['export'],
+            ),
             'abilities' => [
                 'export' => $this->permissionAccess()->handle($user, PermissionKey::tyanc('activity_log', 'export')),
-                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::cumpu('approvals', 'viewany')),
+                'reviewApprovals' => $this->permissionAccess()->handle($user, PermissionKey::cumpu('approval_inbox', 'viewany')),
             ],
             'features' => [
                 'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
@@ -87,11 +101,11 @@ final readonly class ActivityLogController
     }
 
     /**
-     * @return list<ApprovalRequestData>
+     * @return array<int, ApprovalRequestData>
      */
     private function approvalRequests(User $actor): array
     {
-        if (! $this->permissionAccess()->handle($actor, PermissionKey::cumpu('approvals', 'viewany'))) {
+        if (! $this->permissionAccess()->handle($actor, PermissionKey::cumpu('approval_inbox', 'viewany'))) {
             return [];
         }
 
@@ -112,6 +126,9 @@ final readonly class ActivityLogController
         return resolve(PermissionResourceAccess::class);
     }
 
+    /**
+     * @param  Builder<Activity>  $query
+     */
     private function applySearch(Builder $query, mixed $value): void
     {
         if (! is_scalar($value)) {
@@ -181,6 +198,7 @@ final readonly class ActivityLogController
     }
 
     /**
+     * @param  LengthAwarePaginator<int, Activity>  $paginator
      * @return array{total: int, from: int|null, to: int|null, page: int, per_page: int, last_page: int, has_pages: bool}
      */
     private function meta(LengthAwarePaginator $paginator): array

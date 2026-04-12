@@ -17,15 +17,28 @@ final readonly class ShowApprovalRequest
         $access = resolve(PermissionResourceAccess::class);
 
         $canViewOwnRequest = $approvalRequest->requested_by_id === $actor->id
-            && $access->handle($actor, PermissionKey::cumpu('approvals', 'view'));
-        $canViewAnyApproval = $access->handle($actor, PermissionKey::cumpu('approvals', 'viewany'));
+            && (
+                $access->handle($actor, PermissionKey::cumpu('my_requests', 'viewany'))
+                || $access->handle($actor, PermissionKey::cumpu('my_requests', 'view'))
+                || $access->handle($actor, PermissionKey::cumpu('approvals', 'view'))
+            );
+        $canViewInboxApproval = (
+            $access->handle($actor, PermissionKey::cumpu('approval_inbox', 'viewany'))
+            || $access->handle($actor, PermissionKey::cumpu('approval_inbox', 'view'))
+        ) && $approvalRequest->assignments()->where('assigned_to_id', $actor->id)->exists();
+        $canViewAnyApproval = $access->handle($actor, PermissionKey::cumpu('all_approvals', 'viewany'))
+            || $access->handle($actor, PermissionKey::cumpu('all_approvals', 'view'))
+            || $access->handle($actor, PermissionKey::cumpu('approvals', 'viewany'));
 
-        throw_if(! $canViewOwnRequest && ! $canViewAnyApproval, AuthorizationException::class);
+        throw_if(! $canViewOwnRequest && ! $canViewInboxApproval && ! $canViewAnyApproval, AuthorizationException::class);
+
+        ApprovalRequest::expirePastDueGrants();
 
         return $approvalRequest->loadMissing([
             'requester',
             'reviewer',
             'cancelledBy',
+            'consumedBy',
             'subject',
             'rule.steps.role',
             'assignments.assignee',

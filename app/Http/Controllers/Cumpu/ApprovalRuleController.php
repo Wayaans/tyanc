@@ -32,7 +32,7 @@ final readonly class ApprovalRuleController
     {
         $payload = [
             'rules' => $this->rules->handle($user),
-            'permissionOptions' => $this->permissionOptions->handle(),
+            'permissionOptions' => $this->permissionOptions->handle(includeNavigationResources: false),
             'roles' => Role::query()
                 ->orderByDesc('level')
                 ->orderBy('name')

@@ -30,6 +30,7 @@ final class UpdateRoleRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120', Rule::unique(Role::class, 'name')->ignore($role->id)],
             'level' => ['required', 'integer', 'min:0'],
+            'request_note' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

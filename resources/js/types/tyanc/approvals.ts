@@ -1,12 +1,11 @@
 export type ApprovalStatus =
-    | 'draft'
     | 'pending'
     | 'in_review'
     | 'approved'
     | 'rejected'
     | 'cancelled'
     | 'expired'
-    | 'superseded';
+    | 'consumed';
 
 export type ApprovalRequestRow = {
     id: string;
@@ -26,10 +25,9 @@ export type ApprovalRequestRow = {
     requested_by_name: string | null;
     reviewed_by_id: string | null;
     reviewed_by_name: string | null;
+    consumed_by_id: string | null;
+    consumed_by_name: string | null;
     payload: Record<string, unknown> | null;
-    before_payload: Record<string, unknown> | null;
-    after_payload: Record<string, unknown> | null;
-    impact_summary: string | null;
     can_approve: boolean;
     can_reject: boolean;
     can_cancel: boolean;
@@ -37,6 +35,8 @@ export type ApprovalRequestRow = {
     requested_at: string;
     reviewed_at: string | null;
     cancelled_at: string | null;
+    expires_at: string | null;
+    consumed_at: string | null;
     // Phase 3 additions
     rule_id: string | null;
     pending_assignee_names: string[];
@@ -45,6 +45,8 @@ export type ApprovalRequestRow = {
     can_reassign: boolean;
     is_reassigned: boolean;
     is_escalated: boolean;
+    is_grant_usable: boolean;
+    is_grant_expired: boolean;
     last_reassigned_at: string | null;
     last_reminded_at: string | null;
     escalated_at: string | null;
@@ -56,14 +58,19 @@ export type ApprovalReportRow = {
     subject_name: string;
     status: ApprovalStatus;
     requested_by_name: string | null;
+    reviewed_by_name: string | null;
+    consumed_by_name: string | null;
     current_step_label: string | null;
     current_step_order: number | null;
     current_assignee_names: string[];
     is_overdue: boolean;
     is_reassigned: boolean;
     is_escalated: boolean;
+    is_grant_usable: boolean;
     requested_at: string;
     reviewed_at: string | null;
+    expires_at: string | null;
+    consumed_at: string | null;
     escalated_at: string | null;
     last_reassigned_at: string | null;
     app_label: string | null;
@@ -75,8 +82,10 @@ export type ApprovalReportSummary = {
     pending: number;
     in_review: number;
     approved: number;
+    consumed: number;
     rejected: number;
     cancelled: number;
+    expired: number;
     overdue: number;
     escalated: number;
     reassigned: number;

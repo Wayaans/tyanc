@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notification;
 
 final class ApprovalCancelledNotification extends Notification
 {
+    use FormatsApprovalNotificationPayload;
     use Queueable;
 
     public function __construct(private readonly ApprovalRequest $approvalRequest) {}
@@ -27,23 +28,14 @@ final class ApprovalCancelledNotification extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            'kind' => 'approval-cancelled',
-            'title' => __('Approval cancelled'),
-            'body' => __('The approval request for :subject was cancelled.', [
-                'subject' => $this->subjectLabel(),
+        return $this->approvalNotificationPayload(
+            kind: 'approval-cancelled',
+            title: __('Approval request cancelled'),
+            body: __('The request to retry :action for :subject was cancelled.', [
+                'action' => $this->actionLabel($this->approvalRequest),
+                'subject' => $this->subjectLabel($this->approvalRequest),
             ]),
-            'action_label' => __('Open request'),
-            'action_url' => route('cumpu.approvals.show', $this->approvalRequest, absolute: false),
-        ];
-    }
-
-    private function subjectLabel(): string
-    {
-        $label = data_get($this->approvalRequest->payload, 'subject_label');
-
-        return is_string($label) && $label !== ''
-            ? $label
-            : __('Approval request');
+            approvalRequest: $this->approvalRequest,
+        );
     }
 }

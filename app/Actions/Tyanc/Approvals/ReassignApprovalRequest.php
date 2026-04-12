@@ -40,7 +40,7 @@ final readonly class ReassignApprovalRequest
         );
 
         throw_if(
-            ! in_array($approvalRequest->status, ApprovalRequest::activeStatuses(), true),
+            ! in_array($approvalRequest->status, ApprovalRequest::reviewableStatuses(), true),
             ValidationException::withMessages([
                 'approval' => __('Only active approval requests can be reassigned.'),
             ]),
@@ -135,7 +135,8 @@ final readonly class ReassignApprovalRequest
             $targetAssignment = $lockedRequest->assignments()
                 ->lockForUpdate()
                 ->where('approval_rule_step_id', $step->id)
-                ->where('assigned_to_id', $targetAssignee->id)->latest()
+                ->where('assigned_to_id', $targetAssignee->id)
+                ->latest()
                 ->first();
 
             if ($targetAssignment instanceof ApprovalAssignment) {
@@ -185,7 +186,9 @@ final readonly class ReassignApprovalRequest
                     'approval_request_id' => (string) $lockedRequest->id,
                     'assignment_id' => (string) $lockedAssignment->id,
                     'step_order' => $stepOrder,
+                    'step_label' => $lockedAssignment->step_label_snapshot ?: $step->label,
                     'reassigned_to_id' => $targetAssignee->id,
+                    'reassigned_to_name' => $targetAssignee->name,
                     'note' => $this->nullableString($note),
                 ])
                 ->log('Approval reassigned');
@@ -196,6 +199,7 @@ final readonly class ReassignApprovalRequest
                 'requester',
                 'reviewer',
                 'cancelledBy',
+                'consumedBy',
                 'subject',
                 'rule.steps.role',
                 'assignments.assignee',

@@ -2,7 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
-import { PlusCircle } from 'lucide-vue-next';
+import { CheckCircle2, PlusCircle } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
 import ApprovalDecisionDialog from '@/components/tyanc/approvals/ApprovalDecisionDialog.vue';
@@ -22,6 +22,7 @@ import type {
     ImportRunRow,
     UserRow,
 } from '@/types';
+import type { ApprovalContext } from '@/types/cumpu';
 
 const props = defineProps<{
     usersTable: DataTablePayload<UserRow>;
@@ -36,6 +37,8 @@ const props = defineProps<{
         imports_enabled: boolean;
         exports_enabled: boolean;
     };
+    approvalContext?: ApprovalContext | null;
+    status?: string | null;
 }>();
 
 const { __, locale } = useTranslations();
@@ -114,6 +117,11 @@ function openDecisionDialog(request: ApprovalRequestRow) {
                             !props.features.imports_enabled ||
                             !props.abilities.import
                         "
+                        :approval-state="
+                            props.approvalContext?.governed_actions?.[
+                                'import'
+                            ] ?? null
+                        "
                     />
 
                     <Button size="sm" class="gap-2" @click="goToCreate">
@@ -121,6 +129,19 @@ function openDecisionDialog(request: ApprovalRequestRow) {
                         {{ __('New user') }}
                     </Button>
                 </div>
+            </div>
+
+            <!-- Status feedback -->
+            <div
+                v-if="props.status"
+                class="flex items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/[0.07]"
+            >
+                <CheckCircle2
+                    class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                />
+                <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                    {{ props.status }}
+                </p>
             </div>
 
             <!-- Approval timeline (reviewers only) -->

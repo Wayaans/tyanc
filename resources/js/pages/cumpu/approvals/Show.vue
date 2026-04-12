@@ -5,6 +5,8 @@ import {
     ArrowRightLeft,
     ChevronDown,
     ChevronUp,
+    KeyRound,
+    PackageCheck,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ApprovalActivityHistory from '@/components/cumpu/approvals/ApprovalActivityHistory.vue';
@@ -66,8 +68,6 @@ function formatJson(obj: Record<string, unknown>): string {
 const reviewNote = ref('');
 const isSubmitting = ref(false);
 const snapshotOpen = ref(false);
-const beforePayloadOpen = ref(false);
-const afterPayloadOpen = ref(false);
 const reassignDialogOpen = ref(false);
 
 function submitApprove() {
@@ -198,17 +198,231 @@ function goBack() {
             >
                 <!-- Left: request details -->
                 <div class="space-y-5">
-                    <!-- Impact summary -->
+                    <!-- Grant lifecycle flow -->
                     <div
-                        v-if="props.approval.impact_summary"
-                        class="space-y-1 rounded-2xl border border-sidebar-border/70 bg-background/90 px-5 py-4"
+                        v-if="
+                            props.approval.status === 'approved' ||
+                            props.approval.status === 'consumed' ||
+                            props.approval.status === 'expired' ||
+                            props.approval.is_grant_usable ||
+                            props.approval.is_grant_expired
+                        "
+                        class="overflow-hidden rounded-xl border border-sidebar-border/70 bg-background/90"
                     >
-                        <p class="text-xs font-medium text-muted-foreground">
-                            {{ __('Impact summary') }}
-                        </p>
-                        <p class="text-sm text-foreground">
-                            {{ props.approval.impact_summary }}
-                        </p>
+                        <div
+                            class="border-b border-sidebar-border/70 px-4 py-2.5"
+                        >
+                            <p
+                                class="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                            >
+                                {{ __('Grant lifecycle') }}
+                            </p>
+                        </div>
+                        <ol class="flex flex-col gap-0 px-4 py-3">
+                            <!-- Step 1: Approved -->
+                            <li class="flex items-start gap-3">
+                                <div
+                                    class="relative mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30"
+                                >
+                                    <KeyRound
+                                        class="size-3 text-emerald-600 dark:text-emerald-400"
+                                    />
+                                    <div
+                                        v-if="
+                                            props.approval.status ===
+                                                'consumed' ||
+                                            props.approval.status ===
+                                                'expired' ||
+                                            props.approval.is_grant_expired
+                                        "
+                                        class="absolute top-6 left-[11px] h-6 w-0.5 bg-emerald-200 dark:bg-emerald-800/60"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1 pb-4">
+                                    <p
+                                        class="text-sm font-medium text-emerald-800 dark:text-emerald-300"
+                                    >
+                                        {{ __('Grant issued') }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        <span
+                                            v-if="
+                                                props.approval.reviewed_by_name
+                                            "
+                                            >{{
+                                                props.approval.reviewed_by_name
+                                            }}</span
+                                        >
+                                        <template
+                                            v-if="
+                                                props.approval
+                                                    .reviewed_by_name &&
+                                                props.approval.reviewed_at
+                                            "
+                                        >
+                                            <span
+                                                class="mx-1"
+                                                aria-hidden="true"
+                                                >·</span
+                                            >
+                                        </template>
+                                        <span
+                                            v-if="props.approval.reviewed_at"
+                                            >{{
+                                                dateFormatter.format(
+                                                    new Date(
+                                                        props.approval
+                                                            .reviewed_at,
+                                                    ),
+                                                )
+                                            }}</span
+                                        >
+                                    </p>
+                                    <p
+                                        v-if="props.approval.expires_at"
+                                        class="mt-0.5 text-xs text-muted-foreground"
+                                    >
+                                        {{ __('Valid until') }}:
+                                        <span class="font-medium">{{
+                                            dateFormatter.format(
+                                                new Date(
+                                                    props.approval.expires_at,
+                                                ),
+                                            )
+                                        }}</span>
+                                    </p>
+                                </div>
+                            </li>
+
+                            <!-- Step 2a: Awaiting use (grant ready) -->
+                            <li
+                                v-if="props.approval.is_grant_usable"
+                                class="flex items-start gap-3"
+                            >
+                                <div
+                                    class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-400/40 ring-offset-1 ring-offset-background"
+                                >
+                                    <span
+                                        class="size-2 animate-pulse rounded-full bg-emerald-500"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="text-sm font-medium text-emerald-700 dark:text-emerald-400"
+                                    >
+                                        {{
+                                            __('Waiting for requester to retry')
+                                        }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{
+                                            __(
+                                                'The requester must retry the action to consume the grant.',
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                            </li>
+
+                            <!-- Step 2b: Consumed -->
+                            <li
+                                v-else-if="props.approval.status === 'consumed'"
+                                class="flex items-start gap-3"
+                            >
+                                <div
+                                    class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 ring-1 ring-violet-500/30"
+                                >
+                                    <PackageCheck
+                                        class="size-3 text-violet-600 dark:text-violet-400"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="text-sm font-medium text-violet-800 dark:text-violet-300"
+                                    >
+                                        {{ __('Grant consumed') }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        <span
+                                            v-if="
+                                                props.approval.consumed_by_name
+                                            "
+                                            >{{
+                                                props.approval.consumed_by_name
+                                            }}</span
+                                        >
+                                        <template
+                                            v-if="
+                                                props.approval
+                                                    .consumed_by_name &&
+                                                props.approval.consumed_at
+                                            "
+                                        >
+                                            <span
+                                                class="mx-1"
+                                                aria-hidden="true"
+                                                >·</span
+                                            >
+                                        </template>
+                                        <span
+                                            v-if="props.approval.consumed_at"
+                                            >{{
+                                                dateFormatter.format(
+                                                    new Date(
+                                                        props.approval
+                                                            .consumed_at,
+                                                    ),
+                                                )
+                                            }}</span
+                                        >
+                                    </p>
+                                </div>
+                            </li>
+
+                            <!-- Step 2c: Expired -->
+                            <li
+                                v-else-if="
+                                    props.approval.status === 'expired' ||
+                                    props.approval.is_grant_expired
+                                "
+                                class="flex items-start gap-3"
+                            >
+                                <div
+                                    class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/30"
+                                >
+                                    <KeyRound
+                                        class="size-3 text-amber-600 dark:text-amber-400"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="text-sm font-medium text-amber-800 dark:text-amber-300"
+                                    >
+                                        {{ __('Grant expired') }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{
+                                            __(
+                                                'Not used before expiry. A new approval request is required.',
+                                            )
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="props.approval.expires_at"
+                                        class="mt-0.5 text-xs text-muted-foreground"
+                                    >
+                                        {{ __('Expired') }}:
+                                        <span class="font-medium">{{
+                                            dateFormatter.format(
+                                                new Date(
+                                                    props.approval.expires_at,
+                                                ),
+                                            )
+                                        }}</span>
+                                    </p>
+                                </div>
+                            </li>
+                        </ol>
                     </div>
 
                     <!-- Requester / reviewer block -->
@@ -261,15 +475,23 @@ function goBack() {
                         </div>
                     </div>
 
-                    <!-- Request note -->
+                    <!-- Request reason -->
                     <div v-if="props.approval.request_note" class="space-y-1.5">
+                        <div class="flex items-baseline gap-1.5">
+                            <p
+                                class="px-0.5 text-sm font-semibold text-foreground"
+                            >
+                                {{ __('Reason for this request') }}
+                            </p>
+                            <p
+                                v-if="props.approval.requested_by_name"
+                                class="text-xs text-muted-foreground"
+                            >
+                                – {{ props.approval.requested_by_name }}
+                            </p>
+                        </div>
                         <p
-                            class="px-0.5 text-xs font-medium text-muted-foreground"
-                        >
-                            {{ __('Request note') }}
-                        </p>
-                        <p
-                            class="rounded-xl border border-sidebar-border/70 bg-sidebar/10 px-4 py-3 text-sm text-foreground"
+                            class="rounded-xl border border-sidebar-border/70 bg-sidebar/10 px-4 py-3 text-sm leading-relaxed text-foreground"
                         >
                             {{ props.approval.request_note }}
                         </p>
@@ -304,7 +526,15 @@ function goBack() {
                         <CollapsibleTrigger
                             class="flex w-full items-center justify-between rounded-xl border border-sidebar-border/70 bg-sidebar/10 px-4 py-3 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
                         >
-                            {{ __('Subject snapshot') }}
+                            <span>
+                                {{ __('Snapshot at request time') }}
+                                <span
+                                    class="ml-1 font-normal text-muted-foreground"
+                                >
+                                    –
+                                    {{ __('subject state when submitted') }}
+                                </span>
+                            </span>
                             <component
                                 :is="snapshotOpen ? ChevronUp : ChevronDown"
                                 class="size-3.5 shrink-0 text-muted-foreground"
@@ -319,74 +549,6 @@ function goBack() {
                             >
                         </CollapsibleContent>
                     </Collapsible>
-
-                    <!-- Before / after payloads -->
-                    <template
-                        v-if="
-                            hasContent(props.approval.before_payload) ||
-                            hasContent(props.approval.after_payload)
-                        "
-                    >
-                        <Separator />
-
-                        <Collapsible
-                            v-if="hasContent(props.approval.before_payload)"
-                            v-model:open="beforePayloadOpen"
-                        >
-                            <CollapsibleTrigger
-                                class="flex w-full items-center justify-between rounded-xl border border-sidebar-border/70 bg-sidebar/10 px-4 py-3 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
-                            >
-                                {{ __('Before') }}
-                                <component
-                                    :is="
-                                        beforePayloadOpen
-                                            ? ChevronUp
-                                            : ChevronDown
-                                    "
-                                    class="size-3.5 shrink-0 text-muted-foreground"
-                                />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <pre
-                                    class="mt-1 overflow-x-auto rounded-xl border border-sidebar-border/70 bg-sidebar/10 p-3 text-xs text-muted-foreground"
-                                    >{{
-                                        formatJson(
-                                            props.approval.before_payload!,
-                                        )
-                                    }}</pre
-                                >
-                            </CollapsibleContent>
-                        </Collapsible>
-
-                        <Collapsible
-                            v-if="hasContent(props.approval.after_payload)"
-                            v-model:open="afterPayloadOpen"
-                        >
-                            <CollapsibleTrigger
-                                class="flex w-full items-center justify-between rounded-xl border border-sidebar-border/70 bg-sidebar/10 px-4 py-3 text-left text-xs font-medium text-foreground transition-colors hover:bg-sidebar/20"
-                            >
-                                {{ __('After') }}
-                                <component
-                                    :is="
-                                        afterPayloadOpen
-                                            ? ChevronUp
-                                            : ChevronDown
-                                    "
-                                    class="size-3.5 shrink-0 text-muted-foreground"
-                                />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <pre
-                                    class="mt-1 overflow-x-auto rounded-xl border border-sidebar-border/70 bg-sidebar/10 p-3 text-xs text-muted-foreground"
-                                    >{{
-                                        formatJson(
-                                            props.approval.after_payload!,
-                                        )
-                                    }}</pre
-                                >
-                            </CollapsibleContent>
-                        </Collapsible>
-                    </template>
 
                     <!-- Decision and cancellation actions -->
                     <div
@@ -421,6 +583,16 @@ function goBack() {
                                 "
                                 :rows="3"
                             />
+                            <p
+                                v-if="props.approval.can_approve"
+                                class="text-xs text-muted-foreground"
+                            >
+                                {{
+                                    __(
+                                        'Approving issues a one-time grant. The requester must retry the action to consume it.',
+                                    )
+                                }}
+                            </p>
                         </template>
                         <div class="flex flex-wrap gap-2 pt-1">
                             <Button
@@ -434,7 +606,9 @@ function goBack() {
                                     class="mr-1.5 size-4"
                                 />
                                 {{
-                                    isSubmitting ? __('Saving…') : __('Approve')
+                                    isSubmitting
+                                        ? __('Saving…')
+                                        : __('Approve & issue grant')
                                 }}
                             </Button>
                             <Button
@@ -510,7 +684,10 @@ function goBack() {
                         </div>
                     </div>
 
-                    <ApprovalActivityHistory :history="props.history" />
+                    <ApprovalActivityHistory
+                        :history="props.history"
+                        :approval="props.approval"
+                    />
                 </div>
             </div>
         </div>

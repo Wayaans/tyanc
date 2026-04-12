@@ -35,6 +35,16 @@ final class StoreImportRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'file.required' => __('Upload the spreadsheet you want to import or rerun after approval.'),
+        ];
+    }
+
     protected function failedAuthorization(): void
     {
         throw_unless((bool) config('tyanc.features.imports_enabled', false), NotFoundHttpException::class);

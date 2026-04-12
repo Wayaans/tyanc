@@ -12,7 +12,6 @@ use App\Notifications\ApprovalCancelledNotification;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 final readonly class CancelRequest
@@ -32,11 +31,11 @@ final readonly class CancelRequest
         return DB::transaction(function () use ($actor, $approvalRequest): ApprovalRequest {
             /** @var ApprovalRequest $lockedRequest */
             $lockedRequest = ApprovalRequest::query()
-                ->with(['actionRecord', 'assignments.assignee', 'subject'])
+                ->with(['assignments.assignee', 'subject'])
                 ->lockForUpdate()
                 ->findOrFail($approvalRequest->id);
 
-            if (! in_array($lockedRequest->status, ApprovalRequest::activeStatuses(), true)) {
+            if (! in_array($lockedRequest->status, ApprovalRequest::reviewableStatuses(), true)) {
                 throw new RuntimeException(__('Only pending approval requests can be cancelled.'));
             }
 
@@ -52,11 +51,6 @@ final readonly class CancelRequest
                     'status' => ApprovalAssignment::StatusCancelled,
                     'updated_at' => now(),
                 ]);
-
-            $stagedFilePath = data_get($lockedRequest->actionRecord?->payload, 'staged_file_path');
-            if (is_string($stagedFilePath) && $stagedFilePath !== '') {
-                Storage::disk('local')->delete($stagedFilePath);
-            }
 
             activity('approvals')
                 ->performedOn($lockedRequest->subject ?? $lockedRequest)
@@ -79,6 +73,7 @@ final readonly class CancelRequest
                 'requester',
                 'reviewer',
                 'cancelledBy',
+                'consumedBy',
                 'subject',
                 'rule.steps.role',
                 'assignments.assignee',

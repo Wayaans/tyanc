@@ -5,6 +5,8 @@ import { type ColumnDef } from '@tanstack/vue-table';
 import { PlusCircle } from 'lucide-vue-next';
 import { computed } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import { createAppTableColumns } from '@/components/tyanc/apps/AppTableColumns';
 import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
@@ -12,9 +14,11 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { create, index } from '@/routes/tyanc/apps';
 import type { AppRow, DataTablePayload } from '@/types';
+import type { ApprovalContext } from '@/types/cumpu';
 
 const props = defineProps<{
     appsTable: DataTablePayload<AppRow>;
+    approvalContext?: ApprovalContext | null;
 }>();
 
 const { __ } = useTranslations();
@@ -57,6 +61,12 @@ function goToCreate() {
                 </Button>
             </div>
 
+            <!-- Approval banner -->
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
+
             <!-- Table -->
             <DataTable
                 :columns="columns"
@@ -70,6 +80,11 @@ function goToCreate() {
                 :empty-description="
                     __('Register applications to surface them in navigation.')
                 "
+            />
+            <!-- Approval history -->
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
             />
         </div>
     </AppLayout>

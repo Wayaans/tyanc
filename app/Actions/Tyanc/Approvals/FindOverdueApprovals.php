@@ -26,7 +26,7 @@ final readonly class FindOverdueApprovals
                     ->where('status', ApprovalAssignment::StatusPending)
                     ->orderBy('created_at'),
             ])
-            ->whereIn('status', ApprovalRequest::activeStatuses())
+            ->whereIn('status', ApprovalRequest::reviewableStatuses())
             ->whereHas('assignments', fn ($query) => $query->where('status', ApprovalAssignment::StatusPending))
             ->get()
             ->filter(fn (ApprovalRequest $approvalRequest): bool => match ($scope) {

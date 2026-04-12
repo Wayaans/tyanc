@@ -38,6 +38,7 @@ final readonly class UpdateApprovalRule
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
             'steps.*.label' => ['nullable', 'string', 'max:120'],
+            'grant_validity_minutes' => ['required', 'integer', 'min:5', 'max:10080'],
             'reminder_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
             'escalation_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
         ]);
@@ -56,7 +57,7 @@ final readonly class UpdateApprovalRule
             }
         });
 
-        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, workflow_type: string, steps: list<array{role_id: int, label?: string|null}>, reminder_after_minutes?: int|null, escalation_after_minutes?: int|null} $validated */
+        /** @var array{app_key: string, resource_key: string, action_key: string, enabled?: bool, workflow_type: string, steps: list<array{role_id: int, label?: string|null}>, grant_validity_minutes: int, reminder_after_minutes?: int|null, escalation_after_minutes?: int|null} $validated */
         $validated = $validator->validate();
         $permissionName = $this->permissionName($validated);
 
@@ -74,6 +75,7 @@ final readonly class UpdateApprovalRule
                 'permission_name' => $permissionName,
                 'enabled' => (bool) ($validated['enabled'] ?? false),
                 'workflow_type' => $validated['workflow_type'],
+                'grant_validity_minutes' => $validated['grant_validity_minutes'],
                 'reminder_after_minutes' => $validated['reminder_after_minutes'] ?? null,
                 'escalation_after_minutes' => $validated['escalation_after_minutes'] ?? null,
             ])->save();

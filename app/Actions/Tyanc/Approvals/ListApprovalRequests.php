@@ -34,6 +34,8 @@ final readonly class ListApprovalRequests
      */
     public function handle(User $actor, Request $request, string $scope = 'inbox'): array
     {
+        ApprovalRequest::expirePastDueGrants();
+
         $tableQuery = DataTableQueryData::fromRequest(
             request: $request,
             allowedSorts: ['requested_at', 'reviewed_at', 'status', 'action', 'app_key'],
@@ -99,19 +101,20 @@ final readonly class ListApprovalRequests
                 'cancelledBy',
                 'subject',
                 'rule.steps.role',
+                'consumedBy',
                 'assignments.assignee',
                 'assignments.completedBy',
                 'assignments.step.role',
             ]);
 
-        if ($scope === 'inbox' || $scope === 'all') {
-            throw_if(
-                ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::cumpu('approvals', 'viewany')),
-                AuthorizationException::class,
-            );
-        }
+        $access = resolve(PermissionResourceAccess::class);
 
         if ($scope === 'inbox') {
+            throw_if(
+                ! $access->handle($actor, PermissionKey::cumpu('approval_inbox', 'viewany')),
+                AuthorizationException::class,
+            );
+
             $query->whereHas('assignments', function (Builder $builder) use ($actor): void {
                 $builder
                     ->where('assigned_to_id', $actor->id)
@@ -119,7 +122,19 @@ final readonly class ListApprovalRequests
             });
         }
 
+        if ($scope === 'all') {
+            throw_if(
+                ! $access->handle($actor, PermissionKey::cumpu('all_approvals', 'viewany')),
+                AuthorizationException::class,
+            );
+        }
+
         if ($scope === 'my_requests') {
+            throw_if(
+                ! $access->handle($actor, PermissionKey::cumpu('my_requests', 'viewany')),
+                AuthorizationException::class,
+            );
+
             $query->where('requested_by_id', $actor->id);
         }
 
@@ -164,6 +179,12 @@ final readonly class ListApprovalRequests
                 ->orWhere('payload->subject_label', 'like', sprintf('%%%s%%', $search))
                 ->orWhere('payload->action_label', 'like', sprintf('%%%s%%', $search))
                 ->orWhereHas('requester', fn (Builder $requesterQuery) => $requesterQuery
+                    ->where('name', 'like', sprintf('%%%s%%', $search))
+                    ->orWhere('email', 'like', sprintf('%%%s%%', $search)))
+                ->orWhereHas('reviewer', fn (Builder $reviewerQuery) => $reviewerQuery
+                    ->where('name', 'like', sprintf('%%%s%%', $search))
+                    ->orWhere('email', 'like', sprintf('%%%s%%', $search)))
+                ->orWhereHas('consumedBy', fn (Builder $consumerQuery) => $consumerQuery
                     ->where('name', 'like', sprintf('%%%s%%', $search))
                     ->orWhere('email', 'like', sprintf('%%%s%%', $search)));
         });
@@ -283,16 +304,15 @@ final readonly class ListApprovalRequests
                 'label' => 'Status',
                 'type' => 'select',
                 'options' => collect([
-                    ApprovalRequest::StatusDraft,
-                    ApprovalRequest::StatusPending,
-                    ApprovalRequest::StatusInReview,
-                    ApprovalRequest::StatusApproved,
-                    ApprovalRequest::StatusRejected,
-                    ApprovalRequest::StatusCancelled,
-                    ApprovalRequest::StatusExpired,
-                    ApprovalRequest::StatusSuperseded,
-                ])->map(fn (string $status): array => [
-                    'label' => $status,
+                    ApprovalRequest::StatusPending => __('Pending'),
+                    ApprovalRequest::StatusInReview => __('In review'),
+                    ApprovalRequest::StatusApproved => __('Approved (grant ready)'),
+                    ApprovalRequest::StatusConsumed => __('Consumed (grant used)'),
+                    ApprovalRequest::StatusRejected => __('Rejected'),
+                    ApprovalRequest::StatusCancelled => __('Cancelled'),
+                    ApprovalRequest::StatusExpired => __('Expired'),
+                ])->map(fn (string $label, string $status): array => [
+                    'label' => $label,
                     'value' => $status,
                 ])->values()->all(),
             ],
@@ -308,7 +328,7 @@ final readonly class ListApprovalRequests
                     ->pluck('app_key')
                     ->filter()
                     ->map(fn (string $appKey): array => [
-                        'label' => $appKey,
+                        'label' => PermissionKey::appLabel($appKey),
                         'value' => $appKey,
                     ])
                     ->values()

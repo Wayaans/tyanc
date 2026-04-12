@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Jobs\ProcessUsersImport;
-use App\Models\ApprovalAction;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalRule;
 use App\Models\ApprovalRuleStep;
-use App\Models\ImportRun;
 use App\Models\User;
 use App\Notifications\ApprovalApprovedNotification;
 use App\Support\Permissions\PermissionKey;
@@ -21,10 +19,7 @@ use RuntimeException;
 
 final readonly class ApproveRequest
 {
-    public function __construct(
-        private ExecuteApprovedAction $executor,
-        private AdvanceWorkflowStep $advanceWorkflowStep,
-    ) {}
+    public function __construct(private AdvanceWorkflowStep $advanceWorkflowStep) {}
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -51,7 +46,6 @@ final readonly class ApproveRequest
             $lockedRequest = ApprovalRequest::query()
                 ->with([
                     'subject',
-                    'actionRecord',
                     'requester',
                     'rule.steps.role',
                     'assignments.assignee',
@@ -60,7 +54,7 @@ final readonly class ApproveRequest
                 ->lockForUpdate()
                 ->findOrFail($approvalRequest->id);
 
-            if (! in_array($lockedRequest->status, ApprovalRequest::activeStatuses(), true)) {
+            if (! in_array($lockedRequest->status, ApprovalRequest::reviewableStatuses(), true)) {
                 throw new RuntimeException(__('This approval request has already been reviewed.'));
             }
 
@@ -76,8 +70,6 @@ final readonly class ApproveRequest
                 ->first(fn (ApprovalAssignment $assignment): bool => $assignment->assigned_to_id === $actor->id);
 
             $hasAssignments = $pendingAssignments->isNotEmpty();
-            $isLegacyImportRequest = ! $lockedRequest->actionRecord instanceof ApprovalAction
-                && $lockedRequest->subject instanceof ImportRun;
 
             throw_if(
                 ! $isSuperAdmin
@@ -88,8 +80,7 @@ final readonly class ApproveRequest
 
             throw_if(
                 ! $isSuperAdmin
-                && ! $hasAssignments
-                && ! $isLegacyImportRequest,
+                && ! $hasAssignments,
                 AuthorizationException::class,
             );
 
@@ -102,6 +93,7 @@ final readonly class ApproveRequest
                 'review_note' => $reviewNote,
                 'reviewed_by_id' => $actor->id,
                 'reviewed_at' => now(),
+                'expires_at' => now()->addMinutes($this->grantValidityMinutes($lockedRequest)),
             ])->save();
 
             if ($pendingAssignment instanceof ApprovalAssignment) {
@@ -119,17 +111,6 @@ final readonly class ApproveRequest
                     'updated_at' => now(),
                 ]);
 
-            if ($lockedRequest->actionRecord instanceof ApprovalAction) {
-                $this->executor->handle($lockedRequest);
-            } elseif ($lockedRequest->subject instanceof ImportRun) {
-                $lockedRequest->subject->forceFill([
-                    'status' => ImportRun::StatusQueued,
-                    'failure_message' => null,
-                ])->save();
-
-                dispatch(new ProcessUsersImport((string) $lockedRequest->subject->id))->afterCommit();
-            }
-
             activity('approvals')
                 ->performedOn($lockedRequest->subject ?? $lockedRequest)
                 ->causedBy($actor)
@@ -138,6 +119,7 @@ final readonly class ApproveRequest
                     'approval_request_id' => (string) $lockedRequest->id,
                     'review_note' => $reviewNote,
                     'completed_step_order' => $currentStepOrder,
+                    'expires_at' => $lockedRequest->expires_at?->toIso8601String(),
                 ])
                 ->log('Approval approved');
 
@@ -149,6 +131,7 @@ final readonly class ApproveRequest
                 'requester',
                 'reviewer',
                 'cancelledBy',
+                'consumedBy',
                 'subject',
                 'rule.steps.role',
                 'assignments.assignee',
@@ -175,6 +158,15 @@ final readonly class ApproveRequest
     {
         return $approvalRequest->rule?->steps
             ->contains(fn (ApprovalRuleStep $step): bool => $step->step_order > $currentStepOrder) ?? false;
+    }
+
+    private function grantValidityMinutes(ApprovalRequest $approvalRequest): int
+    {
+        if ($approvalRequest->rule instanceof ApprovalRule && is_numeric($approvalRequest->rule->grant_validity_minutes)) {
+            return max((int) $approvalRequest->rule->grant_validity_minutes, 1);
+        }
+
+        return 1440;
     }
 
     private function stepOrder(ApprovalAssignment $assignment): ?int

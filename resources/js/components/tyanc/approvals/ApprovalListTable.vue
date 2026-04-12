@@ -54,11 +54,6 @@ const dateFormatter = computed(
 type StatusConfig = { label: string; badgeClass: string };
 
 const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
-    draft: {
-        label: 'Draft',
-        badgeClass:
-            'border-zinc-500/20 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-    },
     pending: {
         label: 'Pending',
         badgeClass:
@@ -89,10 +84,10 @@ const statusConfigs: Record<ApprovalStatus, StatusConfig> = {
         badgeClass:
             'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
     },
-    superseded: {
-        label: 'Superseded',
+    consumed: {
+        label: 'Consumed',
         badgeClass:
-            'border-stone-500/20 bg-stone-500/10 text-stone-700 dark:text-stone-300',
+            'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
     },
 };
 
@@ -137,6 +132,18 @@ const columns = computed<ColumnDef<ApprovalRequestRow>[]>(() => {
             cell: ({ getValue, row }) => {
                 const subjectName = String(getValue());
                 const href = props.detailHref?.(row.original);
+                const grantDetail =
+                    row.original.status === 'approved' &&
+                    row.original.is_grant_usable &&
+                    row.original.expires_at
+                        ? `${__('Grant valid until')} ${fmt.format(new Date(row.original.expires_at))}`
+                        : row.original.status === 'consumed' &&
+                            row.original.consumed_at
+                          ? `${__('Grant consumed')} · ${fmt.format(new Date(row.original.consumed_at))}`
+                          : row.original.status === 'expired' &&
+                              row.original.expires_at
+                            ? `${__('Grant expired')} · ${fmt.format(new Date(row.original.expires_at))}`
+                            : null;
 
                 return h('div', { class: 'space-y-0.5 min-w-48' }, [
                     href
@@ -164,6 +171,20 @@ const columns = computed<ColumnDef<ApprovalRequestRow>[]>(() => {
                         { class: 'text-xs text-muted-foreground' },
                         row.original.action_label,
                     ),
+                    grantDetail
+                        ? h(
+                              'p',
+                              {
+                                  class:
+                                      row.original.status === 'consumed'
+                                          ? 'text-xs text-violet-700 dark:text-violet-400'
+                                          : row.original.status === 'expired'
+                                            ? 'text-xs text-amber-700 dark:text-amber-400'
+                                            : 'text-xs text-emerald-700 dark:text-emerald-400',
+                              },
+                              grantDetail,
+                          )
+                        : null,
                 ]);
             },
             meta: { label: 'Subject' },

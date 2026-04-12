@@ -88,15 +88,28 @@ function createReportApproval(string $status, array $attributes = []): ApprovalR
             'resource_key' => $resourceKey,
             'action_key' => $actionKey,
             'requested_by_id' => $requester->id,
-            'reviewed_by_id' => in_array($status, [ApprovalRequest::StatusApproved, ApprovalRequest::StatusRejected], true)
+            'reviewed_by_id' => in_array($status, [ApprovalRequest::StatusApproved, ApprovalRequest::StatusRejected, ApprovalRequest::StatusConsumed], true)
                 ? $reviewer->id
                 : null,
-            'reviewed_at' => in_array($status, [ApprovalRequest::StatusApproved, ApprovalRequest::StatusRejected], true)
+            'reviewed_at' => in_array($status, [ApprovalRequest::StatusApproved, ApprovalRequest::StatusRejected, ApprovalRequest::StatusConsumed], true)
                 ? now()->subMinutes(30)
                 : null,
             'requested_at' => $attributes['requested_at'] ?? now()->subHours(2),
+            'cancelled_by_id' => $status === ApprovalRequest::StatusCancelled
+                ? ($attributes['cancelled_by_id'] ?? $requester->id)
+                : null,
+            'cancelled_at' => $status === ApprovalRequest::StatusCancelled
+                ? ($attributes['cancelled_at'] ?? now()->subMinutes(15))
+                : null,
+            'expires_at' => $attributes['expires_at'] ?? null,
             'escalated_at' => $attributes['escalated_at'] ?? null,
             'last_reassigned_at' => $attributes['last_reassigned_at'] ?? null,
+            'consumed_by_id' => $status === ApprovalRequest::StatusConsumed
+                ? ($attributes['consumed_by_id'] ?? $requester->id)
+                : null,
+            'consumed_at' => $status === ApprovalRequest::StatusConsumed
+                ? ($attributes['consumed_at'] ?? now()->subMinutes(10))
+                : null,
         ]);
 
     if (in_array($status, ApprovalRequest::activeStatuses(), true)) {
@@ -129,6 +142,12 @@ it('renders approval reports with summary metrics and filters overdue rows', fun
         'last_reassigned_at' => now()->subMinutes(20),
     ]);
 
+    createReportApproval(ApprovalRequest::StatusInReview, [
+        'action_key' => 'sync',
+        'requested_at' => now()->subMinutes(20),
+        'assignment_created_at' => now()->subMinutes(20),
+    ]);
+
     createReportApproval(ApprovalRequest::StatusApproved, [
         'action_key' => 'export',
         'requested_at' => now()->subHours(4),
@@ -140,14 +159,35 @@ it('renders approval reports with summary metrics and filters overdue rows', fun
         'requested_at' => now()->subHours(5),
     ]);
 
+    createReportApproval(ApprovalRequest::StatusCancelled, [
+        'resource_key' => 'roles',
+        'action_key' => 'archive',
+        'requested_at' => now()->subHours(5)->subMinutes(30),
+    ]);
+
+    createReportApproval(ApprovalRequest::StatusApproved, [
+        'action_key' => 'grant',
+        'requested_at' => now()->subHours(6),
+        'expires_at' => now()->subMinute(),
+    ]);
+
+    $consumedApproval = createReportApproval(ApprovalRequest::StatusConsumed, [
+        'action_key' => 'delete',
+        'requested_at' => now()->subHours(7),
+    ]);
+
     $this->actingAs($reportViewer)
         ->get(route('cumpu.approvals.reports.index'))
         ->assertInertia(fn ($page) => $page
             ->component('cumpu/approvals/Reports')
-            ->where('summary.total', 3)
+            ->where('summary.total', 7)
             ->where('summary.pending', 1)
+            ->where('summary.in_review', 1)
             ->where('summary.approved', 1)
+            ->where('summary.consumed', 1)
             ->where('summary.rejected', 1)
+            ->where('summary.cancelled', 1)
+            ->where('summary.expired', 1)
             ->where('summary.overdue', 1)
             ->where('summary.escalated', 1)
             ->where('summary.reassigned', 1));
@@ -160,6 +200,16 @@ it('renders approval reports with summary metrics and filters overdue rows', fun
         ->assertJsonCount(1, 'rows')
         ->assertJsonPath('rows.0.id', $overdueApproval->id)
         ->assertJsonPath('rows.0.is_overdue', true);
+
+    $this->actingAs($reportViewer)
+        ->getJson(route('cumpu.approvals.reports.index', [
+            'filter' => ['status' => ApprovalRequest::StatusConsumed],
+        ]))
+        ->assertOk()
+        ->assertJsonCount(1, 'rows')
+        ->assertJsonPath('rows.0.id', $consumedApproval->id)
+        ->assertJsonPath('rows.0.status', ApprovalRequest::StatusConsumed)
+        ->assertJsonPath('rows.0.consumed_by_name', $consumedApproval->requester->name);
 });
 
 it('exports filtered approval report rows', function (): void {

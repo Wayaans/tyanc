@@ -129,9 +129,36 @@ it('sends reminder and escalation notifications when overdue jobs are processed'
     new SendApprovalReminder($approvalRequest->id)->handle($finder);
     new SendApprovalEscalation($approvalRequest->id)->handle($finder);
 
-    Notification::assertSentTo($approver, ApprovalReminderNotification::class);
-    Notification::assertSentTo($approver, ApprovalEscalatedNotification::class);
-    Notification::assertSentTo($requester, ApprovalEscalatedNotification::class);
+    Notification::assertSentTo(
+        $approver,
+        ApprovalReminderNotification::class,
+        function (ApprovalReminderNotification $notification) use ($approver): bool {
+            $payload = $notification->toArray($approver);
+
+            return data_get($payload, 'approval_status') === ApprovalRequest::StatusPending
+                && str_contains((string) data_get($payload, 'body'), 'retry Users import for users.xlsx once');
+        },
+    );
+    Notification::assertSentTo(
+        $approver,
+        ApprovalEscalatedNotification::class,
+        function (ApprovalEscalatedNotification $notification) use ($approver): bool {
+            $payload = $notification->toArray($approver);
+
+            return data_get($payload, 'approval_status') === ApprovalRequest::StatusPending
+                && str_contains((string) data_get($payload, 'body'), 'This request is overdue.');
+        },
+    );
+    Notification::assertSentTo(
+        $requester,
+        ApprovalEscalatedNotification::class,
+        function (ApprovalEscalatedNotification $notification) use ($requester): bool {
+            $payload = $notification->toArray($requester);
+
+            return data_get($payload, 'approval_status') === ApprovalRequest::StatusPending
+                && str_contains((string) data_get($payload, 'body'), 'retry Users import for users.xlsx once');
+        },
+    );
 
     expect($approvalRequest->fresh()->last_reminded_at)->not->toBeNull()
         ->and($approvalRequest->fresh()->escalated_at)->not->toBeNull();

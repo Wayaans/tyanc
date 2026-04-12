@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
 use App\Actions\Tyanc\Apps\DeleteApp;
 use App\Actions\Tyanc\Apps\ListApps;
 use App\Actions\Tyanc\Apps\RegisterApp;
 use App\Actions\Tyanc\Apps\ToggleApp;
 use App\Actions\Tyanc\Apps\UpdateApp;
 use App\Data\Tables\DataTableQueryData;
+use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Data\Tyanc\Apps\AppData;
 use App\Models\App;
+use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Support\Tables\AppliesTableQuery;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -27,12 +30,23 @@ final readonly class AppController
 {
     public function __construct(private AppliesTableQuery $tableQuery) {}
 
-    public function index(Request $request, #[CurrentUser] User $user, ListApps $action): Response|JsonResponse
-    {
+    public function index(
+        Request $request,
+        #[CurrentUser] User $user,
+        ListApps $action,
+        ResolveApprovalContext $approvalContext,
+    ): Response|JsonResponse {
         $apps = $action->handle($user);
 
         $payload = [
             'apps' => $apps,
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: __('Apps'),
+                appKey: 'tyanc',
+                resourceKey: 'apps',
+                actionKeys: ['create', 'update', 'toggle', 'delete'],
+            ),
             'appsTable' => [
                 ...$this->tableQuery->handle(
                     items: Collection::make($apps)->map(fn (AppData $app): array => $app->toArray()),
@@ -75,12 +89,22 @@ final readonly class AppController
         return Inertia::render('tyanc/apps/Create');
     }
 
-    public function edit(#[CurrentUser] User $user, App $app): Response
+    public function edit(Request $request, #[CurrentUser] User $user, App $app, ResolveApprovalContext $approvalContext): Response
     {
         Gate::forUser($user)->authorize('update', $app);
 
         return Inertia::render('tyanc/apps/Edit', [
             'app' => AppData::fromModel($app),
+            'approvalContext' => $approvalContext->handle(
+                actor: $user,
+                scopeLabel: $app->label,
+                appKey: 'tyanc',
+                resourceKey: 'apps',
+                subject: $app,
+                actionKeys: ['update', 'toggle', 'delete'],
+                governedActionKeys: ['update'],
+            ),
+            'status' => $request->session()->get('status'),
         ]);
     }
 
@@ -99,11 +123,29 @@ final readonly class AppController
 
     public function update(Request $request, #[CurrentUser] User $user, App $app, UpdateApp $action): RedirectResponse|JsonResponse
     {
-        $app = $action->handle($user, $app, $this->payload($request));
+        $request->validate([
+            'request_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $submission = $action->handle($user, $app, $this->payload($request));
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'executed' => false,
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $user),
+                ], 202);
+            }
+
+            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+        }
+
+        /** @var App $updatedApp */
+        $updatedApp = $submission['result'];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'app' => AppData::fromModel($app),
+                'app' => AppData::fromModel($updatedApp),
             ]);
         }
 
@@ -112,13 +154,31 @@ final readonly class AppController
 
     public function toggle(Request $request, #[CurrentUser] User $user, App $app, ToggleApp $action): RedirectResponse|JsonResponse
     {
-        $app = $action->handle($user, $app, [
-            'enabled' => $request->boolean('enabled', ! $app->enabled),
+        $request->validate([
+            'request_note' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $submission = $action->handle($user, $app, [
+            'enabled' => $request->boolean('enabled', ! $app->enabled),
+            'request_note' => $request->input('request_note'),
+        ]);
+
+        if ($submission['approval'] instanceof ApprovalRequest) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'approval' => ApprovalRequestData::fromModel($submission['approval'], $user),
+                ], 202);
+            }
+
+            return to_route('tyanc.apps.index');
+        }
+
+        /** @var App $updatedApp */
+        $updatedApp = $submission['result'];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'app' => AppData::fromModel($app),
+                'app' => AppData::fromModel($updatedApp),
             ]);
         }
 
@@ -136,6 +196,9 @@ final readonly class AppController
         return to_route('tyanc.apps.index');
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesSearch(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -152,6 +215,9 @@ final readonly class AppController
             ->contains(fn (string $key): bool => str_contains(mb_strtolower((string) ($row[$key] ?? '')), $search));
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesStatus(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -165,6 +231,9 @@ final readonly class AppController
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function matchesSystem(array $row, mixed $value): bool
     {
         if (! is_scalar($value)) {
@@ -226,6 +295,7 @@ final readonly class AppController
             'permission_namespace' => $request->string('permission_namespace')->toString(),
             'enabled' => $request->boolean('enabled', true),
             'sort_order' => $request->integer('sort_order'),
+            'request_note' => $request->input('request_note'),
         ];
 
         if ($request->has('pages')) {

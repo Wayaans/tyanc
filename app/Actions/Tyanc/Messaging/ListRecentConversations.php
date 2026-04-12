@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Data\Tyanc\Messaging\ConversationData;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class ListRecentConversations
 {
@@ -26,7 +26,7 @@ final readonly class ListRecentConversations
             ];
         }
 
-        if (! Gate::forUser($actor)->allows(PermissionKey::tyanc('messages', 'viewany'))) {
+        if (! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'viewany'))) {
             return [
                 'unread_count' => 0,
                 'recent' => [],
