@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Calendar, Download, Filter, X } from 'lucide-vue-next';
+import { Download, Filter, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import ApprovalReportSummaryCards from '@/components/cumpu/approvals/reports/ApprovalReportSummaryCards.vue';
 import ApprovalReportTable from '@/components/cumpu/approvals/reports/ApprovalReportTable.vue';
+import DatePickerField from '@/components/DatePickerField.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -93,7 +93,16 @@ function buildQueryParams(): Record<string, string> {
     return q;
 }
 
+function clearPendingDateApply() {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+}
+
 function applyFilters(page = 1) {
+    clearPendingDateApply();
+
     const query = buildQueryParams();
     if (page > 1) {
         query['page'] = String(page);
@@ -122,9 +131,7 @@ watch(
 watch(
     () => [localFilters.value.date_from, localFilters.value.date_to],
     () => {
-        if (searchTimeout) {
-            clearTimeout(searchTimeout);
-        }
+        clearPendingDateApply();
         searchTimeout = setTimeout(() => applyFilters(), 400);
     },
 );
@@ -186,7 +193,7 @@ const exportUrl = computed(() => {
 
             <!-- Filters bar -->
             <div
-                class="flex flex-wrap items-end gap-3 rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
+                class="flex flex-wrap items-center gap-3 rounded-xl border border-sidebar-border/70 bg-background/80 px-4 py-3"
             >
                 <div class="flex items-center gap-1.5 text-muted-foreground">
                     <Filter class="size-3.5" />
@@ -195,27 +202,21 @@ const exportUrl = computed(() => {
 
                 <!-- Date from/to -->
                 <div class="flex items-center gap-2">
-                    <div class="relative flex items-center">
-                        <Calendar
-                            class="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground"
-                        />
-                        <Input
-                            v-model="localFilters.date_from"
-                            type="date"
-                            class="h-8 w-36 pl-8 text-sm"
-                        />
-                    </div>
+                    <DatePickerField
+                        :model-value="localFilters.date_from || null"
+                        class="h-9 w-40"
+                        @update:model-value="
+                            localFilters.date_from = $event ?? ''
+                        "
+                    />
                     <span class="text-xs text-muted-foreground">–</span>
-                    <div class="relative flex items-center">
-                        <Calendar
-                            class="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground"
-                        />
-                        <Input
-                            v-model="localFilters.date_to"
-                            type="date"
-                            class="h-8 w-36 pl-8 text-sm"
-                        />
-                    </div>
+                    <DatePickerField
+                        :model-value="localFilters.date_to || null"
+                        class="h-9 w-40"
+                        @update:model-value="
+                            localFilters.date_to = $event ?? ''
+                        "
+                    />
                 </div>
 
                 <!-- Status -->
@@ -224,10 +225,10 @@ const exportUrl = computed(() => {
                         :model-value="localFilters.status"
                         @update:model-value="
                             localFilters.status =
-                                $event === '_all' ? '' : $event
+                                $event === '_all' ? '' : String($event)
                         "
                     >
-                        <SelectTrigger class="h-8 text-sm">
+                        <SelectTrigger class="h-9 text-sm">
                             <SelectValue :placeholder="__('Status')" />
                         </SelectTrigger>
                         <SelectContent>
@@ -262,10 +263,10 @@ const exportUrl = computed(() => {
                         :model-value="localFilters.app_key"
                         @update:model-value="
                             localFilters.app_key =
-                                $event === '_all' ? '' : $event
+                                $event === '_all' ? '' : String($event)
                         "
                     >
-                        <SelectTrigger class="h-8 text-sm">
+                        <SelectTrigger class="h-9 text-sm">
                             <SelectValue :placeholder="__('App')" />
                         </SelectTrigger>
                         <SelectContent>
@@ -324,7 +325,7 @@ const exportUrl = computed(() => {
                     v-if="isDirty"
                     variant="ghost"
                     size="sm"
-                    class="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    class="h-9 gap-1 text-xs text-muted-foreground hover:text-foreground"
                     @click="resetFilters"
                 >
                     <X class="size-3" />

@@ -1,4 +1,6 @@
 import {
+    ChartColumn,
+    ClipboardList,
     Clock3,
     FlaskConical,
     Folder,
@@ -30,6 +32,8 @@ export type SidebarApp = {
 
 const iconMap: Record<SidebarIconName, Component> = {
     'app-logo': AppLogoIcon,
+    'chart-column': ChartColumn,
+    'clipboard-list': ClipboardList,
     'clock-3': Clock3,
     'flask-conical': FlaskConical,
     folder: Folder,
@@ -44,7 +48,7 @@ const iconMap: Record<SidebarIconName, Component> = {
 };
 
 export const resolveSidebarIcon = (icon: SidebarIconName): Component =>
-    iconMap[icon];
+    iconMap[icon] ?? LayoutGrid;
 
 export const mapSidebarApps = (
     apps: SidebarNavigationAppData[],

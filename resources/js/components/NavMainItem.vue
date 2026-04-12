@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { ChevronRight } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
+import type { ComputedRef } from 'vue';
 import {
     Collapsible,
     CollapsibleContent,
@@ -21,6 +22,17 @@ const props = defineProps<{ item: NavItem }>();
 
 const { currentUrl, isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 
+/**
+ * All hrefs in the nav tree, provided by NavMain.
+ * Used to implement best-match-wins active state: a less-specific leaf
+ * will NOT be highlighted when a more-specific sibling also matches
+ * the current URL via prefix.
+ */
+const allNavHrefs = inject<ComputedRef<string[]>>(
+    'navAllHrefs',
+    computed(() => []),
+);
+
 const hasChildren = computed(() => !!props.item.children?.length);
 const hasActiveChild = computed(
     () =>
@@ -29,6 +41,27 @@ const hasActiveChild = computed(
         ) ?? false,
 );
 const isOpen = ref(hasChildren.value && hasActiveChild.value);
+
+/**
+ * Active state for leaf (no-children) items.
+ *
+ * Uses prefix matching so detail pages (e.g. /users/123) keep their
+ * parent item highlighted, but yields to any sibling whose href is a
+ * longer (more-specific) prefix match — preventing e.g. "Approval inbox"
+ * from staying lit on the "Reports" page.
+ */
+const isLeafActive = computed(() => {
+    const href = props.item.href;
+    if (!href) return false;
+    if (!isCurrentOrParentUrl(href)) return false;
+
+    const hrefStr = href as string;
+    const hasMoreSpecificMatch = allNavHrefs.value
+        .filter((h) => h !== hrefStr)
+        .some((h) => isCurrentOrParentUrl(h) && h.length > hrefStr.length);
+
+    return !hasMoreSpecificMatch;
+});
 
 watch(currentUrl, () => {
     if (hasActiveChild.value) {
@@ -91,7 +124,7 @@ watch(currentUrl, () => {
         <SidebarMenuButton
             v-else-if="item.href"
             as-child
-            :is-active="isCurrentOrParentUrl(item.href)"
+            :is-active="isLeafActive"
             :tooltip="item.title"
         >
             <Link :href="item.href">

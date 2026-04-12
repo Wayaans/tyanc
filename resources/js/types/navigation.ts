@@ -8,8 +8,10 @@ export type BreadcrumbItem = {
 
 export type SidebarIconName =
     | 'app-logo'
-    | 'flask-conical'
+    | 'chart-column'
+    | 'clipboard-list'
     | 'clock-3'
+    | 'flask-conical'
     | 'folder'
     | 'key-round'
     | 'layout-grid'
