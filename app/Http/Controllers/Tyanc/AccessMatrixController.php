@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Access\ResolveEffectivePermissions;
 use App\Actions\Tyanc\Access\SyncAccessMatrix;
 use App\Data\Tyanc\Apps\AppData;
@@ -21,7 +22,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +31,10 @@ final readonly class AccessMatrixController
 
     public function index(Request $request, #[CurrentUser] User $user): Response|JsonResponse
     {
-        Gate::forUser($user)->authorize(PermissionKey::tyanc('access_matrix', 'manage'));
+        abort_unless(
+            resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('access_matrix', 'viewany')),
+            403,
+        );
 
         $payload = [
             'accessMatrix' => $this->payload($request),

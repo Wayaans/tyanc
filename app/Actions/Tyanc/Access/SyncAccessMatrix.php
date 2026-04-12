@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Access;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Permissions\SyncRolePermissions;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class SyncAccessMatrix
 {
@@ -21,7 +22,10 @@ final readonly class SyncAccessMatrix
      */
     public function handle(User $actor, Role $role, array $permissionNames): Role
     {
-        Gate::forUser($actor)->authorize(PermissionKey::tyanc('access_matrix', 'manage'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('access_matrix', 'update')),
+            AuthorizationException::class,
+        );
 
         $before = RoleData::fromModel($role->fresh(['permissions']))->toArray();
 

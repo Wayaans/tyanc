@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Form, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
+import { Clock, ExternalLink } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import AppearanceSettingsController from '@/actions/App/Http/Controllers/Tyanc/Settings/AppearanceSettingsController';
+import ApprovalReasonDialog from '@/components/cumpu/approvals/ApprovalReasonDialog.vue';
 import InputError from '@/components/InputError.vue';
 import AppearancePreview from '@/components/tyanc/settings/AppearancePreview.vue';
 import SettingsFormFooter from '@/components/tyanc/settings/SettingsFormFooter.vue';
@@ -24,6 +25,8 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { useTranslations } from '@/lib/translations';
+import { update } from '@/routes/tyanc/settings/appearance';
+import type { ApprovalContext, GovernedActionState } from '@/types/cumpu';
 
 type Option = { value: string; label: string };
 type FontFamily = { value: string; label: string; stack: string };
@@ -45,14 +48,10 @@ const props = defineProps<{
     fontFamilies: FontFamily[];
     sidebarVariants: Option[];
     spacingDensities: SpacingDensity[];
+    approvalContext?: ApprovalContext | null;
 }>();
 
 const isOpen = ref(false);
-
-function handleSuccess() {
-    isOpen.value = false;
-    router.reload();
-}
 
 const BORDER_RADIUS_OPTIONS = [
     { value: '0rem', label: 'None' },
@@ -64,13 +63,16 @@ const BORDER_RADIUS_OPTIONS = [
     { value: '1rem', label: '2XL — 16px' },
 ];
 
-/** Local reactive state for the live preview */
 const primaryColor = ref(props.settings.primary_color);
 const secondaryColor = ref(props.settings.secondary_color);
 const borderRadius = ref(props.settings.border_radius);
 const spacingDensity = ref(props.settings.spacing_density);
 const fontFamily = ref(props.settings.font_family);
 const sidebarVariant = ref(props.settings.sidebar_variant);
+
+const errors = ref<Partial<Record<string, string>>>({});
+const processing = ref(false);
+const recentlySuccessful = ref(false);
 
 const borderRadiusOptions = computed(() => {
     const found = BORDER_RADIUS_OPTIONS.find(
@@ -121,6 +123,109 @@ watch(
     },
 );
 
+// ── Approval dialog state ─────────────────────────────────────────────────────
+
+const approvalDialogOpen = ref(false);
+const approvalNote = ref('');
+
+const updateActionState = computed<GovernedActionState | undefined>(
+    () => props.approvalContext?.governed_actions?.['update'],
+);
+
+const updateNeedsApprovalDialog = computed<boolean>(() => {
+    const s = updateActionState.value;
+    if (!s) return false;
+    return s.approval_enabled && !s.bypasses_for_actor && !s.has_usable_grant;
+});
+
+const updateBlockedByRequest = computed(() =>
+    updateActionState.value?.has_blocking_request
+        ? updateActionState.value.relevant_request
+        : null,
+);
+
+const submissionBlockedVisible = ref(false);
+
+watch(approvalDialogOpen, (isOpen) => {
+    if (!isOpen) {
+        approvalNote.value = '';
+        errors.value = {
+            ...errors.value,
+            request_note: undefined,
+            approval: undefined,
+        };
+    }
+});
+
+// ── Submit flow ───────────────────────────────────────────────────────────────
+
+function handleSubmit() {
+    submissionBlockedVisible.value = false;
+
+    if (updateNeedsApprovalDialog.value) {
+        if (updateBlockedByRequest.value) {
+            submissionBlockedVisible.value = true;
+            return;
+        }
+        approvalDialogOpen.value = true;
+        return;
+    }
+
+    doSubmit('');
+}
+
+function onApprovalConfirm() {
+    approvalDialogOpen.value = false;
+    doSubmit(approvalNote.value);
+}
+
+function doSubmit(note: string) {
+    processing.value = true;
+    errors.value = {};
+    recentlySuccessful.value = false;
+
+    router.patch(
+        update.url(),
+        {
+            primary_color: primaryColor.value,
+            secondary_color: secondaryColor.value,
+            border_radius: borderRadius.value,
+            spacing_density: spacingDensity.value,
+            font_family: fontFamily.value,
+            sidebar_variant: sidebarVariant.value,
+            request_note: note || undefined,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (updateNeedsApprovalDialog.value) {
+                    recentlySuccessful.value = false;
+                    isOpen.value = false;
+                    return;
+                }
+
+                recentlySuccessful.value = true;
+                setTimeout(() => {
+                    recentlySuccessful.value = false;
+                    isOpen.value = false;
+                }, 1500);
+            },
+            onError: (responseErrors) => {
+                errors.value = responseErrors as Partial<
+                    Record<string, string>
+                >;
+                if (responseErrors.request_note || responseErrors.approval) {
+                    approvalNote.value = note;
+                    approvalDialogOpen.value = true;
+                }
+            },
+            onFinish: () => {
+                processing.value = false;
+            },
+        },
+    );
+}
+
 const { __ } = useTranslations();
 </script>
 
@@ -160,12 +265,9 @@ const { __ } = useTranslations();
                 />
             </div>
 
-            <Form
-                v-bind="AppearanceSettingsController.update.form()"
-                :options="{ preserveScroll: true }"
+            <form
                 class="flex-1 space-y-5 overflow-y-auto px-6 pb-6"
-                @success="handleSuccess"
-                v-slot="{ errors, processing, recentlySuccessful }"
+                @submit.prevent="handleSubmit"
             >
                 <!-- Colors -->
                 <fieldset class="space-y-3">
@@ -186,7 +288,6 @@ const { __ } = useTranslations();
                                     id="primary_color"
                                     v-model="primaryColor"
                                     type="text"
-                                    name="primary_color"
                                     placeholder="oklch(0.5 0.17 200) or #0f766e"
                                     class="font-mono"
                                 />
@@ -207,7 +308,6 @@ const { __ } = useTranslations();
                                     id="secondary_color"
                                     v-model="secondaryColor"
                                     type="text"
-                                    name="secondary_color"
                                     placeholder="oklch(0.96 0 0) or #f5f5f5"
                                     class="font-mono"
                                 />
@@ -234,11 +334,6 @@ const { __ } = useTranslations();
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <input
-                        type="hidden"
-                        name="border_radius"
-                        :value="borderRadius"
-                    />
                     <InputError :message="errors.border_radius" />
                 </div>
 
@@ -259,11 +354,6 @@ const { __ } = useTranslations();
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <input
-                        type="hidden"
-                        name="font_family"
-                        :value="fontFamily"
-                    />
                     <InputError :message="errors.font_family" />
                 </div>
 
@@ -286,11 +376,6 @@ const { __ } = useTranslations();
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <input
-                        type="hidden"
-                        name="spacing_density"
-                        :value="spacingDensity"
-                    />
                     <InputError :message="errors.spacing_density" />
                 </div>
 
@@ -313,19 +398,71 @@ const { __ } = useTranslations();
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <input
-                        type="hidden"
-                        name="sidebar_variant"
-                        :value="sidebarVariant"
-                    />
                     <InputError :message="errors.sidebar_variant" />
+                </div>
+
+                <!-- Blocked submission callout -->
+                <div
+                    v-if="submissionBlockedVisible && updateBlockedByRequest"
+                    class="flex items-start gap-3 rounded-xl border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/[0.07]"
+                >
+                    <Clock
+                        class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                    />
+                    <div class="min-w-0 flex-1 space-y-1">
+                        <p
+                            class="text-sm font-medium text-amber-900 dark:text-amber-200"
+                        >
+                            {{
+                                __(
+                                    'An approval request for this action is already pending.',
+                                )
+                            }}
+                        </p>
+                        <p
+                            class="text-xs text-amber-700/80 dark:text-amber-300/80"
+                        >
+                            {{
+                                __(
+                                    'You cannot submit a new request until the existing one is resolved.',
+                                )
+                            }}
+                        </p>
+                    </div>
+                    <a
+                        v-if="updateBlockedByRequest.detail_url"
+                        :href="updateBlockedByRequest.detail_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex shrink-0 items-center gap-1 rounded-lg border border-amber-200/80 bg-white/60 px-2.5 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100/60 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                    >
+                        {{ __('View request') }}
+                        <ExternalLink class="size-3" />
+                    </a>
                 </div>
 
                 <SettingsFormFooter
                     :processing="processing"
                     :recently-successful="recentlySuccessful"
                 />
-            </Form>
+            </form>
         </SheetContent>
     </Sheet>
+
+    <ApprovalReasonDialog
+        v-model:open="approvalDialogOpen"
+        v-model:note="approvalNote"
+        :title="__('Save appearance settings')"
+        :description="
+            __(
+                'This action requires approval. Explain why these changes should be approved.',
+            )
+        "
+        :action-label="__('Submit for approval')"
+        :loading="processing"
+        :error="errors.request_note ?? errors.approval"
+        :relevant-request="updateActionState?.relevant_request ?? null"
+        @confirm="onApprovalConfirm"
+        @cancel="approvalNote = ''"
+    />
 </template>

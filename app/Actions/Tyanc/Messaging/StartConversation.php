@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Models\Conversation;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class StartConversation
 {
@@ -21,7 +22,10 @@ final readonly class StartConversation
      */
     public function handle(User $actor, array $attributes): Conversation
     {
-        Gate::forUser($actor)->authorize(PermissionKey::tyanc('messages', 'create'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'create')),
+            AuthorizationException::class,
+        );
 
         $participantIds = $this->participantIds($actor, $attributes['participant_ids'] ?? []);
         $subject = $this->nullableString($attributes['subject'] ?? null);

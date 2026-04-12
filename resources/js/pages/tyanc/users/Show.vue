@@ -4,7 +4,9 @@ import { Head } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     AtSign,
+    CheckCircle2,
     Clock,
+    ExternalLink,
     Key,
     Mail,
     Shield,
@@ -12,7 +14,10 @@ import {
     Trash2,
     UserPen,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalReasonDialog from '@/components/cumpu/approvals/ApprovalReasonDialog.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import UserStatusBadge from '@/components/tyanc/users/UserStatusBadge.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +30,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { destroy, edit, index, suspend } from '@/routes/tyanc/users';
 import type { UserFormData } from '@/types';
+import type { ApprovalContext, GovernedActionState } from '@/types/cumpu';
 
 type Abilities = {
     update: boolean;
@@ -35,6 +41,8 @@ type Abilities = {
 const props = defineProps<{
     user: UserFormData;
     abilities: Abilities;
+    approvalContext?: ApprovalContext | null;
+    status?: string | null;
 }>();
 
 const { __, locale } = useTranslations();
@@ -61,6 +69,49 @@ function formatDate(date: string | null | undefined): string {
 const suspendProcessing = ref(false);
 const deleteProcessing = ref(false);
 const confirmingDelete = ref(false);
+const deleteErrors = ref<Partial<Record<string, string>>>({});
+
+// ── Approval dialog state for delete ─────────────────────────────────────────
+
+const deleteApprovalDialogOpen = ref(false);
+const deleteApprovalNote = ref('');
+
+/** The delete governed-action state from the approval context, if present. */
+const deleteActionState = computed<GovernedActionState | undefined>(
+    () => props.approvalContext?.governed_actions?.['delete'],
+);
+
+/**
+ * Returns true when the delete must go through the approval-request branch.
+ * A blocking request may still short-circuit this into an inline explainer.
+ */
+const deleteNeedsApprovalDialog = computed<boolean>(() => {
+    const s = deleteActionState.value;
+    if (!s) return false;
+    return s.approval_enabled && !s.bypasses_for_actor && !s.has_usable_grant;
+});
+
+/**
+ * When there is already a blocking approval request for the delete action,
+ * we surface this info rather than opening a new request flow.
+ */
+const deleteBlockedByRequest = computed(() =>
+    deleteActionState.value?.has_blocking_request
+        ? deleteActionState.value.relevant_request
+        : null,
+);
+
+/** Shown inline when the user tries to delete while blocked. */
+const deleteBlockedVisible = ref(false);
+
+watch(deleteApprovalDialogOpen, (isOpen) => {
+    if (!isOpen) {
+        deleteApprovalNote.value = '';
+        deleteErrors.value = { ...deleteErrors.value, request_note: undefined };
+    }
+});
+
+// ── Navigation helpers ────────────────────────────────────────────────────────
 
 function goBack() {
     router.visit(index.url());
@@ -69,6 +120,8 @@ function goBack() {
 function goToEdit() {
     router.visit(edit.url({ user: props.user.id }));
 }
+
+// ── Suspend ───────────────────────────────────────────────────────────────────
 
 function suspendUser() {
     suspendProcessing.value = true;
@@ -85,18 +138,58 @@ function suspendUser() {
     );
 }
 
+// ── Delete flow ───────────────────────────────────────────────────────────────
+
 function handleDelete() {
+    // First click: enter confirmation mode.
     if (!confirmingDelete.value) {
         confirmingDelete.value = true;
+        deleteBlockedVisible.value = false;
 
         return;
     }
 
+    deleteBlockedVisible.value = false;
+
+    // Open approval dialog when approval is required and no usable grant.
+    if (deleteNeedsApprovalDialog.value) {
+        if (deleteBlockedByRequest.value) {
+            deleteBlockedVisible.value = true;
+
+            return;
+        }
+
+        deleteApprovalDialogOpen.value = true;
+
+        return;
+    }
+
+    // Has a usable grant, approval not required, or bypassed — delete directly.
+    doDelete('');
+}
+
+function onDeleteApprovalConfirm() {
+    deleteApprovalDialogOpen.value = false;
+    doDelete(deleteApprovalNote.value);
+}
+
+function doDelete(note: string) {
     deleteProcessing.value = true;
+    deleteErrors.value = {};
 
     router.delete(destroy.url({ user: props.user.id }), {
-        onSuccess: () => {
-            router.visit(index.url());
+        data: { request_note: note || undefined },
+        // Server handles navigation after delete (or approval redirect).
+        onError: (responseErrors) => {
+            deleteErrors.value = responseErrors as Partial<
+                Record<string, string>
+            >;
+
+            // Re-open the approval dialog so the user can fix the note.
+            if (responseErrors.request_note) {
+                deleteApprovalNote.value = note;
+                deleteApprovalDialogOpen.value = true;
+            }
         },
         onFinish: () => {
             deleteProcessing.value = false;
@@ -123,6 +216,25 @@ function handleDelete() {
                     {{ __('All users') }}
                 </Button>
             </div>
+
+            <!-- Status feedback (e.g. approval submitted) -->
+            <div
+                v-if="props.status"
+                class="flex items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/[0.07]"
+            >
+                <CheckCircle2
+                    class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                />
+                <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                    {{ props.status }}
+                </p>
+            </div>
+
+            <!-- Approval banner -->
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
 
             <!-- Hero card -->
             <div
@@ -235,14 +347,63 @@ function handleDelete() {
                                 v-if="confirmingDelete"
                                 variant="ghost"
                                 size="sm"
-                                @click="confirmingDelete = false"
+                                @click="
+                                    confirmingDelete = false;
+                                    deleteBlockedVisible = false;
+                                "
                             >
                                 {{ __('Cancel') }}
                             </Button>
                         </div>
                     </div>
+
+                    <!-- Blocked delete callout (shown after second click when blocked) -->
+                    <div
+                        v-if="deleteBlockedVisible && deleteBlockedByRequest"
+                        class="mt-4 flex items-start gap-3 rounded-xl border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/[0.07]"
+                    >
+                        <Clock
+                            class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                        />
+                        <div class="min-w-0 flex-1 space-y-1">
+                            <p
+                                class="text-sm font-medium text-amber-900 dark:text-amber-200"
+                            >
+                                {{
+                                    __(
+                                        'An approval request for this action is already pending.',
+                                    )
+                                }}
+                            </p>
+                            <p
+                                class="text-xs text-amber-700/80 dark:text-amber-300/80"
+                            >
+                                {{
+                                    __(
+                                        'You cannot submit a new request until the existing one is resolved.',
+                                    )
+                                }}
+                            </p>
+                        </div>
+                        <a
+                            v-if="deleteBlockedByRequest.detail_url"
+                            :href="deleteBlockedByRequest.detail_url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="flex shrink-0 items-center gap-1 rounded-lg border border-amber-200/80 bg-white/60 px-2.5 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100/60 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                        >
+                            {{ __('View request') }}
+                            <ExternalLink class="size-3" />
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            <!-- Approval history -->
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
 
             <!-- Detail cards grid -->
             <div class="grid gap-4 lg:grid-cols-2">
@@ -401,4 +562,22 @@ function handleDelete() {
             </div>
         </div>
     </AppLayout>
+
+    <!-- Approval reason dialog for delete submissions -->
+    <ApprovalReasonDialog
+        v-model:open="deleteApprovalDialogOpen"
+        v-model:note="deleteApprovalNote"
+        :title="__('Delete user')"
+        :description="
+            __(
+                'This action requires approval. Explain why this user should be deleted.',
+            )
+        "
+        :action-label="__('Submit for approval')"
+        :loading="deleteProcessing"
+        :error="deleteErrors.request_note"
+        :relevant-request="deleteActionState?.relevant_request ?? null"
+        @confirm="onDeleteApprovalConfirm"
+        @cancel="deleteApprovalNote = ''"
+    />
 </template>

@@ -60,6 +60,17 @@ it('exposes config-driven permission options and a catalog summary', function ()
         ->assertJsonPath('permissionsTable.summary.total', count(PermissionKey::all()));
 });
 
+it('includes dedicated cumpu navigation resources in role permission options', function (): void {
+    $manager = rbacManager();
+
+    $response = $this->actingAs($manager)
+        ->getJson(route('tyanc.roles.index'))
+        ->assertOk();
+
+    expect(collect($response->json('permissionOptions.resources.cumpu'))->pluck('value')->all())
+        ->toContain('dashboard', 'my_requests', 'approval_inbox', 'all_approvals', 'approvals', 'reports', 'approval_rules');
+});
+
 it('creates roles as metadata first and assigns permissions through a dedicated route', function (): void {
     $manager = rbacManager();
 

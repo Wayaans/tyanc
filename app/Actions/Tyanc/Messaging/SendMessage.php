@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -12,7 +13,6 @@ use App\Notifications\NewMessageNotification;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class SendMessage
 {
@@ -21,7 +21,10 @@ final readonly class SendMessage
      */
     public function handle(User $actor, Conversation $conversation, array $attributes): Message
     {
-        Gate::forUser($actor)->authorize(PermissionKey::tyanc('messages', 'create'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'create')),
+            AuthorizationException::class,
+        );
 
         throw_if(! $conversation->participants()->whereKey($actor->getKey())->exists(), AuthorizationException::class);
 

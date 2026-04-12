@@ -1,4 +1,7 @@
 import {
+    ChartColumn,
+    ClipboardList,
+    Clock3,
     FlaskConical,
     Folder,
     KeyRound,
@@ -6,6 +9,7 @@ import {
     MessageSquare,
     Palette,
     Settings,
+    Settings2,
     ShieldCheck,
     User,
 } from 'lucide-vue-next';
@@ -28,6 +32,9 @@ export type SidebarApp = {
 
 const iconMap: Record<SidebarIconName, Component> = {
     'app-logo': AppLogoIcon,
+    'chart-column': ChartColumn,
+    'clipboard-list': ClipboardList,
+    'clock-3': Clock3,
     'flask-conical': FlaskConical,
     folder: Folder,
     'key-round': KeyRound,
@@ -35,12 +42,13 @@ const iconMap: Record<SidebarIconName, Component> = {
     palette: Palette,
     'message-square': MessageSquare,
     settings: Settings,
+    'settings-2': Settings2,
     'shield-check': ShieldCheck,
     user: User,
 };
 
 export const resolveSidebarIcon = (icon: SidebarIconName): Component =>
-    iconMap[icon];
+    iconMap[icon] ?? LayoutGrid;
 
 export const mapSidebarApps = (
     apps: SidebarNavigationAppData[],

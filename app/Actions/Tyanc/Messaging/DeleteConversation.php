@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Messaging;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Models\Conversation;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 final readonly class DeleteConversation
 {
     public function handle(User $actor, Conversation $conversation): void
     {
-        Gate::forUser($actor)->authorize(PermissionKey::tyanc('messages', 'delete'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($actor, PermissionKey::tyanc('messages', 'delete')),
+            AuthorizationException::class,
+        );
 
         $membership = $conversation->participants()
             ->whereKey($actor->getKey())

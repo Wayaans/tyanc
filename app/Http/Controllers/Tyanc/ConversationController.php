@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tyanc;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Messaging\ArchiveConversation;
 use App\Actions\Tyanc\Messaging\DeleteConversation;
 use App\Actions\Tyanc\Messaging\ListConversations;
@@ -18,7 +19,6 @@ use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -133,9 +133,9 @@ final readonly class ConversationController
     private function abilities(User $user): array
     {
         return [
-            'createConversation' => Gate::forUser($user)->allows(PermissionKey::tyanc('messages', 'create')),
-            'archiveConversation' => Gate::forUser($user)->allows(PermissionKey::tyanc('messages', 'archive')),
-            'deleteConversation' => Gate::forUser($user)->allows(PermissionKey::tyanc('messages', 'delete')),
+            'createConversation' => resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('messages', 'create')),
+            'archiveConversation' => resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('messages', 'archive')),
+            'deleteConversation' => resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('messages', 'delete')),
         ];
     }
 

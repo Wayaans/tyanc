@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\Approvals\ApprovalSubject;
+use App\Models\Concerns\InteractsWithApprovals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Role as SpatieRole;
 
-final class Role extends SpatieRole
+/**
+ * @property int $level
+ * @property string $name
+ * @property string $guard_name
+ */
+final class Role extends SpatieRole implements ApprovalSubject
 {
     use HasFactory;
+    use InteractsWithApprovals;
 
     /**
      * @var list<string>
@@ -19,6 +27,16 @@ final class Role extends SpatieRole
         'guard_name',
         'level',
     ];
+
+    public function approvalAppKey(): string
+    {
+        return 'tyanc';
+    }
+
+    public function approvalResourceKey(): string
+    {
+        return 'roles';
+    }
 
     public function isHigherThan(self $role): bool
     {

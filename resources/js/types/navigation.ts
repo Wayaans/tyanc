@@ -8,12 +8,16 @@ export type BreadcrumbItem = {
 
 export type SidebarIconName =
     | 'app-logo'
+    | 'chart-column'
+    | 'clipboard-list'
+    | 'clock-3'
     | 'flask-conical'
     | 'folder'
     | 'key-round'
     | 'layout-grid'
     | 'palette'
     | 'settings'
+    | 'settings-2'
     | 'shield-check'
     | 'user'
     | 'message-square';

@@ -251,10 +251,30 @@ it('clears user preference overrides when all values are unset', function (): vo
     expect(UserPreference::query()->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
-it('forbids tyanc admin settings routes without the tyanc.settings.manage permission', function (): void {
+it('forbids tyanc admin settings routes without tyanc.settings page access', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('tyanc.settings.application.edit'))
+        ->assertForbidden();
+});
+
+it('allows viewing tyanc settings with viewany and still requires update permission to save', function (): void {
+    $user = User::factory()->create();
+
+    $user->givePermissionTo(Permission::query()->firstOrCreate([
+        'name' => PermissionKey::tyanc('settings', 'viewany'),
+        'guard_name' => 'web',
+    ]));
+
+    $this->actingAs($user)
+        ->get(route('tyanc.settings.application.edit'))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->patchJson(route('tyanc.settings.application.update'), [
+            'app_name' => 'Read only Tyanc',
+            'company_legal_name' => 'Read only Labs',
+        ])
         ->assertForbidden();
 });

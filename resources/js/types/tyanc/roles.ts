@@ -1,3 +1,5 @@
+import type { GovernedActionState } from '@/types/cumpu';
+
 export type RoleData = {
     id: number;
     name: string;
@@ -10,6 +12,7 @@ export type RoleData = {
     permissions: string[];
     created_at: string;
     updated_at: string;
+    update_approval_state?: GovernedActionState | null;
 };
 
 export type RoleRow = RoleData;

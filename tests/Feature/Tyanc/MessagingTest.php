@@ -99,6 +99,29 @@ it('shows contacts to message viewers but flags when they cannot create a conver
             ->where('contacts.0.id', (string) $otherParticipant->id));
 });
 
+it('treats tyanc.messages.manage as full access to the messaging workspace', function (): void {
+    $manager = messagingUser([
+        PermissionKey::tyanc('messages', 'manage'),
+    ]);
+    $recipient = User::factory()->create();
+
+    $this->actingAs($manager)
+        ->get(route('tyanc.messages.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tyanc/messages/Index')
+            ->where('abilities.createConversation', true));
+
+    $this->actingAs($manager)
+        ->postJson(route('tyanc.messages.create'), [
+            'participant_ids' => [(string) $recipient->id],
+            'subject' => 'Manage fallback',
+            'message' => 'Manage should allow conversation creation.',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('conversation.subject', 'Manage fallback');
+});
+
 it('starts a new conversation and posts the first message', function (): void {
     $sender = messagingUser([
         PermissionKey::tyanc('messages', 'viewany'),

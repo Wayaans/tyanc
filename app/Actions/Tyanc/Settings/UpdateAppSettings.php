@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Settings;
 
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Models\SettingsAsset;
 use App\Models\User;
 use App\Settings\AppSettings;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\File;
 
@@ -21,7 +22,10 @@ final readonly class UpdateAppSettings
      */
     public function handle(User $user, array $attributes): AppSettings
     {
-        Gate::forUser($user)->authorize(PermissionKey::tyanc('settings', 'manage'));
+        throw_if(
+            ! resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::tyanc('settings', 'update')),
+            AuthorizationException::class,
+        );
 
         $validated = Validator::make($attributes, [
             'app_name' => ['required', 'string', 'max:120'],

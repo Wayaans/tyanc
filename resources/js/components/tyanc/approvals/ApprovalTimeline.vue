@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { CheckCircle2, Clock, XCircle } from 'lucide-vue-next';
+import {
+    Ban,
+    CheckCircle2,
+    Clock,
+    PackageCheck,
+    XCircle,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/lib/translations';
@@ -34,8 +40,15 @@ const statusConfigs: Record<
         icon: Clock,
         iconClass: 'text-slate-500',
     },
+    in_review: {
+        label: 'Approval in review',
+        badgeClass:
+            'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+        icon: Clock,
+        iconClass: 'text-sky-500',
+    },
     approved: {
-        label: 'Approval approved',
+        label: 'Grant issued',
         badgeClass:
             'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
         icon: CheckCircle2,
@@ -47,6 +60,27 @@ const statusConfigs: Record<
             'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400',
         icon: XCircle,
         iconClass: 'text-red-500',
+    },
+    cancelled: {
+        label: 'Request cancelled',
+        badgeClass:
+            'border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300',
+        icon: Ban,
+        iconClass: 'text-orange-500',
+    },
+    expired: {
+        label: 'Grant expired',
+        badgeClass:
+            'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+        icon: Ban,
+        iconClass: 'text-amber-500',
+    },
+    consumed: {
+        label: 'Grant consumed',
+        badgeClass:
+            'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+        icon: PackageCheck,
+        iconClass: 'text-violet-500',
     },
 };
 </script>
@@ -75,7 +109,7 @@ const statusConfigs: Record<
                         (request) => request.status === 'pending',
                     ).length
                 }}
-                {{ __('Pending approval') }}
+                {{ __('Pending') }}
             </Badge>
         </div>
 
@@ -149,6 +183,52 @@ const statusConfigs: Record<
                         }}
                     </p>
 
+                    <!-- Grant expiry (when approved and usable) -->
+                    <p
+                        v-if="
+                            request.status === 'approved' &&
+                            request.is_grant_usable &&
+                            request.expires_at
+                        "
+                        class="text-xs text-emerald-700 dark:text-emerald-400"
+                    >
+                        {{ __('Grant valid until') }}
+                        {{ dateFormatter.format(new Date(request.expires_at)) }}
+                    </p>
+
+                    <!-- Consumed by info -->
+                    <p
+                        v-if="
+                            request.status === 'consumed' &&
+                            request.consumed_by_name
+                        "
+                        class="text-xs text-violet-700 dark:text-violet-400"
+                    >
+                        {{ __('Grant used by') }}
+                        <span class="font-medium">{{
+                            request.consumed_by_name
+                        }}</span>
+                        <span v-if="request.consumed_at">
+                            ·
+                            {{
+                                dateFormatter.format(
+                                    new Date(request.consumed_at),
+                                )
+                            }}
+                        </span>
+                    </p>
+
+                    <!-- Expired grant note -->
+                    <p
+                        v-if="
+                            request.status === 'expired' && request.expires_at
+                        "
+                        class="text-xs text-amber-700 dark:text-amber-400"
+                    >
+                        {{ __('Grant expired') }}
+                        {{ dateFormatter.format(new Date(request.expires_at)) }}
+                    </p>
+
                     <p
                         v-if="request.request_note"
                         class="text-xs text-muted-foreground"
@@ -166,13 +246,14 @@ const statusConfigs: Record<
 
                 <button
                     v-if="
-                        request.status === 'pending' &&
+                        (request.status === 'pending' ||
+                            request.status === 'in_review') &&
                         (request.can_approve || request.can_reject)
                     "
                     class="shrink-0 rounded-lg border border-sidebar-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-sidebar/40"
                     @click="emit('decide', request)"
                 >
-                    {{ __('Approve request') }}
+                    {{ __('Review') }}
                 </button>
             </li>
         </ul>

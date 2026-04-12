@@ -4,17 +4,30 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Roles;
 
+use App\Actions\Authorization\PermissionResourceAccess;
+use App\Actions\Tyanc\Approvals\ResolveApprovalRule;
+use App\Actions\Tyanc\Approvals\ShouldBypassApproval;
+use App\Data\Cumpu\Approvals\ApprovalContextRequestData;
+use App\Data\Cumpu\Approvals\GovernedActionStateData;
 use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Rbac\RoleData;
+use App\Models\ApprovalRequest;
+use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use App\Support\Tables\AppliesTableQuery;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 final readonly class ListRoles
 {
-    public function __construct(private AppliesTableQuery $tableQuery) {}
+    public function __construct(
+        private AppliesTableQuery $tableQuery,
+        private ResolveApprovalRule $rules,
+        private ShouldBypassApproval $bypassApproval,
+        private PermissionResourceAccess $access,
+    ) {}
 
     /**
      * @return array{
@@ -28,17 +41,25 @@ final readonly class ListRoles
     {
         Gate::forUser($actor)->authorize('viewAny', Role::class);
 
+        /** @var Collection<int, Role> $roles */
         $roles = Role::query()
             ->with('permissions')
             ->withCount(['permissions', 'users'])
             ->orderByDesc('level')
             ->orderBy('name')
-            ->get()
-            ->map(fn (Role $role): array => RoleData::fromModel($role)->toArray());
+            ->get();
+
+        $updateApprovalStates = $this->updateApprovalStates($actor, $roles);
+        $rows = $roles->map(
+            fn (Role $role): array => RoleData::fromModel(
+                $role,
+                $updateApprovalStates[(int) $role->getKey()] ?? null,
+            )->toArray(),
+        );
 
         return [
             ...$this->tableQuery->handle(
-                items: $roles,
+                items: $rows,
                 query: $query,
                 sorts: [
                     'name' => 'name',
@@ -54,6 +75,83 @@ final readonly class ListRoles
             ),
             'filters' => $this->filters(),
         ];
+    }
+
+    /**
+     * @param  Collection<int, Role>  $roles
+     * @return array<int, GovernedActionStateData>
+     */
+    private function updateApprovalStates(User $actor, Collection $roles): array
+    {
+        if ($roles->isEmpty()) {
+            return [];
+        }
+
+        $permissionName = PermissionKey::tyanc('roles', 'update');
+        $sampleRole = $roles->first();
+        $rule = $sampleRole instanceof Role
+            ? $this->rules->handle($actor, $permissionName, $sampleRole)
+            : null;
+        $approvalEnabled = $rule instanceof ApprovalRule;
+        $bypassesForActor = $approvalEnabled && $this->bypassApproval->handle($actor, $rule);
+        $canViewDetails = $this->access->handle($actor, PermissionKey::cumpu('approvals', 'viewany'))
+            || $this->access->handle($actor, PermissionKey::cumpu('approvals', 'view'));
+
+        $subjectType = $sampleRole instanceof Role ? $sampleRole->getMorphClass() : new Role()->getMorphClass();
+        $roleIds = $roles
+            ->map(fn (Role $role): string => (string) $role->getKey())
+            ->values()
+            ->all();
+
+        /** @var Collection<string, Collection<int, ApprovalRequest>> $requestsBySubject */
+        $requestsBySubject = ApprovalRequest::query()
+            ->with(['requester', 'consumedBy', 'assignments.step'])
+            ->where('requested_by_id', $actor->id)
+            ->where('action', $permissionName)
+            ->where('subject_type', $subjectType)
+            ->whereIn('subject_id', $roleIds)
+            ->latest('reviewed_at')
+            ->latest('requested_at')
+            ->get()
+            ->groupBy(fn (ApprovalRequest $approvalRequest): string => (string) $approvalRequest->subject_id);
+
+        return $roles
+            ->mapWithKeys(function (Role $role) use ($permissionName, $approvalEnabled, $bypassesForActor, $canViewDetails, $requestsBySubject): array {
+                /** @var Collection<int, ApprovalRequest> $requests */
+                $requests = $requestsBySubject->get((string) $role->getKey(), collect());
+                $usableGrant = $requests->first(
+                    fn (ApprovalRequest $approvalRequest): bool => $approvalRequest->isGrantConsumable(),
+                );
+                $blockingRequest = $requests->first(
+                    fn (ApprovalRequest $approvalRequest): bool => in_array(
+                        $approvalRequest->effectiveStatus(),
+                        ApprovalRequest::reviewableStatuses(),
+                        true,
+                    ),
+                );
+                $relevantRequest = $usableGrant instanceof ApprovalRequest
+                    ? $usableGrant
+                    : $blockingRequest;
+
+                return [
+                    (int) $role->getKey() => new GovernedActionStateData(
+                        action_key: 'update',
+                        permission_name: $permissionName,
+                        approval_enabled: $approvalEnabled,
+                        approval_required: $approvalEnabled
+                            && ! $bypassesForActor
+                            && ! ($usableGrant instanceof ApprovalRequest)
+                            && ! ($blockingRequest instanceof ApprovalRequest),
+                        bypasses_for_actor: $bypassesForActor,
+                        has_usable_grant: $usableGrant instanceof ApprovalRequest,
+                        has_blocking_request: $blockingRequest instanceof ApprovalRequest,
+                        relevant_request: $relevantRequest instanceof ApprovalRequest
+                            ? ApprovalContextRequestData::fromModel($relevantRequest, $canViewDetails)
+                            : null,
+                    ),
+                ];
+            })
+            ->all();
     }
 
     private function matchesSearch(array $row, mixed $value): bool

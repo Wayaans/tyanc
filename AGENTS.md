@@ -1,6 +1,6 @@
 # Project Identity
 
-- Read `README.md` first for a concise overview of what Tyanc is before planning or implementing new work.
+- Read `TYANC-AI.md` first for a concise overview of what Tyanc is before planning or implementing new work.
 - Tyanc is an installable admin foundation. The `tyanc` app is the central control plane for users, roles, permissions, app access, page access, and system settings across future apps such as ERP or Tasks.
 
 <laravel-boost-guidelines>
@@ -8,6 +8,7 @@
 
 # App/Actions guidelines
 
+- Dont add any comments when writing code unles very important, and when you do, be very concise
 - This application uses the Action pattern and prefers for much logic to live in reusable and composable Action classes.
 - Actions live in `app/Actions`, they are named based on what they do, with no suffix.
 - Actions will be called from many different places: jobs, commands, HTTP requests, API requests, MCP requests, and more.

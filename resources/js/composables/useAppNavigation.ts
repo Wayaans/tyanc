@@ -4,10 +4,23 @@ import { mapSidebarApps, mapSidebarItems } from '@/lib/sidebar-navigation';
 import { useTranslations } from '@/lib/translations';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { dashboard as cumpuDashboardRoute } from '@/routes/cumpu';
+import { index as cumpuApprovalRulesRoute } from '@/routes/cumpu/approval-rules';
+import {
+    index as cumpuApprovalsInboxRoute,
+    myRequests as cumpuApprovalsMyRequestsRoute,
+    show as cumpuApprovalsShowRoute,
+    all as cumpuApprovalsAllRoute,
+} from '@/routes/cumpu/approvals';
+import { index as cumpuApprovalReportsRoute } from '@/routes/cumpu/approvals/reports';
 import { dashboard as demoDashboard } from '@/routes/demo';
 import { edit as editAccount } from '@/routes/settings/account';
 import { index as accessMatrixRoute } from '@/routes/tyanc/access-matrix';
 import { index as activityLogRoute } from '@/routes/tyanc/activity-log';
+import {
+    index as approvalsInboxRoute,
+    myRequests as approvalsMyRequestsRoute,
+} from '@/routes/tyanc/approvals';
 import {
     create as appsCreate,
     edit as appsEdit,
@@ -37,6 +50,13 @@ const resolveFallbackSidebarNavigation = (
             subtitle: translate('Admin panel'),
             href: dashboard(),
             icon: 'app-logo',
+        },
+        {
+            id: 'cumpu',
+            title: 'Cumpu',
+            subtitle: translate('Approval workspace'),
+            href: cumpuDashboardRoute(),
+            icon: 'shield-check',
         },
         {
             id: 'demo',
@@ -221,6 +241,16 @@ export function useAppNavigation() {
         },
     ];
 
+    const inboxBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('Approvals inbox'), href: approvalsInboxRoute() },
+    ]);
+
+    const myRequestsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        rootBreadcrumb.value,
+        { title: __('My requests'), href: approvalsMyRequestsRoute() },
+    ]);
+
     const messagesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
         rootBreadcrumb.value,
         { title: __('Messages'), href: messagesRoute() },
@@ -293,6 +323,59 @@ export function useAppNavigation() {
             { title: __('Edit'), href: usersEdit({ user: userId }) },
         ]);
 
+    const cumpuRootBreadcrumb = computed<BreadcrumbItem>(() => ({
+        title: __('Cumpu'),
+        href: cumpuDashboardRoute(),
+    }));
+
+    const cumpuDashboardBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('Dashboard'), href: cumpuDashboardRoute() },
+    ]);
+
+    const cumpuInboxBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('Approvals inbox'), href: cumpuApprovalsInboxRoute() },
+    ]);
+
+    const cumpuMyRequestsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('My requests'), href: cumpuApprovalsMyRequestsRoute() },
+    ]);
+
+    const cumpuApprovalRulesBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('Approval rules'), href: cumpuApprovalRulesRoute() },
+    ]);
+
+    const cumpuAllApprovalsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('All approvals'), href: cumpuApprovalsAllRoute() },
+    ]);
+
+    const cumpuApprovalReportsBreadcrumbs = computed<BreadcrumbItem[]>(() => [
+        cumpuRootBreadcrumb.value,
+        { title: __('Approval reports'), href: cumpuApprovalReportsRoute() },
+    ]);
+
+    const cumpuApprovalShowBreadcrumbs = (
+        backLabel: string,
+        backHref: string,
+        subjectName: string,
+        requestId: string,
+    ) =>
+        computed<BreadcrumbItem[]>(() => [
+            cumpuRootBreadcrumb.value,
+            {
+                title: backLabel,
+                href: backHref,
+            },
+            {
+                title: subjectName,
+                href: cumpuApprovalsShowRoute({ approvalRequest: requestId }),
+            },
+        ]);
+
     return {
         activeApp,
         activeAppId,
@@ -319,5 +402,14 @@ export function useAppNavigation() {
             rootBreadcrumb.value,
             { title: __('Activity log'), href: activityLogRoute() },
         ]),
+        inboxBreadcrumbs,
+        myRequestsBreadcrumbs,
+        cumpuDashboardBreadcrumbs,
+        cumpuInboxBreadcrumbs,
+        cumpuMyRequestsBreadcrumbs,
+        cumpuApprovalRulesBreadcrumbs,
+        cumpuAllApprovalsBreadcrumbs,
+        cumpuApprovalReportsBreadcrumbs,
+        cumpuApprovalShowBreadcrumbs,
     };
 }

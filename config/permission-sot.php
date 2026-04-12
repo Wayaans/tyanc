@@ -89,6 +89,43 @@ return [
                 ],
             ],
         ],
+        'cumpu' => [
+            'label' => 'Cumpu',
+            'resources' => [
+                'dashboard' => [
+                    'label' => 'Dashboard',
+                    'actions' => ['viewany', 'manage'],
+                    'navigation_only' => true,
+                ],
+                'my_requests' => [
+                    'label' => 'My requests',
+                    'actions' => ['viewany', 'view', 'manage'],
+                    'navigation_only' => true,
+                ],
+                'approval_inbox' => [
+                    'label' => 'Approval inbox',
+                    'actions' => ['viewany', 'view', 'manage'],
+                    'navigation_only' => true,
+                ],
+                'all_approvals' => [
+                    'label' => 'All approvals',
+                    'actions' => ['viewany', 'view', 'manage'],
+                    'navigation_only' => true,
+                ],
+                'approvals' => [
+                    'label' => 'Approval actions',
+                    'actions' => ['viewany', 'view', 'approve', 'reject', 'manage'],
+                ],
+                'reports' => [
+                    'label' => 'Reports',
+                    'actions' => ['viewany', 'view', 'export', 'manage'],
+                ],
+                'approval_rules' => [
+                    'label' => 'Approval rules',
+                    'actions' => ['viewany', 'create', 'update', 'delete', 'manage'],
+                ],
+            ],
+        ],
         'demo' => [
             'label' => 'Demo',
             'resources' => [

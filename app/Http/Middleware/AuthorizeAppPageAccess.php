@@ -28,7 +28,10 @@ final class AuthorizeAppPageAccess
 
         $routeName = $request->route()?->getName() ?? '';
 
-        if (str_starts_with($routeName, 'tyanc.notifications.')) {
+        if (
+            str_starts_with($routeName, 'tyanc.notifications.')
+            || in_array($routeName, ['tyanc.approvals.index', 'tyanc.approvals.my-requests', 'cumpu.approvals.cancel'], true)
+        ) {
             return $next($request);
         }
 
@@ -41,6 +44,10 @@ final class AuthorizeAppPageAccess
         }
 
         abort_if(! $registeredApp->enabled, 404);
+
+        if ($routeName === 'cumpu.approvals.show') {
+            return $next($request);
+        }
 
         $routePermission = $this->routePermission($routeName);
 
@@ -73,8 +80,11 @@ final class AuthorizeAppPageAccess
             str_starts_with($routeName, 'tyanc.users.import.') => 'tyanc.users.import',
             str_starts_with($routeName, 'tyanc.users.export.') || $routeName === 'tyanc.users.export' => 'tyanc.users.export',
             str_starts_with($routeName, 'tyanc.activity-log.export.') || $routeName === 'tyanc.activity-log.export' => 'tyanc.activity_log.export',
-            $routeName === 'tyanc.users.approvals.approve' => 'tyanc.approvals.approve',
-            $routeName === 'tyanc.users.approvals.reject' => 'tyanc.approvals.reject',
+            $routeName === 'cumpu.approvals.approve' => 'cumpu.approvals.approve',
+            $routeName === 'cumpu.approvals.reject' => 'cumpu.approvals.reject',
+            $routeName === 'cumpu.approval-rules.store' => 'cumpu.approval_rules.create',
+            $routeName === 'cumpu.approval-rules.update' => 'cumpu.approval_rules.update',
+            $routeName === 'cumpu.approval-rules.destroy' => 'cumpu.approval_rules.delete',
             default => null,
         };
     }

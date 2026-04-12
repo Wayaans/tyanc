@@ -3,6 +3,8 @@ import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
 import { computed, ref } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import { createActivityTableColumns } from '@/components/tyanc/activity/ActivityTableColumns';
 import ApprovalDecisionDialog from '@/components/tyanc/approvals/ApprovalDecisionDialog.vue';
 import ApprovalTimeline from '@/components/tyanc/approvals/ApprovalTimeline.vue';
@@ -17,6 +19,7 @@ import type {
     ApprovalRequestRow,
     DataTablePayload,
 } from '@/types';
+import type { ApprovalContext } from '@/types/cumpu';
 
 const props = defineProps<{
     activitiesTable: DataTablePayload<ActivityRow>;
@@ -28,6 +31,7 @@ const props = defineProps<{
     features: {
         exports_enabled: boolean;
     };
+    approvalContext?: ApprovalContext | null;
 }>();
 
 const { __, locale } = useTranslations();
@@ -100,6 +104,12 @@ function openDecisionDialog(request: ApprovalRequestRow) {
                 />
             </div>
 
+            <!-- Approval banner -->
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
+
             <!-- Approval timeline (reviewers only) -->
             <ApprovalTimeline
                 v-if="
@@ -125,6 +135,11 @@ function openDecisionDialog(request: ApprovalRequestRow) {
                         'No events have been logged yet, or your filters returned no results.',
                     )
                 "
+            />
+            <!-- Approval history -->
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
             />
         </div>
     </AppLayout>

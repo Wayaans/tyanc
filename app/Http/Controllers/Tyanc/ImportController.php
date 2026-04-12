@@ -25,9 +25,14 @@ final readonly class ImportController
         );
 
         if ($request->wantsJson()) {
-            return response()->json($payload, 201);
+            return response()->json($payload, $payload['executed'] ? 201 : 202);
         }
 
-        return to_route('tyanc.users.index');
+        return to_route('tyanc.users.index')->with(
+            'status',
+            $payload['executed']
+                ? __('Users import queued.')
+                : __('Approval request submitted. Upload the file again after it is approved.'),
+        );
     }
 }

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\NewApprovalRequestedNotification;
 use App\Notifications\NewMessageNotification;
 use App\Support\Permissions\PermissionKey;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 function activityManager(): User
@@ -22,7 +23,7 @@ function activityManager(): User
             'guard_name' => 'web',
         ]),
         Permission::query()->firstOrCreate([
-            'name' => PermissionKey::tyanc('activity_log', 'view'),
+            'name' => PermissionKey::tyanc('activity_log', 'viewany'),
             'guard_name' => 'web',
         ]),
         Permission::query()->firstOrCreate([
@@ -44,6 +45,7 @@ it('logs user update, suspension, deletion, and login activity events', function
 
     $this->actingAs($manager)
         ->patchJson(route('tyanc.users.update', $managedUser), [
+            'name' => 'Updated User',
             'username' => 'updated-user',
             'email' => 'updated@example.com',
             'status' => 'active',
@@ -141,6 +143,44 @@ it('shares system notifications separately from message inbox data and marks the
         ->first()?->read_at)->toBeNull();
 });
 
+it('normalizes legacy approval notification urls to the cumpu workspace', function (): void {
+    $manager = activityManager();
+
+    $manager->notifications()->create([
+        'id' => (string) Str::uuid(),
+        'type' => NewApprovalRequestedNotification::class,
+        'data' => [
+            'kind' => 'approval-request',
+            'title' => 'Legacy approval requested',
+            'body' => 'Open the approval workspace.',
+            'action_label' => 'Open request',
+            'action_url' => route('tyanc.approvals.index', absolute: false),
+        ],
+    ]);
+
+    $manager->notifications()->create([
+        'id' => (string) Str::uuid(),
+        'type' => NewApprovalRequestedNotification::class,
+        'data' => [
+            'kind' => 'approval-request',
+            'title' => 'Legacy approval requested absolute',
+            'body' => 'Open the approval workspace.',
+            'action_label' => 'Open request',
+            'action_url' => route('tyanc.approvals.index'),
+        ],
+    ]);
+
+    $response = $this->actingAs($manager)
+        ->getJson(route('tyanc.notifications.index'))
+        ->assertOk();
+
+    $actionUrls = collect($response->json('recent'))->pluck('action_url');
+
+    expect($actionUrls)
+        ->toContain(route('cumpu.approvals.index', absolute: false))
+        ->toContain(route('cumpu.approvals.index'));
+});
+
 it('renders and filters the activity log page for authorized managers', function (): void {
     $manager = activityManager();
     $subject = User::factory()->create();
@@ -204,7 +244,7 @@ it('shows login activity for Supa Manuse users through the activity log index', 
             ->where('activitiesTable.rows.0.description', 'User signed in'));
 });
 
-it('forbids the activity log without the tyanc.activity_log.view permission', function (): void {
+it('forbids the activity log without the tyanc.activity_log.viewany permission', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)

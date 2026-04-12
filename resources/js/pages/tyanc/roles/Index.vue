@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { type ColumnDef } from '@tanstack/vue-table';
-import { PlusCircle } from 'lucide-vue-next';
+import { CheckCircle2, PlusCircle } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import DataTable from '@/components/admin/DataTable.vue';
+import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
+import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
 import RoleFormDialog from '@/components/tyanc/roles/RoleFormDialog.vue';
 import RolePermissionAssignDialog from '@/components/tyanc/roles/RolePermissionAssignDialog.vue';
 import { createRoleTableColumns } from '@/components/tyanc/roles/RoleTableColumns';
@@ -13,10 +15,13 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { index } from '@/routes/tyanc/roles';
 import type { DataTablePayload, PermissionOptions, RoleRow } from '@/types';
+import type { ApprovalContext } from '@/types/cumpu';
 
 const props = defineProps<{
     rolesTable: DataTablePayload<RoleRow>;
     permissionOptions: PermissionOptions;
+    approvalContext?: ApprovalContext | null;
+    status?: string | null;
 }>();
 
 const { __ } = useTranslations();
@@ -78,6 +83,25 @@ const columns = computed<ColumnDef<RoleRow>[]>(() =>
                 </Button>
             </div>
 
+            <!-- Approval banner -->
+            <ApprovalRequestBanner
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
+            />
+
+            <!-- Status feedback -->
+            <div
+                v-if="props.status"
+                class="flex items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/[0.07]"
+            >
+                <CheckCircle2
+                    class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                />
+                <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                    {{ props.status }}
+                </p>
+            </div>
+
             <!-- Table -->
             <DataTable
                 :columns="columns"
@@ -91,6 +115,11 @@ const columns = computed<ColumnDef<RoleRow>[]>(() =>
                 :empty-description="
                     __('Create a role to start assigning permissions.')
                 "
+            />
+            <!-- Approval history -->
+            <ApprovalHistoryPanel
+                v-if="props.approvalContext"
+                :context="props.approvalContext"
             />
         </div>
     </AppLayout>

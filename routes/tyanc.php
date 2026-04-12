@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Http\Controllers\Tyanc\AccessMatrixController;
 use App\Http\Controllers\Tyanc\ActivityLogController;
 use App\Http\Controllers\Tyanc\AppController;
-use App\Http\Controllers\Tyanc\ApprovalController;
 use App\Http\Controllers\Tyanc\ConversationController;
 use App\Http\Controllers\Tyanc\DashboardController;
 use App\Http\Controllers\Tyanc\ExportController;
@@ -111,10 +110,12 @@ Route::controller(ExportController::class)->group(function (): void {
 
 Route::post('imports/users', [ImportController::class, 'store'])->name('tyanc.users.import.store');
 
-Route::controller(ApprovalController::class)->group(function (): void {
-    Route::patch('approvals/{approvalRequest}/approve', 'approve')->name('tyanc.users.approvals.approve');
-    Route::patch('approvals/{approvalRequest}/reject', 'reject')->name('tyanc.users.approvals.reject');
-});
+Route::prefix('approvals')
+    ->name('tyanc.approvals.')
+    ->group(function (): void {
+        Route::get('/', fn (): RedirectResponse => to_route('cumpu.approvals.index'))->name('index');
+        Route::get('my-requests', fn (): RedirectResponse => to_route('cumpu.approvals.my-requests'))->name('my-requests');
+    });
 
 Route::get('activity-log', [ActivityLogController::class, 'index'])->name('tyanc.activity-log.index');
 

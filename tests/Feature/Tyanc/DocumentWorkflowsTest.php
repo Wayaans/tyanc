@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalRule;
 use App\Models\FileLibrary;
 use App\Models\ImportRun;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Http\UploadedFile;
@@ -150,29 +152,54 @@ it('returns not found for user imports while the feature is disabled', function 
         ->and(ApprovalRequest::query()->count())->toBe(0);
 });
 
-it('rejects an approval request and marks the import run as failed', function (): void {
-    $approver = documentManager([
-        PermissionKey::tyanc('approvals', 'reject'),
+it('rejects an approval request without mutating the governed import run', function (): void {
+    $reviewerRole = Role::query()->create([
+        'name' => 'Document Workflow Reviewers',
+        'guard_name' => 'web',
+        'level' => 60,
     ]);
+
+    $approver = documentManager([
+        PermissionKey::cumpu('approvals', 'viewany'),
+        PermissionKey::cumpu('approvals', 'reject'),
+        PermissionKey::tyanc('users', 'import'),
+    ]);
+    $approver->assignRole($reviewerRole);
 
     $requester = User::factory()->create();
     $importRun = ImportRun::factory()->for($requester, 'creator')->create();
-    $approvalRequest = ApprovalRequest::factory()->create([
+    $approvalRule = ApprovalRule::factory()
+        ->forPermission(PermissionKey::tyanc('users', 'import'))
+        ->enabled()
+        ->create();
+
+    $step = $approvalRule->steps()->create([
+        'role_id' => $reviewerRole->id,
+        'step_order' => 1,
+        'label' => 'Import review',
+    ]);
+
+    $approvalRequest = ApprovalRequest::factory()->for($approvalRule, 'rule')->create([
         'subject_type' => ImportRun::class,
         'subject_id' => $importRun->id,
         'requested_by_id' => $requester->id,
     ]);
 
+    $approvalRequest->assignments()->create([
+        'approval_rule_step_id' => $step->id,
+        'assigned_to_id' => $approver->id,
+    ]);
+
     $this->actingAs($approver)
-        ->patchJson(route('tyanc.users.approvals.reject', $approvalRequest), [
+        ->patchJson(route('cumpu.approvals.reject', $approvalRequest), [
             'review_note' => 'The file needs corrections first.',
         ])
         ->assertOk()
         ->assertJsonPath('approval.status', ApprovalRequest::StatusRejected);
 
     expect($approvalRequest->fresh()->status)->toBe(ApprovalRequest::StatusRejected)
-        ->and($importRun->fresh()->status)->toBe(ImportRun::StatusFailed)
-        ->and($importRun->fresh()->failure_message)->toBe('Import request was rejected.');
+        ->and($importRun->fresh()->status)->toBe(ImportRun::StatusPendingApproval)
+        ->and($importRun->fresh()->failure_message)->toBeNull();
 });
 
 it('returns not found for exports while the feature is disabled', function (): void {

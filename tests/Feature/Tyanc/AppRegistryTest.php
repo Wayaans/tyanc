@@ -36,15 +36,17 @@ it('lists the app registry for authorized managers', function (): void {
         ->assertInertia(fn ($page) => $page
             ->component('tyanc/apps/Index')
             ->where('apps.0.key', 'tyanc')
-            ->where('apps.1.key', 'demo'));
+            ->where('apps.1.key', 'cumpu')
+            ->where('apps.2.key', 'demo'));
 
     $this->actingAs($manager)
         ->getJson(route('tyanc.apps.index'))
         ->assertOk()
-        ->assertJsonCount(2, 'apps')
+        ->assertJsonCount(3, 'apps')
         ->assertJsonPath('apps.0.key', 'tyanc')
         ->assertJsonPath('apps.0.pages.0.key', 'dashboard')
-        ->assertJsonPath('apps.1.key', 'demo');
+        ->assertJsonPath('apps.1.key', 'cumpu')
+        ->assertJsonPath('apps.2.key', 'demo');
 });
 
 it('does not mutate app state when listing the registry', function (): void {
@@ -398,6 +400,55 @@ it('shows manage-gated sidebar items for authenticated users with the matching p
             ->component('settings/Account')
             ->where('sidebarNavigation.menu.1.title', 'Users')
             ->where('sidebarNavigation.menu.1.href', '/tyanc/users'));
+});
+
+it('shows viewany-gated tyanc navigation items and pages without requiring manage', function (): void {
+    $user = User::factory()->create();
+
+    $user->givePermissionTo(array_map(
+        fn (string $permissionName): Permission => Permission::query()->firstOrCreate([
+            'name' => $permissionName,
+            'guard_name' => 'web',
+        ]),
+        [
+            PermissionKey::tyanc('users', 'viewany'),
+            PermissionKey::tyanc('apps', 'viewany'),
+            PermissionKey::tyanc('roles', 'viewany'),
+            PermissionKey::tyanc('permissions', 'viewany'),
+            PermissionKey::tyanc('access_matrix', 'viewany'),
+            PermissionKey::tyanc('activity_log', 'viewany'),
+            PermissionKey::tyanc('settings', 'viewany'),
+        ],
+    ));
+
+    $this->actingAs($user)
+        ->get(route('settings.account.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->component('settings/Account')
+            ->where('sidebarNavigation.menu', function ($menu): bool {
+                $items = collect($menu);
+                $governance = $items
+                    ->first(fn (array $item): bool => collect($item['children'] ?? [])->isNotEmpty());
+
+                return $items->contains(fn (array $item): bool => ($item['href'] ?? null) === '/tyanc/users')
+                    && $items->contains(fn (array $item): bool => ($item['href'] ?? null) === '/tyanc/activity-log')
+                    && $items->contains(fn (array $item): bool => ($item['href'] ?? null) === '/tyanc/settings')
+                    && is_array($governance)
+                    && collect($governance['children'] ?? [])->pluck('href')->values()->all() === [
+                        '/tyanc/apps',
+                        '/tyanc/roles',
+                        '/tyanc/permissions',
+                        '/tyanc/access-matrix',
+                    ];
+            }));
+
+    $this->actingAs($user)->get(route('tyanc.users.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.apps.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.roles.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.permissions.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.access-matrix.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.activity-log.index'))->assertOk();
+    $this->actingAs($user)->get(route('tyanc.settings.application.edit'))->assertOk();
 });
 
 it('blocks disabled app routes even when the user has the page permission', function (): void {
