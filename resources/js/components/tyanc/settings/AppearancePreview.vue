@@ -17,7 +17,7 @@ defineProps<{
             fontFamily: fontFamilyStack || undefined,
             '--preview-primary': primaryColor,
             '--preview-secondary': secondaryColor,
-            '--preview-radius': borderRadius || '0.375rem',
+            '--preview-radius': borderRadius || '0.625rem',
         }"
     >
         <!-- Mini sidebar + content chrome -->

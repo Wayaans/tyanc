@@ -55,12 +55,12 @@ const isOpen = ref(false);
 
 const BORDER_RADIUS_OPTIONS = [
     { value: '0rem', label: 'None' },
-    { value: '0.125rem', label: 'XS — 2px' },
-    { value: '0.25rem', label: 'SM — 4px' },
-    { value: '0.375rem', label: 'MD — 6px' },
-    { value: '0.5rem', label: 'LG — 8px' },
-    { value: '0.75rem', label: 'XL — 12px' },
-    { value: '1rem', label: '2XL — 16px' },
+    { value: '0.125rem', label: 'XS — 0.125rem' },
+    { value: '0.25rem', label: 'SM — 0.25rem' },
+    { value: '0.625rem', label: 'MD — 0.625rem' },
+    { value: '0.75rem', label: 'LG — 0.75rem' },
+    { value: '1rem', label: 'XL — 1rem' },
+    { value: '1.5rem', label: '2XL — 1.5rem' },
 ];
 
 const primaryColor = ref(props.settings.primary_color);
@@ -74,18 +74,25 @@ const errors = ref<Partial<Record<string, string>>>({});
 const processing = ref(false);
 const recentlySuccessful = ref(false);
 
-const borderRadiusOptions = computed(() => {
-    const found = BORDER_RADIUS_OPTIONS.find(
-        (o) => o.value === borderRadius.value,
-    );
-    if (found) {
-        return BORDER_RADIUS_OPTIONS;
-    }
-    return [
-        { value: borderRadius.value, label: borderRadius.value },
-        ...BORDER_RADIUS_OPTIONS,
-    ];
-});
+const legacyBorderRadiusOption = ref<Option | null>(null);
+
+watch(
+    () => props.settings.border_radius,
+    (value) => {
+        legacyBorderRadiusOption.value = BORDER_RADIUS_OPTIONS.some(
+            (option) => option.value === value,
+        )
+            ? null
+            : { value, label: value };
+    },
+    { immediate: true },
+);
+
+const borderRadiusOptions = computed(() =>
+    legacyBorderRadiusOption.value
+        ? [legacyBorderRadiusOption.value, ...BORDER_RADIUS_OPTIONS]
+        : BORDER_RADIUS_OPTIONS,
+);
 
 const previewFontStack = computed(
     () =>
