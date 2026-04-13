@@ -186,8 +186,8 @@ There are two valid registry flows, and they serve different needs.
 
 #### 1. Config-driven app registration for real coded apps
 
-Tyanc seeds default apps from `config/sidebar-menu.php` through `Database\Seeders\AppRegistrySeeder`.
-That flow uses `SyncAppPages` to keep app pages aligned with the configured menu.
+Tyanc syncs default apps from `config/sidebar-menu.php` through the `App\Actions\Tyanc\Bootstrap\SyncConfiguredApps` action and the `tyanc:apps-sync` command.
+The local and testing `Database\Seeders\AppRegistrySeeder` wrapper calls the same sync flow, and `SyncAppPages` keeps app pages aligned with the configured menu.
 
 Important effect:
 
@@ -215,12 +215,12 @@ For a real first-party app, use this order.
 5. Add the route group in `routes/web.php` and create `routes/{app}.php`.
 6. Create backend code inside the app namespace.
 7. Create frontend pages and components inside the app namespace.
-8. Seed the app registry and app pages with `php artisan db:seed --class=AppRegistrySeeder --no-interaction`.
+8. Sync the app registry and app pages with `php artisan tyanc:apps-sync --no-interaction`.
 9. Sync permissions into the database with `php artisan tyanc:permissions-sync --no-interaction`.
 10. If frontend route helpers changed, run `php artisan wayfinder:generate --no-interaction`.
 11. Add tests for the new behavior.
 
-For real coded apps, treat `config/sidebar-menu.php` as the registry seed source. `AppRegistrySeeder` and `SyncAppPages` derive `app_pages` from it, so do not treat the database registry as a second source of truth.
+For real coded apps, treat `config/sidebar-menu.php` as the registry source of truth. `SyncConfiguredApps` and `SyncAppPages` derive `app_pages` from it, so do not treat the database registry as a second source of truth.
 
 ### Permission checklist for new apps
 
@@ -517,7 +517,7 @@ For implementation work:
 - add or update Pest tests
 - run the minimum relevant tests
 - if `config/permission-sot.php` changed, run `php artisan tyanc:permissions-sync --no-interaction`
-- if `config/sidebar-menu.php` changed, reseed or resync app registry pages with `php artisan db:seed --class=AppRegistrySeeder --no-interaction`
+- if `config/sidebar-menu.php` changed, resync app registry pages with `php artisan tyanc:apps-sync --no-interaction`
 - if PHP files changed, format with Pint
 - if frontend route usage changed, keep Wayfinder-generated helpers aligned and run `php artisan wayfinder:generate --no-interaction` when needed
 - keep translations and UI labels consistent

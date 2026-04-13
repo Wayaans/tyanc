@@ -89,7 +89,7 @@ it('returns paginated API envelopes for governance endpoints', function (): void
     $this->actingAs($manager)
         ->getJson('http://api.tyanc.test/api/v1/apps')
         ->assertOk()
-        ->assertJsonPath('meta.total', 3);
+        ->assertJsonPath('meta.total', 4);
 
     $this->actingAs($manager)
         ->getJson('http://api.tyanc.test/api/v1/roles')
@@ -112,6 +112,23 @@ it('returns paginated API envelopes for governance endpoints', function (): void
         ->assertOk()
         ->assertJsonPath('data.0.id', (string) $conversation->id)
         ->assertJsonPath('context.unread_count', 0);
+});
+
+it('returns a bootstrap incomplete error payload for the app registry endpoint when registry metadata is missing', function (): void {
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::query()->firstOrCreate([
+        'name' => PermissionKey::tyanc('apps', 'viewany'),
+        'guard_name' => 'web',
+    ]));
+
+    $response = $this->actingAs($user)
+        ->getJson('http://api.tyanc.test/api/v1/apps')
+        ->assertStatus(503)
+        ->assertJsonPath('code', 'bootstrap_incomplete')
+        ->assertJsonPath('command', 'php artisan tyanc:bootstrap --no-interaction');
+
+    expect(collect($response->json('missing'))->contains(fn (string $item): bool => $item === 'apps.tyanc'
+        || str_starts_with($item, 'app_pages.tyanc.')))->toBeTrue();
 });
 
 it('returns a permission-aware error payload when access is forbidden', function (): void {

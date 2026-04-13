@@ -10,6 +10,7 @@ use App\Actions\Tyanc\Messaging\ListRecentConversations;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Permission;
 use App\Models\User;
+use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
@@ -67,6 +68,8 @@ it('shares empty app navigation for guests on the home page', function (): void 
 });
 
 it('prefers the current app cookie on shared routes', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
     $user->givePermissionTo(Permission::query()->firstOrCreate([
         'name' => 'demo.dashboard.viewany',
@@ -119,6 +122,8 @@ it('sets sidebarOpen to false when cookie is false', function (): void {
 });
 
 it('shares demo as the current app for demo routes', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
     $user->givePermissionTo(Permission::query()->firstOrCreate([
         'name' => 'demo.dashboard.viewany',

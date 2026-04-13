@@ -45,13 +45,13 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "App\\": "app/"
         }
     },
     "autoload-dev": {
         "psr-4": {
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/",
             "Tests\\": "tests/"
         }
     },
@@ -64,6 +64,8 @@
             "bun install",
             "bun run build"
         ],
+        "bootstrap:local": "@php artisan tyanc:bootstrap-local --no-interaction",
+        "bootstrap:production": "@php artisan tyanc:bootstrap --no-interaction",
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "bunx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"bun run dev\" --names=server,queue,logs,vite --kill-others"

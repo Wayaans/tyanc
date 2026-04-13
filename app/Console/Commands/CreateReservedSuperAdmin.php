@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\Tyanc\Bootstrap\RunProductionBootstrap;
 use App\Actions\Tyanc\Users\EnsureReservedUser;
 use App\Models\User;
-use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Validation\ValidationException;
 
@@ -28,7 +28,7 @@ final class CreateReservedSuperAdmin extends Command
      */
     protected $description = 'Create the reserved Supa Manuse super admin user when one does not already exist';
 
-    public function handle(EnsureReservedUser $action): int
+    public function handle(EnsureReservedUser $action, RunProductionBootstrap $bootstrap): int
     {
         if (User::query()->withTrashed()->where('reserved_key', 'super_admin')->exists()) {
             $this->components->error('A reserved super admin user already exists. Aborting to prevent multiple super admins.');
@@ -51,10 +51,17 @@ final class CreateReservedSuperAdmin extends Command
             return self::FAILURE;
         }
 
-        $this->callSilent('db:seed', [
-            '--class' => RolesAndPermissionsSeeder::class,
-            '--force' => true,
-        ]);
+        $bootstrapResult = $bootstrap->handle();
+
+        if (! $bootstrapResult['status']['ready']) {
+            $this->components->error('Tyanc bootstrap is incomplete. Resolve the missing metadata before creating the reserved super admin.');
+
+            foreach ($bootstrapResult['status']['missing'] as $missing) {
+                $this->line(sprintf('- %s', $missing));
+            }
+
+            return self::FAILURE;
+        }
 
         try {
             $user = $action->handle('super_admin', $attributes);

@@ -5,22 +5,14 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 final class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([
-            AppRegistrySeeder::class,
-            RolesAndPermissionsSeeder::class,
-            AccessMatrixSeeder::class,
-        ]);
+        throw_unless(app()->environment(['local', 'testing']), RuntimeException::class, 'DatabaseSeeder is only for local and testing environments. Use "php artisan tyanc:bootstrap --no-interaction" in non-local environments.');
 
-        if (app()->environment(['local', 'testing'])) {
-            $this->call([
-                LocalReservedUsersSeeder::class,
-                TyancBootstrapSeeder::class,
-            ]);
-        }
+        $this->call(LocalDevelopmentSeeder::class);
     }
 }

@@ -2,35 +2,42 @@
 
 declare(strict_types=1);
 
-namespace Database\Seeders;
+namespace App\Actions\Tyanc\Bootstrap;
 
 use App\Enums\UserStatus;
 use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Faker\Generator;
-use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
-final class TyancBootstrapSeeder extends Seeder
+final readonly class SyncLocalSampleUsers
 {
-    public function run(): void
+    /**
+     * @return array{total: int, users: list<string>}
+     */
+    public function handle(): array
     {
-        DB::transaction(function (): void {
-            $this->seedBootstrapUsers();
+        throw_unless(app()->environment(['local', 'testing']), RuntimeException::class, 'The local sample-user bootstrap is only available in local and testing environments.');
+
+        $users = [];
+
+        DB::transaction(function () use (&$users): void {
+            $faker = FakerFactory::create('id_ID');
+            $faker->seed(20260411);
+
+            for ($index = 1; $index <= 3; $index++) {
+                $users[] = $this->syncIndonesianUser($faker, $index);
+            }
         });
+
+        return [
+            'total' => count($users),
+            'users' => $users,
+        ];
     }
 
-    private function seedBootstrapUsers(): void
-    {
-        $faker = FakerFactory::create('id_ID');
-        $faker->seed(20260411);
-
-        for ($index = 1; $index <= 3; $index++) {
-            $this->seedIndonesianUser($faker, $index);
-        }
-    }
-
-    private function seedIndonesianUser(Generator $faker, int $index): void
+    private function syncIndonesianUser(Generator $faker, int $index): string
     {
         $name = (string) $faker->name();
         $username = str($name)
@@ -78,6 +85,8 @@ final class TyancBootstrapSeeder extends Seeder
 
         $user->syncRoles([]);
         $user->syncPermissions([]);
+
+        return $email;
     }
 
     private function generatedPassword(string $email): string
