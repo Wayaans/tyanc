@@ -71,9 +71,9 @@ That mismatch breaks access control, app visibility, page visibility, and approv
 - add the app and its resources to `config/permission-sot.php`
 - add the app menu to `config/sidebar-menu.php`
 - keep code under the app namespace, for example `app/Actions/Erp/*` and `resources/js/pages/erp/*`
-- seed the app registry with `php artisan db:seed --class=AppRegistrySeeder --no-interaction`
-- sync permissions with `php artisan tyanc:permissions-sync`
-- run `php artisan wayfinder:generate` if frontend route helpers changed
+- sync the app registry with `php artisan tyanc:apps-sync --no-interaction`
+- sync permissions with `php artisan tyanc:permissions-sync --no-interaction`
+- run `php artisan wayfinder:generate --no-interaction` if frontend route helpers changed
 
 If you introduce a new action verb like `publish`, `cancel`, or `submit`, add it to the top-level action map in `config/permission-sot.php` too.
 
@@ -98,8 +98,15 @@ Cumpu handles the review workflow, but the business app still owns the real muta
 
 ```bash
 composer setup
-php artisan db:seed
+composer bootstrap:local
 composer dev
+```
+
+## Production bootstrap
+
+```bash
+php artisan tyanc:bootstrap --no-interaction
+php artisan tyanc:create-super-admin
 ```
 
 If you also need Reverb locally, run:

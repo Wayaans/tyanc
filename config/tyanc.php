@@ -49,6 +49,9 @@ return [
     'reserved_apps' => [
         'tyanc',
     ],
+    'local_bootstrap' => [
+        'reserved_password' => env('TYANC_LOCAL_RESERVED_PASSWORD', 'password'),
+    ],
     'features' => [
         'imports_enabled' => (bool) env('TYANC_IMPORTS_ENABLED', false),
         'exports_enabled' => (bool) env('TYANC_EXPORTS_ENABLED', false),

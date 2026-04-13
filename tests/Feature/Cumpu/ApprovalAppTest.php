@@ -283,6 +283,8 @@ it('allows legacy tyanc approval view holders to open the cumpu my requests work
 });
 
 it('manages approval rules through cumpu', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     $manager = cumpuUser([
         PermissionKey::cumpu('approval_rules', 'viewany'),
         PermissionKey::cumpu('approval_rules', 'create'),
@@ -419,6 +421,8 @@ it('renders approval request detail history and protects the request view', func
 });
 
 it('marks expired grants in approval history when the request detail is opened', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     $requester = cumpuUser([
         PermissionKey::cumpu('approvals', 'view'),
     ]);
@@ -443,6 +447,8 @@ it('marks expired grants in approval history when the request detail is opened',
 });
 
 it('applies tyanc user import approval only when a cumpu-managed rule enables it', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     Storage::fake('public');
     Storage::fake('local');
     Queue::fake();

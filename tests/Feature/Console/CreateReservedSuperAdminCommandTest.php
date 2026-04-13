@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\App;
+use App\Models\Role;
 use App\Models\User;
 
 it('creates the reserved super admin user through the artisan command', function (): void {
@@ -22,7 +24,9 @@ it('creates the reserved super admin user through the artisan command', function
         ->and($user->name)->toBe('Supa Manuse')
         ->and($user->username)->toBe('supa-manuse')
         ->and($user->email)->toBe('supa@app.com')
-        ->and($user->hasRole(config('tyanc.reserved_roles.super_admin')))->toBeTrue();
+        ->and($user->hasRole(config('tyanc.reserved_roles.super_admin')))->toBeTrue()
+        ->and(Role::query()->where('name', (string) config('tyanc.reserved_roles.admin'))->exists())->toBeTrue()
+        ->and(App::query()->where('key', 'tyanc')->exists())->toBeTrue();
 });
 
 it('refuses to create a second reserved super admin user', function (): void {

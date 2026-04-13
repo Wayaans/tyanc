@@ -8,7 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\Permissions\PermissionKey;
-use Database\Seeders\DevelopmentAccessSeeder;
+use Database\Seeders\LocalDevelopmentSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -148,7 +148,7 @@ it('lets user managers assign direct permissions without already holding each ta
 });
 
 it('lets the baseline admin assign lower-level roles during user management', function (): void {
-    $this->seed(DevelopmentAccessSeeder::class);
+    $this->seed(LocalDevelopmentSeeder::class);
 
     $admin = User::factory()->create();
     $admin->assignRole((string) config('tyanc.reserved_roles.admin'));

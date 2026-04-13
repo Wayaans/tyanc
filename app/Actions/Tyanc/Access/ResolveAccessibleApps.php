@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Access;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Actions\Tyanc\Apps\EnsureAppRegistrySeeded;
+use App\Actions\Tyanc\Bootstrap\ResolveBootstrapStatus;
 use App\Data\Navigation\AccessibleAppData;
 use App\Models\App;
 use App\Models\AppPage;
-use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Collection;
@@ -17,12 +16,21 @@ use Illuminate\Support\Facades\Route;
 
 final readonly class ResolveAccessibleApps
 {
+    public function __construct(
+        private ResolveBootstrapStatus $bootstrapStatus,
+        private PermissionResourceAccess $permissionAccess,
+    ) {}
+
     /**
      * @return array<int, array<string, mixed>>
      */
     public function handle(?User $user): array
     {
-        resolve(EnsureAppRegistrySeeded::class)->handle();
+        $status = $this->bootstrapStatus->handle();
+
+        if ($this->bootstrapStatus->registryIssues($status) !== []) {
+            return [];
+        }
 
         $registeredApps = App::query()
             ->with('pages')
@@ -30,7 +38,7 @@ final readonly class ResolveAccessibleApps
             ->get();
 
         if ($registeredApps->isEmpty()) {
-            return $user instanceof User ? $this->fallbackAccessibleApps() : [];
+            return [];
         }
 
         return $registeredApps
@@ -48,54 +56,21 @@ final readonly class ResolveAccessibleApps
 
         $app->loadMissing('pages');
 
-        $enabledPages = $app->pages->where('enabled', true);
-        $protectedPages = $enabledPages
-            ->filter(fn (AppPage $page): bool => $this->pageRequiresPermission($page));
-        $openPages = $enabledPages
-            ->reject(fn (AppPage $page): bool => $this->pageRequiresPermission($page));
+        $enabledPages = $app->pages
+            ->where('enabled', true)
+            ->values();
+
+        if ($enabledPages->isEmpty()) {
+            return false;
+        }
 
         if (! $user instanceof User) {
-            return $openPages->contains(fn (AppPage $page): bool => $this->pageAllowsGuestAccess($page));
+            return $enabledPages->contains(fn (AppPage $page): bool => ! $this->pageRequiresPermission($page)
+                && $this->pageAllowsGuestAccess($page));
         }
 
-        if ($openPages->isNotEmpty()) {
-            return true;
-        }
-
-        if ($protectedPages->isNotEmpty()) {
-            $access = resolve(PermissionResourceAccess::class);
-
-            return $protectedPages->contains(
-                fn ($page): bool => $access->handle($user, $page->permission_name),
-            );
-        }
-
-        if ($app->isSystem()) {
-            return true;
-        }
-
-        $namespace = mb_trim($app->permission_namespace, '.');
-
-        if ($namespace === '') {
-            return true;
-        }
-
-        $hasNamespacedPermissions = Permission::query()
-            ->where('guard_name', 'web')
-            ->where('name', 'like', sprintf('%s.%%', $namespace))
-            ->exists();
-
-        if (! $hasNamespacedPermissions) {
-            return true;
-        }
-
-        if ($user->hasRole(config('tyanc.reserved_roles.super_admin'))) {
-            return true;
-        }
-
-        return $user->getAllPermissions()->contains(
-            fn (Permission $permission): bool => str_starts_with($permission->name, sprintf('%s.', $namespace)),
-        );
+        return $enabledPages->contains(fn (AppPage $page): bool => ! $this->pageRequiresPermission($page)
+            || $this->permissionAccess->handle($user, (string) $page->permission_name));
     }
 
     private function preferredPage(?User $user, App $app): ?AppPage
@@ -116,15 +91,12 @@ final readonly class ResolveAccessibleApps
             return $preferredPublicPage instanceof AppPage ? $preferredPublicPage : null;
         }
 
-        $access = resolve(PermissionResourceAccess::class);
-
         $preferredPage = $pages->first(
-            fn (AppPage $page): bool => ! is_string($page->permission_name)
-                || $page->permission_name === ''
-                || $access->handle($user, $page->permission_name),
+            fn (AppPage $page): bool => ! $this->pageRequiresPermission($page)
+                || $this->permissionAccess->handle($user, (string) $page->permission_name),
         );
 
-        return $preferredPage instanceof AppPage ? $preferredPage : $pages->first();
+        return $preferredPage instanceof AppPage ? $preferredPage : null;
     }
 
     private function pageRequiresPermission(AppPage $page): bool
@@ -153,16 +125,5 @@ final readonly class ResolveAccessibleApps
             ->doesntContain(fn (string $middleware): bool => $middleware === 'auth'
                 || str_starts_with($middleware, 'auth:')
                 || $middleware === 'verified');
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function fallbackAccessibleApps(): array
-    {
-        return Collection::make((array) config('sidebar-menu.apps', []))
-            ->map(fn (array $config, string $key): array => AccessibleAppData::fromConfig($key, $config)->toArray())
-            ->values()
-            ->all();
     }
 }

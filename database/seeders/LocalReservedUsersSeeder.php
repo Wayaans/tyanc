@@ -15,14 +15,17 @@ final class LocalReservedUsersSeeder extends Seeder
             return;
         }
 
+        $password = mb_trim((string) config('tyanc.local_bootstrap.reserved_password', 'password'));
+        $password = $password === '' ? 'password' : $password;
+
         $reservedUsers = resolve(EnsureReservedUser::class);
 
         $reservedUsers->handle('super_admin', [
-            'password' => 'password',
+            'password' => $password,
         ]);
 
         $reservedUsers->handle('admin', [
-            'password' => 'password',
+            'password' => $password,
         ]);
     }
 }
