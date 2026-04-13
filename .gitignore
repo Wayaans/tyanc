@@ -27,6 +27,7 @@ Homestead.yaml
 /.zed
 /tmp/
 .pi
-.docs
 .docs/plans/
+.docs/prds/
+.docs/prompts/
 .agents
