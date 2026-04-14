@@ -11,6 +11,7 @@ use App\Data\Cumpu\Approvals\ApprovalContextRequestData;
 use App\Data\Cumpu\Approvals\GovernedActionStateData;
 use App\Data\Tables\DataTableQueryData;
 use App\Data\Tyanc\Rbac\RoleData;
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
 use App\Models\Role;
@@ -136,6 +137,7 @@ final readonly class ListRoles
                     (int) $role->getKey() => new GovernedActionStateData(
                         action_key: 'update',
                         permission_name: $permissionName,
+                        mode: $approvalEnabled ? ApprovalMode::Grant->value : ApprovalMode::None->value,
                         approval_enabled: $approvalEnabled,
                         approval_required: $approvalEnabled
                             && ! $bypassesForActor
@@ -144,6 +146,9 @@ final readonly class ListRoles
                         bypasses_for_actor: $bypassesForActor,
                         has_usable_grant: $usableGrant instanceof ApprovalRequest,
                         has_blocking_request: $blockingRequest instanceof ApprovalRequest,
+                        has_committable_draft: false,
+                        has_stale_subject_revision: false,
+                        requires_draft_submission: false,
                         relevant_request: $relevantRequest instanceof ApprovalRequest
                             ? ApprovalContextRequestData::fromModel($relevantRequest, $canViewDetails)
                             : null,

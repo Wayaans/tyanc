@@ -4,30 +4,59 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Approvals;
 
+use App\Data\Tyanc\Approvals\ApprovalCapabilityData;
 use App\Models\ApprovalRule;
 use App\Models\User;
-use App\Support\Permissions\PermissionKey;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 final readonly class ResolveApprovalRule
 {
+    public function __construct(
+        private ResolveApprovalCapability $capabilities,
+        private ResolveApprovalRuleReadiness $readiness,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $context
      */
     public function handle(User $actor, string $permissionName, ?Model $subject = null, array $context = []): ?ApprovalRule
     {
-        $parsed = PermissionKey::parse($permissionName);
+        $capability = $this->capabilities->handle($permissionName);
 
-        if ($parsed === null) {
+        if (! $capability instanceof ApprovalCapabilityData) {
             return null;
         }
 
-        return ApprovalRule::query()
+        /** @var Collection<int, ApprovalRule> $rules */
+        $rules = ApprovalRule::query()
             ->with(['steps.role'])
             ->where('permission_name', $permissionName)
             ->where('enabled', true)
-            ->get()
-            ->first(fn (ApprovalRule $rule): bool => $this->matchesConditions($rule, $actor, $subject, $context));
+            ->where(function ($query): void {
+                $query
+                    ->whereNull('retired_at')
+                    ->orWhere('managed_by_config', false);
+            })
+            ->get();
+
+        if ($rules->isEmpty()) {
+            return null;
+        }
+
+        $managedRules = $rules
+            ->filter(fn (ApprovalRule $rule): bool => $rule->managed_by_config && $rule->retired_at === null)
+            ->values();
+
+        $candidates = $managedRules->isNotEmpty()
+            ? $managedRules
+            : $rules->values();
+
+        return $candidates->first(function (ApprovalRule $rule) use ($actor, $subject, $context): bool {
+            $readiness = $this->readiness->handle($rule);
+
+            return $readiness['ready'] && $this->matchesConditions($rule, $actor, $subject, $context);
+        });
     }
 
     /**

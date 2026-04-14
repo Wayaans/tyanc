@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Settings;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Data\Settings\AppearanceSettingsData;
 use App\Models\ApprovalRequest;
 use App\Models\User;
@@ -17,7 +17,7 @@ use Illuminate\Validation\Rule;
 
 final readonly class UpdateAppearanceSettings
 {
-    public function __construct(private SubmitGovernedAction $governedActions) {}
+    public function __construct(private ExecuteApprovalControlledAction $governedActions) {}
 
     /**
      * @param  array<string, mixed>  $attributes

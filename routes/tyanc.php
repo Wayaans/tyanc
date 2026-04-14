@@ -47,6 +47,8 @@ Route::controller(UserController::class)
         Route::get('{user}', 'show')->name('show');
         Route::get('{user}/edit', 'edit')->name('edit');
         Route::patch('{user}', 'update')->name('update');
+        Route::patch('{user}/drafts/submit', 'submitDraft')->name('drafts.submit');
+        Route::patch('{user}/drafts/commit', 'commitDraft')->name('drafts.commit');
         Route::patch('{user}/suspend', 'suspend')->name('suspend');
         Route::delete('{user}', 'destroy')->name('destroy');
     });

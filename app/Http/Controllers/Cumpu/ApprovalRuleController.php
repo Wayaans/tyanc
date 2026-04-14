@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cumpu;
 
-use App\Actions\Tyanc\Approvals\DeleteApprovalRule;
+use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Approvals\ListApprovalRules;
-use App\Actions\Tyanc\Approvals\StoreApprovalRule;
+use App\Actions\Tyanc\Approvals\ResolveApprovalCapabilityOptions;
+use App\Actions\Tyanc\Approvals\SyncApprovalRulesFromSource;
+use App\Actions\Tyanc\Approvals\ToggleApprovalRule;
 use App\Actions\Tyanc\Approvals\UpdateApprovalRule;
-use App\Actions\Tyanc\Permissions\ResolvePermissionOptions;
-use App\Http\Requests\Cumpu\StoreApprovalRuleRequest;
-use App\Http\Requests\Cumpu\UpdateApprovalRuleRequest;
+use App\Http\Requests\Cumpu\ToggleApprovalRuleRequest;
+use App\Http\Requests\Cumpu\UpdateManagedApprovalRuleRequest;
 use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +26,7 @@ use Inertia\Response;
 final readonly class ApprovalRuleController
 {
     public function __construct(
-        private ResolvePermissionOptions $permissionOptions,
+        private ResolveApprovalCapabilityOptions $capabilityOptions,
         private ListApprovalRules $rules,
     ) {}
 
@@ -32,17 +34,22 @@ final readonly class ApprovalRuleController
     {
         $payload = [
             'rules' => $this->rules->handle($user),
-            'permissionOptions' => $this->permissionOptions->handle(includeNavigationResources: false),
+            'capabilityOptions' => $this->capabilityOptions->handle(),
             'roles' => Role::query()
                 ->orderByDesc('level')
                 ->orderBy('name')
-                ->get(['id', 'name', 'level'])
+                ->get()
                 ->map(fn (Role $role): array => [
                     'value' => $role->id,
                     'label' => $role->name,
                     'level' => $role->level,
                 ])
+                ->values()
                 ->all(),
+            'abilities' => [
+                'manage' => resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::cumpu('approval_rules', 'manage')),
+            ],
+            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -52,53 +59,58 @@ final readonly class ApprovalRuleController
         return Inertia::render('cumpu/approval-rules/Index', $payload);
     }
 
-    public function store(
-        StoreApprovalRuleRequest $request,
+    public function sync(
+        Request $request,
         #[CurrentUser] User $user,
-        StoreApprovalRule $action,
+        SyncApprovalRulesFromSource $action,
     ): RedirectResponse|JsonResponse {
-        $approvalRule = $action->handle($user, $request->validated());
+        $summary = $action->handle($user);
 
         if ($request->wantsJson()) {
             return response()->json([
-                'rule' => [
-                    'id' => (string) $approvalRule->id,
-                ],
-            ], 201);
+                'summary' => $summary,
+                'rules' => $this->rules->handle($user),
+            ]);
         }
 
-        return to_route('cumpu.approval-rules.index');
+        return to_route('cumpu.approval-rules.index')->with('status', __('Approval capabilities synced.'));
     }
 
     public function update(
-        UpdateApprovalRuleRequest $request,
+        UpdateManagedApprovalRuleRequest $request,
         #[CurrentUser] User $user,
         ApprovalRule $approvalRule,
         UpdateApprovalRule $action,
     ): RedirectResponse|JsonResponse {
-        $approvalRule = $action->handle($user, $approvalRule, $request->validated());
+        $action->handle($user, $approvalRule, array_merge($request->validated(), [
+            'app_key' => $approvalRule->app_key,
+            'resource_key' => $approvalRule->resource_key,
+            'action_key' => $approvalRule->action_key,
+            'enabled' => $approvalRule->enabled,
+        ]));
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'rule' => [
-                    'id' => (string) $approvalRule->id,
-                ],
-            ]);
+            return response()->json(['rules' => $this->rules->handle($user)]);
         }
 
         return to_route('cumpu.approval-rules.index');
     }
 
-    public function destroy(
-        Request $request,
+    public function toggle(
+        ToggleApprovalRuleRequest $request,
         #[CurrentUser] User $user,
         ApprovalRule $approvalRule,
-        DeleteApprovalRule $action,
+        ToggleApprovalRule $action,
     ): RedirectResponse|JsonResponse {
-        $action->handle($user, $approvalRule);
+        $approvalRule = $action->handle($user, $approvalRule, $request->boolean('enabled'));
 
         if ($request->wantsJson()) {
-            return response()->json(status: 204);
+            return response()->json([
+                'rule' => [
+                    'id' => (string) $approvalRule->id,
+                    'enabled' => (bool) $approvalRule->enabled,
+                ],
+            ]);
         }
 
         return to_route('cumpu.approval-rules.index');

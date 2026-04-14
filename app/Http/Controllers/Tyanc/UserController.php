@@ -6,9 +6,11 @@ namespace App\Http\Controllers\Tyanc;
 
 use App\Actions\Authorization\PermissionResourceAccess;
 use App\Actions\Tyanc\Approvals\ResolveApprovalContext;
+use App\Actions\Tyanc\Users\CommitUserUpdateDraft;
 use App\Actions\Tyanc\Users\DeleteUser;
 use App\Actions\Tyanc\Users\ListUsers;
 use App\Actions\Tyanc\Users\StoreUser;
+use App\Actions\Tyanc\Users\SubmitUserUpdateDraftForApproval;
 use App\Actions\Tyanc\Users\SuspendUser;
 use App\Actions\Tyanc\Users\UpdateUser;
 use App\Data\Tyanc\Approvals\ApprovalRequestData;
@@ -17,6 +19,7 @@ use App\Data\Tyanc\Rbac\PermissionData;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Data\Tyanc\Users\UserFormData;
 use App\Data\Tyanc\Users\UserIndexData;
+use App\Data\Tyanc\Users\UserUpdateDraftData;
 use App\Enums\UserStatus;
 use App\Http\Requests\Tyanc\StoreUserRequest;
 use App\Http\Requests\Tyanc\UpdateUserRequest;
@@ -26,6 +29,7 @@ use App\Models\ImportRun;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserUpdateDraft;
 use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -134,6 +138,17 @@ final readonly class UserController
     ): Response|JsonResponse {
         Gate::forUser($actor)->authorize('update', $user);
 
+        $currentDraft = $this->currentUserUpdateDraft($actor, $user);
+        $updateApprovalContext = $approvalContext->handle(
+            actor: $actor,
+            scopeLabel: $currentDraft?->approvalSubjectLabel() ?? $user->name,
+            appKey: 'tyanc',
+            resourceKey: 'users',
+            subject: $currentDraft ?? $user,
+            actionKeys: ['update'],
+            governedActionKeys: ['update'],
+        );
+
         $payload = [
             'user' => UserFormData::fromModel($user),
             'approvalContext' => $approvalContext->handle(
@@ -142,9 +157,13 @@ final readonly class UserController
                 appKey: 'tyanc',
                 resourceKey: 'users',
                 subject: $user,
-                actionKeys: ['update', 'suspend', 'delete'],
-                governedActionKeys: ['update', 'delete'],
+                actionKeys: ['delete'],
+                governedActionKeys: ['delete'],
             ),
+            'updateActionState' => $updateApprovalContext?->governed_actions['update'] ?? null,
+            'userUpdateDraft' => $currentDraft instanceof UserUpdateDraft
+                ? UserUpdateDraftData::fromModel($currentDraft)
+                : null,
             'status' => $request->session()->get('status'),
             ...$this->formOptions(),
         ];
@@ -173,6 +192,18 @@ final readonly class UserController
     {
         $submission = $action->handle($actor, $user, $request->validated());
 
+        if ($submission['draft'] instanceof UserUpdateDraft) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'executed' => false,
+                    'mode' => $submission['mode'],
+                    'draft' => UserUpdateDraftData::fromModel($submission['draft']),
+                ]);
+            }
+
+            return back()->with('status', __('Draft saved. Submit it for approval when you are ready.'));
+        }
+
         if ($submission['approval'] instanceof ApprovalRequest) {
             if ($request->wantsJson()) {
                 return response()->json([
@@ -194,6 +225,52 @@ final readonly class UserController
         }
 
         return to_route('tyanc.users.show', $managedUser);
+    }
+
+    public function submitDraft(
+        Request $request,
+        #[CurrentUser] User $actor,
+        User $user,
+        SubmitUserUpdateDraftForApproval $action,
+    ): RedirectResponse|JsonResponse {
+        $validated = $request->validate([
+            'request_note' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $approvalRequest = $action->handle(
+            actor: $actor,
+            user: $user,
+            requestNote: is_string($validated['request_note'] ?? null) ? $validated['request_note'] : null,
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'executed' => false,
+                'approval' => ApprovalRequestData::fromModel($approvalRequest, $actor),
+            ], 202);
+        }
+
+        return back()->with('status', __('Draft submitted for approval.'));
+    }
+
+    public function commitDraft(
+        Request $request,
+        #[CurrentUser] User $actor,
+        User $user,
+        CommitUserUpdateDraft $action,
+    ): RedirectResponse|JsonResponse {
+        $submission = $action->handle($actor, $user);
+
+        /** @var User $managedUser */
+        $managedUser = $submission['result'];
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'user' => UserFormData::fromModel($managedUser),
+            ]);
+        }
+
+        return to_route('tyanc.users.show', $managedUser)->with('status', __('Approved draft committed.'));
     }
 
     public function suspend(Request $request, #[CurrentUser] User $actor, User $user, SuspendUser $action): RedirectResponse|JsonResponse
@@ -286,6 +363,16 @@ final readonly class UserController
             ->get()
             ->map(fn (ApprovalRequest $approvalRequest): ApprovalRequestData => ApprovalRequestData::fromModel($approvalRequest, $actor))
             ->all();
+    }
+
+    private function currentUserUpdateDraft(User $actor, User $user): ?UserUpdateDraft
+    {
+        return UserUpdateDraft::query()
+            ->where('user_id', $user->id)
+            ->where('created_by_id', $actor->id)
+            ->whereNull('committed_at')
+            ->latest('updated_at')
+            ->first();
     }
 
     private function permissionAccess(): PermissionResourceAccess

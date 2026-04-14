@@ -5,14 +5,17 @@ import {
     ArrowRightLeft,
     ChevronDown,
     ChevronUp,
+    FileText,
     KeyRound,
     PackageCheck,
+    TriangleAlert,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ApprovalActivityHistory from '@/components/cumpu/approvals/ApprovalActivityHistory.vue';
 import ApprovalAssignmentsCard from '@/components/cumpu/approvals/ApprovalAssignmentsCard.vue';
 import ApprovalReassignDialog from '@/components/cumpu/approvals/ApprovalReassignDialog.vue';
 import ApprovalStatusBadge from '@/components/cumpu/approvals/ApprovalStatusBadge.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -157,6 +160,22 @@ function goBack() {
                                     class="rounded-full text-xs"
                                 >
                                     {{ props.approval.action_label }}
+                                </Badge>
+                                <Badge
+                                    v-if="props.approval.mode !== 'none'"
+                                    variant="outline"
+                                    :class="[
+                                        'rounded-full text-xs',
+                                        props.approval.mode === 'grant'
+                                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                            : 'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+                                    ]"
+                                >
+                                    {{
+                                        props.approval.mode === 'grant'
+                                            ? __('Grant mode')
+                                            : __('Draft mode')
+                                    }}
                                 </Badge>
                             </div>
 
@@ -473,6 +492,50 @@ function goBack() {
                                 }}
                             </p>
                         </div>
+                    </div>
+
+                    <!-- Draft revision context -->
+                    <div
+                        v-if="props.approval.mode === 'draft'"
+                        class="space-y-2"
+                    >
+                        <div
+                            class="flex items-center gap-3 rounded-xl border border-sidebar-border/70 bg-sidebar/20 px-4 py-3"
+                        >
+                            <FileText
+                                class="size-4 shrink-0 text-sky-600 dark:text-sky-400"
+                            />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs text-muted-foreground">
+                                    {{ __('Reviewed draft revision') }}
+                                </p>
+                                <p
+                                    class="mt-0.5 truncate font-mono text-xs font-medium text-foreground"
+                                >
+                                    {{ props.approval.subject_revision ?? '—' }}
+                                </p>
+                            </div>
+                        </div>
+                        <Alert
+                            v-if="
+                                !props.approval.subject_revision_matches_subject
+                            "
+                            class="border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 [&>svg]:text-amber-600 dark:[&>svg]:text-amber-400"
+                        >
+                            <TriangleAlert class="size-4" />
+                            <AlertTitle class="font-semibold">{{
+                                __('Draft has changed')
+                            }}</AlertTitle>
+                            <AlertDescription
+                                class="text-amber-700 dark:text-amber-400"
+                            >
+                                {{
+                                    __(
+                                        'The draft has been modified since this request was submitted. The reviewed revision is no longer current.',
+                                    )
+                                }}
+                            </AlertDescription>
+                        </Alert>
                     </div>
 
                     <!-- Request reason -->

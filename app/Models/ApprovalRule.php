@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ApprovalMode;
 use Database\Factories\ApprovalRuleFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -19,6 +20,12 @@ use Illuminate\Support\Carbon;
  * @property string $action_key
  * @property string $permission_name
  * @property bool $enabled
+ * @property ApprovalMode $mode
+ * @property bool $managed_by_config
+ * @property string|null $source_key
+ * @property string|null $config_hash
+ * @property Carbon|null $retired_at
+ * @property string|null $retired_reason
  * @property string $workflow_type
  * @property array<string, mixed>|null $conditions
  * @property int|null $grant_validity_minutes
@@ -58,6 +65,12 @@ final class ApprovalRule extends Model
         'action_key',
         'permission_name',
         'enabled',
+        'mode',
+        'managed_by_config',
+        'source_key',
+        'config_hash',
+        'retired_at',
+        'retired_reason',
         'workflow_type',
         'conditions',
         'grant_validity_minutes',
@@ -70,6 +83,8 @@ final class ApprovalRule extends Model
      */
     protected $attributes = [
         'enabled' => false,
+        'mode' => ApprovalMode::Grant->value,
+        'managed_by_config' => false,
         'workflow_type' => self::WorkflowSingle,
         'grant_validity_minutes' => 1440,
     ];
@@ -95,6 +110,12 @@ final class ApprovalRule extends Model
             'action_key' => 'string',
             'permission_name' => 'string',
             'enabled' => 'boolean',
+            'mode' => ApprovalMode::class,
+            'managed_by_config' => 'boolean',
+            'source_key' => 'string',
+            'config_hash' => 'string',
+            'retired_at' => 'datetime',
+            'retired_reason' => 'string',
             'workflow_type' => 'string',
             'conditions' => 'array',
             'grant_validity_minutes' => 'integer',

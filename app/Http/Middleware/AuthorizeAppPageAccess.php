@@ -146,9 +146,8 @@ final readonly class AuthorizeAppPageAccess
             str_starts_with($routeName, 'tyanc.activity-log.export.') || $routeName === 'tyanc.activity-log.export' => 'tyanc.activity_log.export',
             $routeName === 'cumpu.approvals.approve' => 'cumpu.approvals.approve',
             $routeName === 'cumpu.approvals.reject' => 'cumpu.approvals.reject',
-            $routeName === 'cumpu.approval-rules.store' => 'cumpu.approval_rules.create',
-            $routeName === 'cumpu.approval-rules.update' => 'cumpu.approval_rules.update',
-            $routeName === 'cumpu.approval-rules.destroy' => 'cumpu.approval_rules.delete',
+            $routeName === 'cumpu.approval-rules.sync' => 'cumpu.approval_rules.manage',
+            $routeName === 'cumpu.approval-rules.toggle' => 'cumpu.approval_rules.manage',
             default => null,
         };
     }

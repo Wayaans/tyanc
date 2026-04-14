@@ -18,7 +18,10 @@ final class ApprovalContextRequestData extends Data
     public function __construct(
         public string $id,
         public string $status,
+        public string $mode,
         public string $action_label,
+        public ?string $subject_revision,
+        public bool $subject_revision_matches_subject,
         public ?string $requested_by_name,
         public ?string $current_step_label,
         public string $requested_at,
@@ -39,9 +42,12 @@ final class ApprovalContextRequestData extends Data
         return new self(
             id: (string) $approvalRequest->id,
             status: $approvalRequest->effectiveStatus(),
+            mode: $approvalRequest->approvalMode()->value,
             action_label: $canViewDetails
                 ? self::actionLabel($approvalRequest)
                 : (string) __('Approval request'),
+            subject_revision: $canViewDetails ? $approvalRequest->subject_revision : null,
+            subject_revision_matches_subject: $canViewDetails && $approvalRequest->subjectRevisionMatchesSubject(),
             requested_by_name: $canViewDetails && $approvalRequest->requester instanceof User
                 ? $approvalRequest->requester->name
                 : null,

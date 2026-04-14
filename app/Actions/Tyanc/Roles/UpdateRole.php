@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Roles;
 
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Data\Tyanc\Rbac\RoleData;
 use App\Models\ApprovalRequest;
 use App\Models\Role;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Gate;
 
 final readonly class UpdateRole
 {
-    public function __construct(private SubmitGovernedAction $governedActions) {}
+    public function __construct(private ExecuteApprovalControlledAction $governedActions) {}
 
     /**
      * @param  array{name: string, level: int, request_note?: string|null}  $attributes

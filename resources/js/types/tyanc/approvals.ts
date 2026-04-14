@@ -14,10 +14,13 @@ export type ApprovalRequestRow = {
     action_key: string | null;
     action: string;
     action_label: string;
+    mode: 'none' | 'grant' | 'draft';
     status: ApprovalStatus;
     subject_name: string;
     subject_type: string | null;
     subject_id: string | null;
+    subject_revision: string | null;
+    subject_revision_matches_subject: boolean;
     subject_snapshot: Record<string, unknown> | null;
     request_note: string | null;
     review_note: string | null;
@@ -55,6 +58,7 @@ export type ApprovalRequestRow = {
 export type ApprovalReportRow = {
     id: string;
     action_label: string;
+    mode: 'none' | 'grant' | 'draft';
     subject_name: string;
     status: ApprovalStatus;
     requested_by_name: string | null;

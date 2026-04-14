@@ -4,40 +4,96 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Users;
 
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\DetectApprovalMode;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
+use App\Actions\Tyanc\Approvals\ResolveApprovalRule;
+use App\Actions\Tyanc\Approvals\ShouldBypassApproval;
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserUpdateDraft;
 use App\Support\Permissions\PermissionKey;
-use Illuminate\Http\UploadedFile;
 
 final readonly class UpdateUser
 {
     public function __construct(
-        private SubmitGovernedAction $governedActions,
+        private DetectApprovalMode $approvalMode,
+        private ResolveApprovalRule $approvalRules,
+        private ShouldBypassApproval $bypassApproval,
+        private ExecuteApprovalControlledAction $governedActions,
         private PrepareUserUpdate $prepareUserUpdate,
         private PersistUserUpdate $persistUserUpdate,
+        private StoreUserUpdateDraft $storeUserUpdateDraft,
     ) {}
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return array{executed: bool, result: mixed, approval: ApprovalRequest|null, bypassed: bool}
+     * @return array{executed: bool, result: mixed, approval: ApprovalRequest|null, bypassed: bool, mode: string, requires_draft_submission: bool, draft: UserUpdateDraft|null, saved_draft: bool}
      */
     public function handle(User $actor, User $user, array $attributes): array
     {
         $payload = $this->prepareUserUpdate->handle($actor, $user, $attributes);
         $requestNote = $this->nullableString($payload['request_note'] ?? null);
+        $context = [
+            ...$payload,
+            'request_note' => $requestNote,
+            'changed_fields' => $this->changedFields($user, $payload),
+            'target_role_levels' => $this->targetRoleLevels($payload['roles'] ?? []),
+        ];
+        $permissionName = PermissionKey::tyanc('users', 'update');
+        $mode = $this->approvalMode->handle($actor, $permissionName, $user, $context);
 
-        return $this->governedActions->handle(
+        if ($mode === ApprovalMode::Draft) {
+            $rule = $this->approvalRules->handle($actor, $permissionName, $user, $context);
+            $bypassed = $rule instanceof ApprovalRule && $this->bypassApproval->handle($actor, $rule);
+
+            if ($bypassed) {
+                $managedUser = $this->persistUserUpdate->handle($actor, $user, $payload);
+
+                activity('approvals')
+                    ->performedOn($user)
+                    ->causedBy($actor)
+                    ->event('bypassed')
+                    ->withProperties([
+                        'permission_name' => $permissionName,
+                        'subject_type' => $user->getMorphClass(),
+                        'subject_id' => (string) $user->getKey(),
+                    ])
+                    ->log('Approval bypassed and action executed');
+
+                return [
+                    'executed' => true,
+                    'result' => $managedUser,
+                    'approval' => null,
+                    'bypassed' => true,
+                    'mode' => $mode->value,
+                    'requires_draft_submission' => false,
+                    'draft' => null,
+                    'saved_draft' => false,
+                ];
+            }
+
+            $draft = $this->storeUserUpdateDraft->handle($actor, $user, $payload);
+
+            return [
+                'executed' => false,
+                'result' => null,
+                'approval' => null,
+                'bypassed' => false,
+                'mode' => $mode->value,
+                'requires_draft_submission' => true,
+                'draft' => $draft,
+                'saved_draft' => true,
+            ];
+        }
+
+        $submission = $this->governedActions->handle(
             actor: $actor,
-            permissionName: PermissionKey::tyanc('users', 'update'),
+            permissionName: $permissionName,
             subject: $user,
-            context: [
-                ...$payload,
-                'request_note' => $requestNote,
-                'changed_fields' => $this->changedFields($user, $payload),
-                'target_role_levels' => $this->targetRoleLevels($payload['roles'] ?? []),
-            ],
+            context: $context,
             definition: [
                 'execute' => fn (): User => $this->persistUserUpdate->handle($actor, $user, $payload),
                 'proposal' => [
@@ -50,6 +106,12 @@ final readonly class UpdateUser
                 ],
             ],
         );
+
+        return [
+            ...$submission,
+            'draft' => null,
+            'saved_draft' => false,
+        ];
     }
 
     /**
@@ -60,7 +122,6 @@ final readonly class UpdateUser
     {
         $user->loadMissing('roles', 'permissions');
 
-        $hasAvatarUpload = ($attributes['avatar'] ?? null) instanceof UploadedFile;
         $changedFields = collect();
 
         if (($attributes['name'] ?? $user->name) !== $user->name) {
@@ -113,10 +174,6 @@ final readonly class UpdateUser
 
         if ($nextPermissions !== $currentPermissions) {
             $changedFields->push('permissions');
-        }
-
-        if ($hasAvatarUpload || ((bool) ($attributes['remove_avatar'] ?? false) && $user->avatar !== null)) {
-            $changedFields->push('avatar');
         }
 
         if (is_string($attributes['password'] ?? null) && mb_trim($attributes['password']) !== '') {

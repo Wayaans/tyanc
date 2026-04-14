@@ -67,7 +67,7 @@ it('registers cumpu as a standalone app and renders its workspace routes', funct
         ->get(route('cumpu.approval-rules.index'))
         ->assertInertia(fn ($page) => $page
             ->component('cumpu/approval-rules/Index')
-            ->where('permissionOptions.apps.1.value', 'cumpu'));
+            ->has('capabilityOptions.apps'));
 });
 
 it('supports dedicated cumpu navigation permissions and keeps approval rule options focused on governable actions', function (): void {
@@ -101,8 +101,13 @@ it('supports dedicated cumpu navigation permissions and keeps approval rule opti
         ->getJson(route('cumpu.approval-rules.index'))
         ->assertOk();
 
-    expect(collect($response->json('permissionOptions.resources.cumpu'))->pluck('value')->all())
-        ->toBe(['approvals', 'reports', 'approval_rules']);
+    expect(collect($response->json('capabilityOptions.actions.tyanc.users'))->pluck('permission')->all())
+        ->toBe([
+            PermissionKey::tyanc('users', 'delete'),
+            PermissionKey::tyanc('users', 'import'),
+            PermissionKey::tyanc('users', 'suspend'),
+            PermissionKey::tyanc('users', 'update'),
+        ]);
 });
 
 it('allows approval detail access from dedicated cumpu page permissions', function (): void {
@@ -287,9 +292,7 @@ it('manages approval rules through cumpu', function (): void {
 
     $manager = cumpuUser([
         PermissionKey::cumpu('approval_rules', 'viewany'),
-        PermissionKey::cumpu('approval_rules', 'create'),
-        PermissionKey::cumpu('approval_rules', 'update'),
-        PermissionKey::cumpu('approval_rules', 'delete'),
+        PermissionKey::cumpu('approval_rules', 'manage'),
     ]);
 
     $approverRole = Role::query()->create([
@@ -298,42 +301,74 @@ it('manages approval rules through cumpu', function (): void {
         'level' => 50,
     ]);
 
+    config()->set('approval-sot.apps', [
+        'tyanc' => [
+            'resources' => [
+                'users' => [
+                    'actions' => [
+                        'import' => [
+                            'mode' => 'grant',
+                            'managed' => true,
+                            'toggleable' => true,
+                            'default_enabled' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
     $this->actingAs($manager)
-        ->postJson(route('cumpu.approval-rules.store'), [
-            'app_key' => 'tyanc',
-            'resource_key' => 'users',
-            'action_key' => 'import',
-            'step_role_id' => $approverRole->id,
-            'grant_validity_minutes' => 90,
-            'enabled' => true,
-        ])
-        ->assertCreated();
+        ->postJson(route('cumpu.approval-rules.sync'))
+        ->assertOk()
+        ->assertJsonPath('summary.created', 1);
 
     $approvalRule = ApprovalRule::query()
         ->where('permission_name', PermissionKey::tyanc('users', 'import'))
         ->firstOrFail();
 
-    expect($approvalRule->enabled)->toBeTrue()
-        ->and($approvalRule->steps()->where('role_id', $approverRole->id)->exists())->toBeTrue();
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.update', $approvalRule), [
+            'workflow_type' => ApprovalRule::WorkflowSingle,
+            'steps' => [
+                ['role_id' => $approverRole->id, 'label' => 'Import review'],
+            ],
+            'grant_validity_minutes' => 90,
+            'reminder_after_minutes' => null,
+            'escalation_after_minutes' => null,
+        ])
+        ->assertOk();
+
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.toggle', $approvalRule), [
+            'enabled' => true,
+        ])
+        ->assertOk();
+
+    expect($approvalRule->fresh()->enabled)->toBeTrue()
+        ->and($approvalRule->fresh()->steps()->where('role_id', $approverRole->id)->exists())->toBeTrue();
 
     $this->actingAs($manager)
         ->patchJson(route('cumpu.approval-rules.update', $approvalRule), [
-            'app_key' => 'tyanc',
-            'resource_key' => 'users',
-            'action_key' => 'import',
-            'step_role_id' => $approverRole->id,
+            'workflow_type' => ApprovalRule::WorkflowSingle,
+            'steps' => [
+                ['role_id' => $approverRole->id, 'label' => 'Revised import review'],
+            ],
             'grant_validity_minutes' => 180,
+            'reminder_after_minutes' => null,
+            'escalation_after_minutes' => null,
+        ])
+        ->assertOk();
+
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.toggle', $approvalRule), [
             'enabled' => false,
         ])
         ->assertOk();
 
-    expect($approvalRule->fresh()->enabled)->toBeFalse();
-
-    $this->actingAs($manager)
-        ->deleteJson(route('cumpu.approval-rules.destroy', $approvalRule))
-        ->assertNoContent();
-
-    expect(ApprovalRule::query()->whereKey($approvalRule->id)->exists())->toBeFalse();
+    expect($approvalRule->fresh()->enabled)->toBeFalse()
+        ->and($approvalRule->fresh()->grant_validity_minutes)->toBe(180)
+        ->and($approvalRule->fresh()->steps()->firstOrFail()->label)->toBe('Revised import review');
 });
 
 it('renders approval request detail history and protects the request view', function (): void {
@@ -455,7 +490,8 @@ it('applies tyanc user import approval only when a cumpu-managed rule enables it
     config()->set('tyanc.features.imports_enabled', true);
 
     $manager = cumpuUser([
-        PermissionKey::cumpu('approval_rules', 'create'),
+        PermissionKey::cumpu('approval_rules', 'viewany'),
+        PermissionKey::cumpu('approval_rules', 'manage'),
     ]);
     $requester = cumpuUser([
         PermissionKey::tyanc('users', 'import'),
@@ -489,16 +525,48 @@ it('applies tyanc user import approval only when a cumpu-managed rule enables it
 
     expect(ApprovalRequest::query()->count())->toBe(0);
 
+    config()->set('approval-sot.apps', [
+        'tyanc' => [
+            'resources' => [
+                'users' => [
+                    'actions' => [
+                        'import' => [
+                            'mode' => 'grant',
+                            'managed' => true,
+                            'toggleable' => true,
+                            'default_enabled' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
     $this->actingAs($manager)
-        ->postJson(route('cumpu.approval-rules.store'), [
-            'app_key' => 'tyanc',
-            'resource_key' => 'users',
-            'action_key' => 'import',
-            'step_role_id' => $reviewerRole->id,
+        ->postJson(route('cumpu.approval-rules.sync'))
+        ->assertOk();
+
+    $approvalRule = ApprovalRule::query()
+        ->where('permission_name', PermissionKey::tyanc('users', 'import'))
+        ->firstOrFail();
+
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.update', $approvalRule), [
+            'workflow_type' => ApprovalRule::WorkflowSingle,
+            'steps' => [
+                ['role_id' => $reviewerRole->id, 'label' => 'Import review'],
+            ],
             'grant_validity_minutes' => 60,
+            'reminder_after_minutes' => null,
+            'escalation_after_minutes' => null,
+        ])
+        ->assertOk();
+
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.toggle', $approvalRule), [
             'enabled' => true,
         ])
-        ->assertCreated();
+        ->assertOk();
 
     $this->actingAs($requester)
         ->postJson(route('tyanc.users.import.store'), [

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Users;
 
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 final readonly class DeleteUser
 {
     public function __construct(
-        private SubmitGovernedAction $governedActions,
+        private ExecuteApprovalControlledAction $governedActions,
         private DestroyUser $destroyUser,
     ) {}
 

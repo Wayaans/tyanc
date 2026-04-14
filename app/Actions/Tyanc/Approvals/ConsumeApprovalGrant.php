@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Approvals;
 
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalRequest;
 use App\Models\User;
 use Closure;
@@ -38,6 +39,7 @@ final readonly class ConsumeApprovalGrant
                 ])
                 ->where('requested_by_id', $actor->id)
                 ->where('action', $permissionName)
+                ->where('mode', ApprovalMode::Grant->value)
                 ->whereIn('status', ApprovalRequest::consumableStatuses())
                 ->latest('reviewed_at')
                 ->latest('requested_at')
@@ -90,6 +92,7 @@ final readonly class ConsumeApprovalGrant
                 ->event('consumed')
                 ->withProperties([
                     'approval_request_id' => (string) $approvalRequest->id,
+                    'mode' => ApprovalMode::Grant->value,
                     'permission_name' => $permissionName,
                     'subject_type' => $subject?->getMorphClass(),
                     'subject_id' => $subject instanceof Model && is_scalar($subject->getKey()) ? (string) $subject->getKey() : null,

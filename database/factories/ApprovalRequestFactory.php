@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
 use App\Models\ImportRun;
@@ -27,9 +28,11 @@ final class ApprovalRequestFactory extends Factory
             'app_key' => 'tyanc',
             'resource_key' => 'users',
             'action_key' => 'import',
+            'mode' => ApprovalMode::Grant->value,
             'status' => ApprovalRequest::StatusPending,
             'subject_type' => ImportRun::class,
             'subject_id' => ImportRun::factory(),
+            'subject_revision' => null,
             'requested_by_id' => User::factory(),
             'reviewed_by_id' => null,
             'cancelled_by_id' => null,
@@ -89,6 +92,14 @@ final class ApprovalRequestFactory extends Factory
             'status' => ApprovalRequest::StatusConsumed,
             'consumed_by_id' => User::factory(),
             'consumed_at' => now(),
+        ]);
+    }
+
+    public function draftMode(string $subjectRevision = '1'): self
+    {
+        return $this->state(fn (): array => [
+            'mode' => ApprovalMode::Draft->value,
+            'subject_revision' => $subjectRevision,
         ]);
     }
 }

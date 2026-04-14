@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Support\Permissions\PermissionKey;
@@ -25,6 +26,12 @@ final class ApprovalRuleFactory extends Factory
             'action_key' => 'import',
             'permission_name' => PermissionKey::tyanc('users', 'import'),
             'enabled' => false,
+            'mode' => ApprovalMode::Grant->value,
+            'managed_by_config' => false,
+            'source_key' => null,
+            'config_hash' => null,
+            'retired_at' => null,
+            'retired_reason' => null,
             'workflow_type' => ApprovalRule::WorkflowSingle,
             'conditions' => null,
             'grant_validity_minutes' => 1440,
@@ -47,6 +54,22 @@ final class ApprovalRuleFactory extends Factory
         ]);
     }
 
+    public function managed(?string $sourceKey = null): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'managed_by_config' => true,
+            'source_key' => $sourceKey ?? (string) ($attributes['permission_name'] ?? null),
+            'config_hash' => hash('sha256', fake()->uuid()),
+        ]);
+    }
+
+    public function draftMode(): self
+    {
+        return $this->state(fn (): array => [
+            'mode' => ApprovalMode::Draft->value,
+        ]);
+    }
+
     public function forPermission(string $permissionName): self
     {
         return $this->state(function () use ($permissionName): array {
@@ -57,6 +80,7 @@ final class ApprovalRuleFactory extends Factory
                 'resource_key' => $parsed['resource'] ?? 'users',
                 'action_key' => $parsed['action'] ?? 'viewany',
                 'permission_name' => $permissionName,
+                'source_key' => $permissionName,
             ];
         });
     }

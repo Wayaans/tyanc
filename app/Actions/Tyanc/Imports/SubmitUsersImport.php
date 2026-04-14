@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Imports;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Data\Tyanc\Imports\ImportRunData;
 use App\Models\ApprovalRequest;
@@ -18,7 +18,7 @@ use Illuminate\Http\UploadedFile;
 final readonly class SubmitUsersImport
 {
     public function __construct(
-        private SubmitGovernedAction $governedActions,
+        private ExecuteApprovalControlledAction $governedActions,
         private QueueUsersImport $imports,
     ) {}
 

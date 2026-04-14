@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Users;
 
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Data\Tyanc\Users\UserFormData;
 use App\Enums\UserStatus;
 use App\Models\ApprovalRequest;
@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Gate;
 
 final readonly class SuspendUser
 {
-    public function __construct(private SubmitGovernedAction $governedActions) {}
+    public function __construct(private ExecuteApprovalControlledAction $governedActions) {}
 
     /**
      * @param  array<string, mixed>  $attributes

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -55,7 +55,7 @@ const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => (
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -65,7 +65,7 @@ indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::index
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:31
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:33
 * @route '/cumpu/approval-rules'
 */
 indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -81,64 +81,64 @@ indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 index.form = indexForm
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::store
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:55
-* @route '/cumpu/approval-rules'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::sync
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:62
+* @route '/cumpu/approval-rules/sync'
 */
-export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: store.url(options),
+export const sync = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sync.url(options),
     method: 'post',
 })
 
-store.definition = {
+sync.definition = {
     methods: ["post"],
-    url: '/cumpu/approval-rules',
+    url: '/cumpu/approval-rules/sync',
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::store
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:55
-* @route '/cumpu/approval-rules'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::sync
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:62
+* @route '/cumpu/approval-rules/sync'
 */
-store.url = (options?: RouteQueryOptions) => {
-    return store.definition.url + queryParams(options)
+sync.url = (options?: RouteQueryOptions) => {
+    return sync.definition.url + queryParams(options)
 }
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::store
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:55
-* @route '/cumpu/approval-rules'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::sync
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:62
+* @route '/cumpu/approval-rules/sync'
 */
-store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
-    url: store.url(options),
+sync.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: sync.url(options),
     method: 'post',
 })
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::store
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:55
-* @route '/cumpu/approval-rules'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::sync
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:62
+* @route '/cumpu/approval-rules/sync'
 */
-const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-    action: store.url(options),
+const syncForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: sync.url(options),
     method: 'post',
 })
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::store
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:55
-* @route '/cumpu/approval-rules'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::sync
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:62
+* @route '/cumpu/approval-rules/sync'
 */
-storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-    action: store.url(options),
+syncForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: sync.url(options),
     method: 'post',
 })
 
-store.form = storeForm
+sync.form = syncForm
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::update
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:73
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:79
 * @route '/cumpu/approval-rules/{approvalRule}'
 */
 export const update = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -153,7 +153,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::update
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:73
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:79
 * @route '/cumpu/approval-rules/{approvalRule}'
 */
 update.url = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions) => {
@@ -186,7 +186,7 @@ update.url = (args: { approvalRule: string | { id: string } } | [approvalRule: s
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::update
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:73
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:79
 * @route '/cumpu/approval-rules/{approvalRule}'
 */
 update.patch = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -196,7 +196,7 @@ update.patch = (args: { approvalRule: string | { id: string } } | [approvalRule:
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::update
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:73
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:79
 * @route '/cumpu/approval-rules/{approvalRule}'
 */
 const updateForm = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -211,7 +211,7 @@ const updateForm = (args: { approvalRule: string | { id: string } } | [approvalR
 
 /**
 * @see \App\Http\Controllers\Cumpu\ApprovalRuleController::update
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:73
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:79
 * @route '/cumpu/approval-rules/{approvalRule}'
 */
 updateForm.patch = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -227,26 +227,26 @@ updateForm.patch = (args: { approvalRule: string | { id: string } } | [approvalR
 update.form = updateForm
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::destroy
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:92
-* @route '/cumpu/approval-rules/{approvalRule}'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::toggle
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:99
+* @route '/cumpu/approval-rules/{approvalRule}/toggle'
 */
-export const destroy = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
-    url: destroy.url(args, options),
-    method: 'delete',
+export const toggle = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: toggle.url(args, options),
+    method: 'patch',
 })
 
-destroy.definition = {
-    methods: ["delete"],
-    url: '/cumpu/approval-rules/{approvalRule}',
-} satisfies RouteDefinition<["delete"]>
+toggle.definition = {
+    methods: ["patch"],
+    url: '/cumpu/approval-rules/{approvalRule}/toggle',
+} satisfies RouteDefinition<["patch"]>
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::destroy
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:92
-* @route '/cumpu/approval-rules/{approvalRule}'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::toggle
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:99
+* @route '/cumpu/approval-rules/{approvalRule}/toggle'
 */
-destroy.url = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions) => {
+toggle.url = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { approvalRule: args }
     }
@@ -269,30 +269,30 @@ destroy.url = (args: { approvalRule: string | { id: string } } | [approvalRule: 
         : args.approvalRule,
     }
 
-    return destroy.definition.url
+    return toggle.definition.url
             .replace('{approvalRule}', parsedArgs.approvalRule.toString())
             .replace(/\/+$/, '') + queryParams(options)
 }
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::destroy
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:92
-* @route '/cumpu/approval-rules/{approvalRule}'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::toggle
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:99
+* @route '/cumpu/approval-rules/{approvalRule}/toggle'
 */
-destroy.delete = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
-    url: destroy.url(args, options),
-    method: 'delete',
+toggle.patch = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: toggle.url(args, options),
+    method: 'patch',
 })
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::destroy
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:92
-* @route '/cumpu/approval-rules/{approvalRule}'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::toggle
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:99
+* @route '/cumpu/approval-rules/{approvalRule}/toggle'
 */
-const destroyForm = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-    action: destroy.url(args, {
+const toggleForm = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: toggle.url(args, {
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-            _method: 'DELETE',
+            _method: 'PATCH',
             ...(options?.query ?? options?.mergeQuery ?? {}),
         }
     }),
@@ -300,27 +300,27 @@ const destroyForm = (args: { approvalRule: string | { id: string } } | [approval
 })
 
 /**
-* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::destroy
-* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:92
-* @route '/cumpu/approval-rules/{approvalRule}'
+* @see \App\Http\Controllers\Cumpu\ApprovalRuleController::toggle
+* @see app/Http/Controllers/Cumpu/ApprovalRuleController.php:99
+* @route '/cumpu/approval-rules/{approvalRule}/toggle'
 */
-destroyForm.delete = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-    action: destroy.url(args, {
+toggleForm.patch = (args: { approvalRule: string | { id: string } } | [approvalRule: string | { id: string } ] | string | { id: string }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: toggle.url(args, {
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-            _method: 'DELETE',
+            _method: 'PATCH',
             ...(options?.query ?? options?.mergeQuery ?? {}),
         }
     }),
     method: 'post',
 })
 
-destroy.form = destroyForm
+toggle.form = toggleForm
 
 const approvalRules = {
     index: Object.assign(index, index),
-    store: Object.assign(store, store),
+    sync: Object.assign(sync, sync),
     update: Object.assign(update, update),
-    destroy: Object.assign(destroy, destroy),
+    toggle: Object.assign(toggle, toggle),
 }
 
 export default approvalRules
