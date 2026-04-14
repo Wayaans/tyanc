@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "wayanary/tyanc",
+    "name": "wayaans/tyanc",
     "type": "project",
     "description": "Tyanc starter kit for Laravel.",
     "keywords": [
