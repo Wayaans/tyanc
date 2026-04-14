@@ -38,7 +38,7 @@ Route::controller(ApprovalRuleController::class)
     ->name('approval-rules.')
     ->group(function (): void {
         Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
+        Route::post('sync', 'sync')->name('sync');
         Route::patch('{approvalRule}', 'update')->name('update');
-        Route::delete('{approvalRule}', 'destroy')->name('destroy');
+        Route::patch('{approvalRule}/toggle', 'toggle')->name('toggle');
     });

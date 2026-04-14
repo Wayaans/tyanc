@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Contracts\Approvals\DraftApprovalSubject;
 use App\Data\Cumpu\Approvals\ApprovalContextData;
 use App\Data\Cumpu\Approvals\ApprovalContextRequestData;
 use App\Data\Cumpu\Approvals\GovernedActionStateData;
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
@@ -22,12 +24,14 @@ final readonly class ResolveApprovalContext
     public function __construct(
         private PermissionResourceAccess $access,
         private ResolveApprovalRule $rules,
+        private DetectApprovalMode $approvalMode,
         private ShouldBypassApproval $bypassApproval,
     ) {}
 
     /**
      * @param  array<int, string>  $actionKeys
      * @param  array<int, string>  $governedActionKeys
+     * @param  array<string, array<string, mixed>>  $governedActionContexts
      */
     public function handle(
         User $actor,
@@ -38,6 +42,7 @@ final readonly class ResolveApprovalContext
         array $actionKeys = [],
         int $historyLimit = 5,
         array $governedActionKeys = [],
+        array $governedActionContexts = [],
     ): ?ApprovalContextData {
         ApprovalRequest::expirePastDueGrants();
 
@@ -86,6 +91,9 @@ final readonly class ResolveApprovalContext
                     resourceKey: $resourceKey,
                     subject: $subject,
                     actionKey: $actionKey,
+                    context: is_array($governedActionContexts[$actionKey] ?? null)
+                        ? $governedActionContexts[$actionKey]
+                        : [],
                 ),
             ])
             ->all();
@@ -164,35 +172,58 @@ final readonly class ResolveApprovalContext
         return $this->access->handle($actor, PermissionKey::cumpu('approvals', 'viewany'));
     }
 
+    /**
+     * @param  array<string, mixed>  $context
+     */
     private function resolveGovernedActionState(
         User $actor,
         string $appKey,
         string $resourceKey,
         ?Model $subject,
         string $actionKey,
+        array $context = [],
     ): GovernedActionStateData {
         $permissionName = PermissionKey::make($appKey, $resourceKey, $actionKey);
-        $rule = $this->rules->handle($actor, $permissionName, $subject);
-        $approvalEnabled = $rule instanceof ApprovalRule;
-        $bypassesForActor = $approvalEnabled && $this->bypassApproval->handle($actor, $rule);
+        $mode = $this->approvalMode->handle($actor, $permissionName, $subject, $context);
+        $rule = $mode !== ApprovalMode::None
+            ? $this->rules->handle($actor, $permissionName, $subject, $context)
+            : null;
+        $approvalEnabled = $mode !== ApprovalMode::None;
+        $bypassesForActor = $rule instanceof ApprovalRule && $this->bypassApproval->handle($actor, $rule);
 
-        $usableGrant = $this->relevantRequest($actor, $permissionName, $subject, 'usable_grant');
-        $blockingRequest = $this->relevantRequest($actor, $permissionName, $subject, 'blocking_request');
+        $usableGrant = $this->relevantRequest($actor, $permissionName, $subject, $mode, 'usable_grant');
+        $blockingRequest = $this->relevantRequest($actor, $permissionName, $subject, $mode, 'blocking_request');
+        $currentRevisionRequest = $mode === ApprovalMode::Draft
+            ? $this->relevantRequest($actor, $permissionName, $subject, $mode, 'current_revision')
+            : null;
+        $staleApprovedRequest = $mode === ApprovalMode::Draft
+            ? $this->relevantRequest($actor, $permissionName, $subject, $mode, 'stale_approved')
+            : null;
         $relevantRequest = $usableGrant instanceof ApprovalRequest
             ? $usableGrant
-            : $blockingRequest;
+            : ($blockingRequest instanceof ApprovalRequest
+                ? $blockingRequest
+                : $currentRevisionRequest);
 
         return new GovernedActionStateData(
             action_key: $actionKey,
             permission_name: $permissionName,
+            mode: $mode->value,
             approval_enabled: $approvalEnabled,
             approval_required: $approvalEnabled
+                && $mode === ApprovalMode::Grant
                 && ! $bypassesForActor
                 && ! ($usableGrant instanceof ApprovalRequest)
                 && ! ($blockingRequest instanceof ApprovalRequest),
             bypasses_for_actor: $bypassesForActor,
             has_usable_grant: $usableGrant instanceof ApprovalRequest,
             has_blocking_request: $blockingRequest instanceof ApprovalRequest,
+            has_committable_draft: $mode === ApprovalMode::Draft && $usableGrant instanceof ApprovalRequest,
+            has_stale_subject_revision: $staleApprovedRequest instanceof ApprovalRequest,
+            requires_draft_submission: $mode === ApprovalMode::Draft
+                && ! $bypassesForActor
+                && ! ($usableGrant instanceof ApprovalRequest)
+                && ! ($blockingRequest instanceof ApprovalRequest),
             relevant_request: $relevantRequest instanceof ApprovalRequest
                 ? ApprovalContextRequestData::fromModel(
                     $relevantRequest,
@@ -206,12 +237,14 @@ final readonly class ResolveApprovalContext
         User $actor,
         string $permissionName,
         ?Model $subject,
+        ApprovalMode $mode,
         string $kind,
     ): ?ApprovalRequest {
         $query = ApprovalRequest::query()
             ->with(['requester', 'consumedBy', 'assignments.step'])
             ->where('requested_by_id', $actor->id)
             ->where('action', $permissionName)
+            ->where('mode', $mode->value)
             ->latest('reviewed_at')
             ->latest('requested_at');
 
@@ -225,8 +258,12 @@ final readonly class ResolveApprovalContext
                 ->whereNull('subject_id');
         }
 
+        $currentRevision = $subject instanceof DraftApprovalSubject
+            ? $subject->approvalSubjectRevision()
+            : null;
+
         return match ($kind) {
-            'usable_grant' => $query
+            'usable_grant' => $this->currentRevisionAwareQuery(clone $query, $mode, $currentRevision)
                 ->whereIn('status', ApprovalRequest::consumableStatuses())
                 ->where(function (Builder $builder): void {
                     $builder
@@ -234,11 +271,35 @@ final readonly class ResolveApprovalContext
                         ->orWhere('expires_at', '>', now());
                 })
                 ->first(),
-            'blocking_request' => $query
+            'blocking_request' => $this->currentRevisionAwareQuery(clone $query, $mode, $currentRevision)
                 ->whereIn('status', ApprovalRequest::reviewableStatuses())
                 ->first(),
+            'current_revision' => $this->currentRevisionAwareQuery(clone $query, $mode, $currentRevision)->first(),
+            'stale_approved' => $mode === ApprovalMode::Draft && $currentRevision !== null
+                ? $query
+                    ->whereIn('status', ApprovalRequest::consumableStatuses())
+                    ->where(function (Builder $builder) use ($currentRevision): void {
+                        $builder
+                            ->whereNull('subject_revision')
+                            ->orWhere('subject_revision', '!=', $currentRevision);
+                    })
+                    ->first()
+                : null,
             default => null,
         };
+    }
+
+    /**
+     * @param  Builder<ApprovalRequest>  $query
+     * @return Builder<ApprovalRequest>
+     */
+    private function currentRevisionAwareQuery(Builder $query, ApprovalMode $mode, ?string $currentRevision): Builder
+    {
+        if ($mode !== ApprovalMode::Draft || $currentRevision === null) {
+            return $query;
+        }
+
+        return $query->where('subject_revision', $currentRevision);
     }
 
     private function historyTimestamp(ApprovalRequest $approvalRequest): int

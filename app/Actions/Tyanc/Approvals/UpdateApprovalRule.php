@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Data\Tyanc\Approvals\ApprovalCapabilityData;
 use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
@@ -17,7 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateApprovalRule
 {
-    public function __construct(private SyncApprovalRuleSteps $syncSteps) {}
+    public function __construct(
+        private SyncApprovalRuleSteps $syncSteps,
+        private ResolveApprovalCapability $capabilities,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -38,9 +42,9 @@ final readonly class UpdateApprovalRule
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.role_id' => ['required', 'integer', Rule::exists(Role::class, 'id')],
             'steps.*.label' => ['nullable', 'string', 'max:120'],
-            'grant_validity_minutes' => ['required', 'integer', 'min:5', 'max:10080'],
-            'reminder_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
-            'escalation_after_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
+            'grant_validity_minutes' => ['required', 'integer', 'min:1', 'max:10080'],
+            'reminder_after_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
+            'escalation_after_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
         ]);
 
         $validator->after(function ($validator) use ($attributes, $approvalRule): void {
@@ -50,6 +54,51 @@ final readonly class UpdateApprovalRule
                 $validator->errors()->add('action_key', __('Choose a valid governed action.'));
 
                 return;
+            }
+
+            $workflowType = is_string($attributes['workflow_type'] ?? null)
+                ? $attributes['workflow_type']
+                : ApprovalRule::WorkflowSingle;
+            $steps = is_array($attributes['steps'] ?? null) ? $attributes['steps'] : [];
+            $reminderAfterMinutes = is_numeric($attributes['reminder_after_minutes'] ?? null)
+                ? (int) $attributes['reminder_after_minutes']
+                : null;
+            $escalationAfterMinutes = is_numeric($attributes['escalation_after_minutes'] ?? null)
+                ? (int) $attributes['escalation_after_minutes']
+                : null;
+            $capability = $this->capabilities->handle($permissionName);
+
+            if (! $capability instanceof ApprovalCapabilityData || ! $capability->managed) {
+                $validator->errors()->add('action_key', __('Only config-managed approval capabilities can be updated from the UI.'));
+            }
+
+            if (! $approvalRule->managed_by_config || $approvalRule->retired_at !== null) {
+                $validator->errors()->add('approval_rule', __('This approval rule is not available for runtime updates.'));
+            }
+
+            if (
+                (string) $approvalRule->permission_name !== $permissionName
+                || (string) $approvalRule->app_key !== (string) ($attributes['app_key'] ?? '')
+                || (string) $approvalRule->resource_key !== (string) ($attributes['resource_key'] ?? '')
+                || (string) $approvalRule->action_key !== (string) ($attributes['action_key'] ?? '')
+            ) {
+                $validator->errors()->add('action_key', __('Config-managed approval capability identity cannot be changed at runtime.'));
+            }
+
+            if ($workflowType === ApprovalRule::WorkflowSingle && count($steps) > 1) {
+                $validator->errors()->add('steps', __('Single-step workflows can only define one step.'));
+            }
+
+            if ($workflowType === ApprovalRule::WorkflowMulti && count($steps) < 2) {
+                $validator->errors()->add('steps', __('Multi-step workflows must define at least two steps.'));
+            }
+
+            if (
+                $reminderAfterMinutes !== null
+                && $escalationAfterMinutes !== null
+                && $escalationAfterMinutes <= $reminderAfterMinutes
+            ) {
+                $validator->errors()->add('escalation_after_minutes', __('Escalation must happen after the reminder window.'));
             }
 
             if (ApprovalRule::query()->where('permission_name', $permissionName)->whereKeyNot($approvalRule->id)->exists()) {
@@ -73,7 +122,6 @@ final readonly class UpdateApprovalRule
                 'resource_key' => $validated['resource_key'],
                 'action_key' => $validated['action_key'],
                 'permission_name' => $permissionName,
-                'enabled' => (bool) ($validated['enabled'] ?? false),
                 'workflow_type' => $validated['workflow_type'],
                 'grant_validity_minutes' => $validated['grant_validity_minutes'],
                 'reminder_after_minutes' => $validated['reminder_after_minutes'] ?? null,

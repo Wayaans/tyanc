@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Actions\Authorization\PermissionResourceAccess;
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
@@ -56,6 +57,10 @@ final readonly class ApproveRequest
 
             if (! in_array($lockedRequest->status, ApprovalRequest::reviewableStatuses(), true)) {
                 throw new RuntimeException(__('This approval request has already been reviewed.'));
+            }
+
+            if ($lockedRequest->approvalMode() === ApprovalMode::Draft && ! $lockedRequest->subjectRevisionMatchesSubject()) {
+                throw new RuntimeException(__('This draft has changed since it was submitted and must be reviewed again.'));
             }
 
             $pendingAssignments = $lockedRequest->assignments()
@@ -117,6 +122,8 @@ final readonly class ApproveRequest
                 ->event('approved')
                 ->withProperties([
                     'approval_request_id' => (string) $lockedRequest->id,
+                    'mode' => $lockedRequest->approvalMode()->value,
+                    'subject_revision' => $lockedRequest->subject_revision,
                     'review_note' => $reviewNote,
                     'completed_step_order' => $currentStepOrder,
                     'expires_at' => $lockedRequest->expires_at?->toIso8601String(),

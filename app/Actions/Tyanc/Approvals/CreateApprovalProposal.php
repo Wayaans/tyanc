@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc\Approvals;
 
 use App\Contracts\Approvals\ApprovalSubject;
+use App\Contracts\Approvals\DraftApprovalSubject;
+use App\Enums\ApprovalMode;
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
@@ -30,6 +32,7 @@ final readonly class CreateApprovalProposal
         string $permissionName,
         ?Model $subject = null,
         array $attributes = [],
+        ApprovalMode $mode = ApprovalMode::Grant,
     ): ApprovalRequest {
         ApprovalRequest::expirePastDueGrants();
         $rule->loadMissing(['steps.role']);
@@ -67,7 +70,11 @@ final readonly class CreateApprovalProposal
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $rule, $permissionName, $subject, $attributes, $approvers, $step, $parsed, $requestNote): ApprovalRequest {
+        $subjectRevision = $mode === ApprovalMode::Draft
+            ? $this->draftSubjectRevision($subject)
+            : $this->nullableString($attributes['subject_revision'] ?? null);
+
+        return DB::transaction(function () use ($actor, $rule, $permissionName, $subject, $attributes, $approvers, $step, $parsed, $requestNote, $mode, $subjectRevision): ApprovalRequest {
             ApprovalRule::query()->whereKey($rule->id)->lockForUpdate()->first();
 
             if ($subject instanceof Model && $subject->getKey() !== null) {
@@ -87,9 +94,11 @@ final readonly class CreateApprovalProposal
                 'app_key' => $parsed['app'],
                 'resource_key' => $parsed['resource'],
                 'action_key' => $parsed['action'],
+                'mode' => $mode->value,
                 'status' => ApprovalRequest::StatusPending,
                 'subject_type' => $subject?->getMorphClass(),
                 'subject_id' => $subject instanceof Model && is_scalar($subject->getKey()) ? (string) $subject->getKey() : null,
+                'subject_revision' => $subjectRevision,
                 'requested_by_id' => $actor->id,
                 'request_note' => $requestNote,
                 'payload' => $this->proposalPayload($attributes, $permissionName, $subject),
@@ -114,6 +123,8 @@ final readonly class CreateApprovalProposal
                 ->event('requested')
                 ->withProperties([
                     'approval_request_id' => (string) $approvalRequest->id,
+                    'mode' => $mode->value,
+                    'subject_revision' => $subjectRevision,
                     'attributes' => $approvalRequest->toArray(),
                 ])
                 ->log('Approval requested');
@@ -225,6 +236,17 @@ final readonly class CreateApprovalProposal
         }
 
         return null;
+    }
+
+    private function draftSubjectRevision(?Model $subject): string
+    {
+        if (! $subject instanceof DraftApprovalSubject) {
+            throw ValidationException::withMessages([
+                'approval' => __('Draft approval requires a revision-aware draft subject.'),
+            ]);
+        }
+
+        return $subject->approvalSubjectRevision();
     }
 
     private function nullableString(mixed $value): ?string

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Tyanc\Apps;
 
-use App\Actions\Tyanc\Approvals\SubmitGovernedAction;
+use App\Actions\Tyanc\Approvals\ExecuteApprovalControlledAction;
 use App\Data\Tyanc\Apps\AppData;
 use App\Models\App;
 use App\Models\ApprovalRequest;
@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 final readonly class UpdateApp
 {
     public function __construct(
-        private SubmitGovernedAction $governedActions,
+        private ExecuteApprovalControlledAction $governedActions,
         private SyncAppPages $pages,
     ) {}
 

@@ -12,6 +12,8 @@ import { computed, ref, watch } from 'vue';
 import ApprovalHistoryPanel from '@/components/cumpu/approvals/ApprovalHistoryPanel.vue';
 import ApprovalReasonDialog from '@/components/cumpu/approvals/ApprovalReasonDialog.vue';
 import ApprovalRequestBanner from '@/components/cumpu/approvals/ApprovalRequestBanner.vue';
+import UserDraftStateBanner from '@/components/tyanc/users/UserDraftStateBanner.vue';
+import UserDraftSubmitDialog from '@/components/tyanc/users/UserDraftSubmitDialog.vue';
 import UserForm, {
     type UserEditorFields,
 } from '@/components/tyanc/users/UserForm.vue';
@@ -25,6 +27,10 @@ import { getInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { destroy, show, suspend, update } from '@/routes/tyanc/users';
+import {
+    commit as commitDraft,
+    submit as submitDraft,
+} from '@/routes/tyanc/users/drafts';
 import type {
     PermissionOption,
     RoleOption,
@@ -32,6 +38,7 @@ import type {
     UserFormData,
 } from '@/types';
 import type { ApprovalContext, GovernedActionState } from '@/types/cumpu';
+import type { UserUpdateDraft } from '@/types/tyanc/users';
 
 const props = defineProps<{
     user: UserFormData;
@@ -40,7 +47,12 @@ const props = defineProps<{
     locales: SelectOption[];
     statuses: SelectOption[];
     timezones: string[];
+    /** Delete-only approval context */
     approvalContext?: ApprovalContext | null;
+    /** Governed action state for the update action */
+    updateActionState?: GovernedActionState | null;
+    /** Current draft if one exists */
+    userUpdateDraft?: UserUpdateDraft | null;
     status?: string | null;
 }>();
 
@@ -48,6 +60,27 @@ const { __ } = useTranslations();
 const { usersEditBreadcrumbs } = useAppNavigation();
 
 const breadcrumbs = usersEditBreadcrumbs(props.user.name, props.user.id);
+
+// ── Draft mode detection ──────────────────────────────────────────────────────
+
+const isDraftMode = computed(() => props.updateActionState?.mode === 'draft');
+
+/**
+ * Whether the form should be locked (submitted/approved draft in flight).
+ */
+const isFormLocked = computed(() => {
+    if (!isDraftMode.value || !props.userUpdateDraft) {
+        return false;
+    }
+
+    return (
+        props.userUpdateDraft.state === 'submitted_for_approval' ||
+        props.userUpdateDraft.state === 'approved_for_commit' ||
+        props.userUpdateDraft.state === 'committed'
+    );
+});
+
+// ── Form initialisation ───────────────────────────────────────────────────────
 
 function fromUserFormData(user: UserFormData): UserEditorFields {
     return {
@@ -66,7 +99,49 @@ function fromUserFormData(user: UserFormData): UserEditorFields {
     };
 }
 
-const form = ref<UserEditorFields>(fromUserFormData(props.user));
+function fromDraftValues(
+    draft: UserUpdateDraft,
+    fallback: UserFormData,
+): UserEditorFields {
+    const v = draft.form_values ?? {};
+
+    return {
+        name: typeof v.name === 'string' ? v.name : fallback.name,
+        username:
+            typeof v.username === 'string'
+                ? v.username
+                : (fallback.username ?? ''),
+        email: typeof v.email === 'string' ? v.email : fallback.email,
+        avatar: null,
+        remove_avatar: false,
+        status: typeof v.status === 'string' ? v.status : fallback.status,
+        locale: typeof v.locale === 'string' ? v.locale : fallback.locale,
+        timezone:
+            typeof v.timezone === 'string' ? v.timezone : fallback.timezone,
+        roles: Array.isArray(v.roles)
+            ? (v.roles as string[])
+            : [...fallback.roles],
+        permissions: Array.isArray(v.permissions)
+            ? (v.permissions as string[])
+            : [...fallback.permissions],
+        password: '',
+        password_confirmation: '',
+    };
+}
+
+function initialForm(): UserEditorFields {
+    if (
+        props.userUpdateDraft?.form_values &&
+        (props.userUpdateDraft.state === 'draft' ||
+            props.userUpdateDraft.state === 'rejected_for_revision')
+    ) {
+        return fromDraftValues(props.userUpdateDraft, props.user);
+    }
+
+    return fromUserFormData(props.user);
+}
+
+const form = ref<UserEditorFields>(initialForm());
 const errors = ref<Partial<Record<string, string>>>({});
 const processing = ref(false);
 const suspendProcessing = ref(false);
@@ -74,49 +149,48 @@ const deleteProcessing = ref(false);
 const deleteErrors = ref<Partial<Record<string, string>>>({});
 const confirmingDelete = ref(false);
 
-// ── Approval dialog state ─────────────────────────────────────────────────────
+// ── Approval / draft dialog state ─────────────────────────────────────────────
 
 const approvalDialogOpen = ref(false);
 const approvalNote = ref('');
 
-/** The update governed-action state from the approval context, if present. */
-const updateActionState = computed<GovernedActionState | undefined>(
-    () => props.approvalContext?.governed_actions?.['update'],
-);
+const draftSubmitOpen = ref(false);
+const draftSubmitNote = ref('');
+const draftSubmitProcessing = ref(false);
+const draftSubmitErrors = ref<Partial<Record<string, string>>>({});
 
-/**
- * Returns true when the update must go through the approval-request branch.
- * A blocking request may still short-circuit this into an inline explainer.
- */
+const commitProcessing = ref(false);
+
 const updateNeedsApprovalDialog = computed<boolean>(() => {
-    const s = updateActionState.value;
-    if (!s) return false;
+    const s = props.updateActionState;
+    if (!s || isDraftMode.value) {
+        return false;
+    }
+
     return s.approval_enabled && !s.bypasses_for_actor && !s.has_usable_grant;
 });
 
-/**
- * When there is already a blocking approval request for the update action,
- * clicking Save should surface this info rather than opening a new request flow.
- */
 const updateBlockedByRequest = computed(() =>
-    updateActionState.value?.has_blocking_request
-        ? updateActionState.value.relevant_request
+    props.updateActionState?.has_blocking_request
+        ? props.updateActionState.relevant_request
         : null,
 );
 
-/** Shown inline when the user tries to submit while blocked. */
 const submissionBlockedVisible = ref(false);
 
 const deleteApprovalDialogOpen = ref(false);
 const deleteApprovalNote = ref('');
 
-const deleteActionState = computed<GovernedActionState | undefined>(
+const deleteActionState = computed(
     () => props.approvalContext?.governed_actions?.['delete'],
 );
 
 const deleteNeedsApprovalDialog = computed<boolean>(() => {
     const s = deleteActionState.value;
-    if (!s) return false;
+    if (!s) {
+        return false;
+    }
+
     return s.approval_enabled && !s.bypasses_for_actor && !s.has_usable_grant;
 });
 
@@ -142,16 +216,29 @@ watch(deleteApprovalDialogOpen, (isOpen) => {
     }
 });
 
-// ── Navigation helpers ────────────────────────────────────────────────────────
+watch(draftSubmitOpen, (isOpen) => {
+    if (!isOpen) {
+        draftSubmitNote.value = '';
+        draftSubmitErrors.value = {};
+    }
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
 
 function goBack() {
     router.visit(show.url({ user: props.user.id }));
 }
 
-// ── Submit flow ───────────────────────────────────────────────────────────────
+// ── Save / draft submit / commit ─────────────────────────────────────────────
 
 function handleSubmit() {
     submissionBlockedVisible.value = false;
+
+    if (isDraftMode.value) {
+        saveDraft();
+
+        return;
+    }
 
     if (updateNeedsApprovalDialog.value) {
         if (updateBlockedByRequest.value) {
@@ -165,13 +252,37 @@ function handleSubmit() {
         return;
     }
 
-    // Has a usable grant, approval not required, or bypassed — submit directly.
     doSubmit('');
 }
 
 function onApprovalConfirm() {
     approvalDialogOpen.value = false;
     doSubmit(approvalNote.value);
+}
+
+function saveDraft() {
+    processing.value = true;
+    errors.value = {};
+
+    router.post(
+        update.url({ user: props.user.id }),
+        {
+            _method: 'PATCH',
+            ...form.value,
+        },
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onError: (responseErrors) => {
+                errors.value = responseErrors as Partial<
+                    Record<string, string>
+                >;
+            },
+            onFinish: () => {
+                processing.value = false;
+            },
+        },
+    );
 }
 
 function doSubmit(note: string) {
@@ -193,7 +304,6 @@ function doSubmit(note: string) {
                     Record<string, string>
                 >;
 
-                // Re-open the approval dialog so the user can fix the note.
                 if (responseErrors.request_note) {
                     approvalNote.value = note;
                     approvalDialogOpen.value = true;
@@ -201,6 +311,49 @@ function doSubmit(note: string) {
             },
             onFinish: () => {
                 processing.value = false;
+            },
+        },
+    );
+}
+
+function openDraftSubmit() {
+    draftSubmitOpen.value = true;
+}
+
+function onDraftSubmitConfirm() {
+    draftSubmitProcessing.value = true;
+    draftSubmitErrors.value = {};
+
+    router.patch(
+        submitDraft.url({ user: props.user.id }),
+        { request_note: draftSubmitNote.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                draftSubmitOpen.value = false;
+            },
+            onError: (responseErrors) => {
+                draftSubmitErrors.value = responseErrors as Partial<
+                    Record<string, string>
+                >;
+            },
+            onFinish: () => {
+                draftSubmitProcessing.value = false;
+            },
+        },
+    );
+}
+
+function doCommit() {
+    commitProcessing.value = true;
+
+    router.patch(
+        commitDraft.url({ user: props.user.id }),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                commitProcessing.value = false;
             },
         },
     );
@@ -259,7 +412,6 @@ function doDelete(note: string) {
 
     router.delete(destroy.url({ user: props.user.id }), {
         data: { request_note: note || undefined },
-        // Server handles navigation after delete (or approval redirect).
         onError: (responseErrors) => {
             deleteErrors.value = responseErrors as Partial<
                 Record<string, string>
@@ -276,6 +428,10 @@ function doDelete(note: string) {
         },
     });
 }
+
+const saveBtnLabel = computed(() =>
+    isDraftMode.value ? __('Save draft') : __('Save changes'),
+);
 </script>
 
 <template>
@@ -320,7 +476,7 @@ function doDelete(note: string) {
                 </div>
             </div>
 
-            <!-- Status feedback (e.g. approval submitted) -->
+            <!-- Status feedback -->
             <div
                 v-if="props.status"
                 class="flex items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/[0.07]"
@@ -333,7 +489,16 @@ function doDelete(note: string) {
                 </p>
             </div>
 
-            <!-- Approval banner -->
+            <!-- Draft state banner -->
+            <UserDraftStateBanner
+                v-if="isDraftMode && props.userUpdateDraft"
+                :draft="props.userUpdateDraft"
+                :commit-loading="commitProcessing"
+                @submit="openDraftSubmit"
+                @commit="doCommit"
+            />
+
+            <!-- Approval banner (delete-related requests) -->
             <ApprovalRequestBanner
                 v-if="props.approvalContext"
                 :context="props.approvalContext"
@@ -362,7 +527,7 @@ function doDelete(note: string) {
 
                     <Separator />
 
-                    <!-- Blocked submission callout -->
+                    <!-- Blocked submission callout (grant mode) -->
                     <div
                         v-if="
                             submissionBlockedVisible && updateBlockedByRequest
@@ -404,6 +569,23 @@ function doDelete(note: string) {
                         </a>
                     </div>
 
+                    <!-- Form locked notice (draft under review) -->
+                    <div
+                        v-if="isFormLocked"
+                        class="flex items-start gap-3 rounded-xl border border-slate-200/60 bg-slate-50/50 px-4 py-3 dark:border-slate-500/20 dark:bg-slate-500/[0.07]"
+                    >
+                        <Clock
+                            class="mt-0.5 size-4 shrink-0 text-slate-500 dark:text-slate-400"
+                        />
+                        <p class="text-sm text-slate-700 dark:text-slate-300">
+                            {{
+                                __(
+                                    'The form is locked while the draft is under review or awaiting commit.',
+                                )
+                            }}
+                        </p>
+                    </div>
+
                     <!-- Actions -->
                     <div class="flex items-center justify-end gap-3">
                         <Button
@@ -414,15 +596,18 @@ function doDelete(note: string) {
                         >
                             {{ __('Cancel') }}
                         </Button>
-                        <Button type="submit" :disabled="processing">
+                        <Button
+                            type="submit"
+                            :disabled="processing || isFormLocked"
+                        >
                             <Spinner v-if="processing" />
-                            {{ __('Save changes') }}
+                            {{ saveBtnLabel }}
                         </Button>
                     </div>
                 </form>
             </div>
 
-            <!-- Approval history -->
+            <!-- Approval history (delete context) -->
             <ApprovalHistoryPanel
                 v-if="props.approvalContext"
                 :context="props.approvalContext"
@@ -541,7 +726,7 @@ function doDelete(note: string) {
         </div>
     </AppLayout>
 
-    <!-- Approval reason dialog for update submissions -->
+    <!-- Approval reason dialog for update (grant mode) -->
     <ApprovalReasonDialog
         v-model:open="approvalDialogOpen"
         v-model:note="approvalNote"
@@ -554,11 +739,22 @@ function doDelete(note: string) {
         :action-label="__('Submit for approval')"
         :loading="processing"
         :error="errors.request_note"
-        :relevant-request="updateActionState?.relevant_request ?? null"
+        :relevant-request="props.updateActionState?.relevant_request ?? null"
         @confirm="onApprovalConfirm"
         @cancel="approvalNote = ''"
     />
 
+    <!-- Draft submit dialog -->
+    <UserDraftSubmitDialog
+        v-model:open="draftSubmitOpen"
+        v-model:note="draftSubmitNote"
+        :loading="draftSubmitProcessing"
+        :error="draftSubmitErrors.request_note"
+        @confirm="onDraftSubmitConfirm"
+        @cancel="draftSubmitNote = ''"
+    />
+
+    <!-- Delete approval dialog -->
     <ApprovalReasonDialog
         v-model:open="deleteApprovalDialogOpen"
         v-model:note="deleteApprovalNote"

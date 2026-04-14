@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Actions\Tyanc\Approvals\ExpireApprovalGrants;
+use App\Contracts\Approvals\DraftApprovalSubject;
+use App\Enums\ApprovalMode;
 use Carbon\CarbonInterface;
 use Database\Factories\ApprovalRequestFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -23,9 +25,11 @@ use Illuminate\Support\Carbon;
  * @property string|null $app_key
  * @property string|null $resource_key
  * @property string|null $action_key
+ * @property ApprovalMode $mode
  * @property string $status
  * @property string|null $subject_type
  * @property string|null $subject_id
+ * @property string|null $subject_revision
  * @property string|null $requested_by_id
  * @property string|null $reviewed_by_id
  * @property string|null $cancelled_by_id
@@ -93,9 +97,11 @@ final class ApprovalRequest extends Model
         'app_key',
         'resource_key',
         'action_key',
+        'mode',
         'status',
         'subject_type',
         'subject_id',
+        'subject_revision',
         'requested_by_id',
         'reviewed_by_id',
         'cancelled_by_id',
@@ -119,6 +125,7 @@ final class ApprovalRequest extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
+        'mode' => ApprovalMode::Grant->value,
         'status' => self::StatusPending,
     ];
 
@@ -236,6 +243,11 @@ final class ApprovalRequest extends Model
         return $this->hasMany(ApprovalAssignment::class, 'approval_request_id');
     }
 
+    public function approvalMode(): ApprovalMode
+    {
+        return $this->mode ?? ApprovalMode::Grant;
+    }
+
     public function effectiveStatus(?CarbonInterface $referenceTime = null): string
     {
         return $this->grantHasExpired($referenceTime)
@@ -253,11 +265,32 @@ final class ApprovalRequest extends Model
             && $this->expires_at->lte($referenceTime?->copy() ?? now());
     }
 
+    public function subjectRevisionMatchesSubject(): bool
+    {
+        if ($this->subject_revision === null) {
+            return true;
+        }
+
+        $subject = $this->subject;
+
+        if (! $subject instanceof DraftApprovalSubject) {
+            return true;
+        }
+
+        return $subject->approvalSubjectRevision() === $this->subject_revision;
+    }
+
     public function isGrantConsumable(?CarbonInterface $referenceTime = null): bool
     {
-        return in_array((string) $this->status, self::consumableStatuses(), true)
-            && ! $this->grantHasExpired($referenceTime)
-            && $this->consumed_at === null;
+        if (! in_array((string) $this->status, self::consumableStatuses(), true)) {
+            return false;
+        }
+
+        if ($this->grantHasExpired($referenceTime) || $this->consumed_at !== null) {
+            return false;
+        }
+
+        return ! ($this->approvalMode() === ApprovalMode::Draft && ! $this->subjectRevisionMatchesSubject());
     }
 
     /**
@@ -272,9 +305,11 @@ final class ApprovalRequest extends Model
             'app_key' => 'string',
             'resource_key' => 'string',
             'action_key' => 'string',
+            'mode' => ApprovalMode::class,
             'status' => 'string',
             'subject_type' => 'string',
             'subject_id' => 'string',
+            'subject_revision' => 'string',
             'requested_by_id' => 'string',
             'reviewed_by_id' => 'string',
             'cancelled_by_id' => 'string',

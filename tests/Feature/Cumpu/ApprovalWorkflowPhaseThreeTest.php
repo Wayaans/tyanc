@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ApprovalReassignedNotification;
 use App\Support\Permissions\PermissionKey;
+use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -53,23 +54,50 @@ function phaseThreeUser(Role $role, array $permissions): User
     return $user;
 }
 
-it('stores and updates multi-step approval rules through cumpu with audit entries', function (): void {
+beforeEach(function (): void {
+    $this->seed(AppRegistrySeeder::class);
+});
+
+it('syncs and updates multi-step approval rules through cumpu with audit entries', function (): void {
     $manager = phaseThreeUser(phaseThreeRole('Cumpu Rule Manager', 90), [
         PermissionKey::cumpu('approval_rules', 'viewany'),
-        PermissionKey::cumpu('approval_rules', 'create'),
-        PermissionKey::cumpu('approval_rules', 'update'),
+        PermissionKey::cumpu('approval_rules', 'manage'),
     ]);
 
     $stepOneRole = phaseThreeRole('Phase Three Step One', 40);
     $stepTwoRole = phaseThreeRole('Phase Three Step Two', 60);
 
+    config()->set('approval-sot.apps', [
+        'tyanc' => [
+            'resources' => [
+                'users' => [
+                    'actions' => [
+                        'import' => [
+                            'mode' => 'grant',
+                            'managed' => true,
+                            'toggleable' => true,
+                            'default_enabled' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
     $this->actingAs($manager)
-        ->postJson(route('cumpu.approval-rules.store'), [
-            'app_key' => 'tyanc',
-            'resource_key' => 'users',
-            'action_key' => 'import',
+        ->postJson(route('cumpu.approval-rules.sync'))
+        ->assertOk()
+        ->assertJsonPath('summary.created', 1);
+
+    $approvalRule = ApprovalRule::query()
+        ->where('permission_name', PermissionKey::tyanc('users', 'import'))
+        ->firstOrFail();
+
+    expect(Activity::query()->where('event', 'rule-sync')->exists())->toBeTrue();
+
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.update', $approvalRule), [
             'workflow_type' => ApprovalRule::WorkflowMulti,
-            'enabled' => true,
             'grant_validity_minutes' => 90,
             'reminder_after_minutes' => 30,
             'escalation_after_minutes' => 60,
@@ -78,29 +106,29 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
                 ['role_id' => $stepTwoRole->id, 'label' => 'Final review'],
             ],
         ])
-        ->assertCreated();
+        ->assertOk();
 
-    $approvalRule = ApprovalRule::query()
-        ->where('permission_name', PermissionKey::tyanc('users', 'import'))
-        ->firstOrFail();
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.toggle', $approvalRule), [
+            'enabled' => true,
+        ])
+        ->assertOk();
 
-    expect($approvalRule->workflow_type)->toBe(ApprovalRule::WorkflowMulti)
-        ->and($approvalRule->grant_validity_minutes)->toBe(90)
-        ->and($approvalRule->reminder_after_minutes)->toBe(30)
-        ->and($approvalRule->escalation_after_minutes)->toBe(60)
-        ->and($approvalRule->steps()->count())->toBe(2)
-        ->and($approvalRule->steps()->orderBy('step_order')->pluck('label')->all())
+    expect($approvalRule->fresh()->workflow_type)->toBe(ApprovalRule::WorkflowMulti)
+        ->and($approvalRule->fresh()->enabled)->toBeTrue()
+        ->and($approvalRule->fresh()->grant_validity_minutes)->toBe(90)
+        ->and($approvalRule->fresh()->reminder_after_minutes)->toBe(30)
+        ->and($approvalRule->fresh()->escalation_after_minutes)->toBe(60)
+        ->and($approvalRule->fresh()->steps()->count())->toBe(2)
+        ->and($approvalRule->fresh()->steps()->orderBy('step_order')->pluck('label')->all())
         ->toBe(['Department review', 'Final review']);
 
-    expect(Activity::query()->where('event', 'rule-created')->exists())->toBeTrue();
+    expect(Activity::query()->where('event', 'rule-updated')->exists())->toBeTrue()
+        ->and(Activity::query()->where('event', 'rule-toggled')->exists())->toBeTrue();
 
     $this->actingAs($manager)
         ->patchJson(route('cumpu.approval-rules.update', $approvalRule), [
-            'app_key' => 'tyanc',
-            'resource_key' => 'users',
-            'action_key' => 'import',
             'workflow_type' => ApprovalRule::WorkflowSingle,
-            'enabled' => false,
             'grant_validity_minutes' => 180,
             'reminder_after_minutes' => null,
             'escalation_after_minutes' => 120,
@@ -110,13 +138,17 @@ it('stores and updates multi-step approval rules through cumpu with audit entrie
         ])
         ->assertOk();
 
+    $this->actingAs($manager)
+        ->patchJson(route('cumpu.approval-rules.toggle', $approvalRule), [
+            'enabled' => false,
+        ])
+        ->assertOk();
+
     expect($approvalRule->fresh()->workflow_type)->toBe(ApprovalRule::WorkflowSingle)
         ->and($approvalRule->fresh()->enabled)->toBeFalse()
         ->and($approvalRule->fresh()->grant_validity_minutes)->toBe(180)
         ->and($approvalRule->fresh()->steps()->count())->toBe(1)
         ->and($approvalRule->fresh()->steps()->firstOrFail()->label)->toBe('Single final review');
-
-    expect(Activity::query()->where('event', 'rule-updated')->exists())->toBeTrue();
 });
 
 it('advances multi-step approvals in order and completes the governed action only after the final approval', function (): void {

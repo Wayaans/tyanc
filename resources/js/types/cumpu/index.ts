@@ -1,5 +1,45 @@
 export type ApprovalRuleWorkflowType = 'single' | 'multi';
 
+export type ApprovalRuleSyncState =
+    | 'synced'
+    | 'incomplete'
+    | 'pending_sync'
+    | 'removed'
+    | 'unknown';
+
+export type ManagedApprovalRule = {
+    id: string | null;
+    source_key: string;
+    app_key: string;
+    app_label: string;
+    resource_key: string;
+    resource_label: string;
+    action_key: string;
+    action_label: string;
+    permission_name: string;
+    mode: string;
+    enabled: boolean;
+    managed_by_config: boolean;
+    toggleable: boolean;
+    default_enabled: boolean;
+    workflow_type: ApprovalRuleWorkflowType;
+    grant_validity_minutes: number | null;
+    reminder_after_minutes: number | null;
+    escalation_after_minutes: number | null;
+    step_role_name: string | null;
+    step_label: string | null;
+    steps: ApprovalRuleStep[];
+    is_ready: boolean;
+    readiness_issues: string[];
+    sync_state: ApprovalRuleSyncState;
+    retired_at: string | null;
+    retired_reason: string | null;
+};
+
+export type ApprovalRuleAbilities = {
+    manage: boolean;
+};
+
 export type ApprovalRuleStep = {
     id?: string;
     label: string;
@@ -100,7 +140,10 @@ export type ReassignOption = {
 export type GovernedActionRelevantRequest = {
     id: string;
     status: import('@/types').ApprovalStatus;
+    mode: 'none' | 'grant' | 'draft';
     action_label: string;
+    subject_revision: string | null;
+    subject_revision_matches_subject: boolean;
     requested_by_name: string | null;
     current_step_label: string | null;
     requested_at: string;
@@ -116,18 +159,25 @@ export type GovernedActionRelevantRequest = {
 export type GovernedActionState = {
     action_key: string;
     permission_name: string;
+    mode: 'none' | 'draft' | 'grant';
     approval_enabled: boolean;
     approval_required: boolean;
     bypasses_for_actor: boolean;
     has_usable_grant: boolean;
     has_blocking_request: boolean;
+    has_committable_draft: boolean;
+    has_stale_subject_revision: boolean;
+    requires_draft_submission: boolean;
     relevant_request: GovernedActionRelevantRequest | null;
 };
 
 export type ApprovalContextRequest = {
     id: string;
     status: import('@/types').ApprovalStatus;
+    mode: 'none' | 'grant' | 'draft';
     action_label: string;
+    subject_revision: string | null;
+    subject_revision_matches_subject: boolean;
     requested_by_name: string | null;
     current_step_label: string | null;
     requested_at: string;
