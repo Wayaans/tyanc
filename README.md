@@ -94,13 +94,36 @@ If `erp.orders.delete` needs approval, the governed action is still `erp.orders.
 It is not a fake approval resource.
 Cumpu handles the review workflow, but the business app still owns the real mutation.
 
-## Local setup
+## Install as a Laravel starter kit
+
+After publishing `wayaans/tyanc` to Packagist, use the Laravel installer:
+
+```bash
+laravel new my-app --using=wayaans/tyanc
+cd my-app
+bun install
+composer dev
+```
+
+Or install it directly with Composer:
+
+```bash
+composer create-project wayaans/tyanc my-app
+cd my-app
+bun install
+composer dev
+```
+
+The starter kit install scripts copy `.env`, generate the app key, create the SQLite database, run migrations, and run `php artisan tyanc:bootstrap-local --no-interaction`.
+
+## Develop this repository directly
 
 ```bash
 composer setup
-composer bootstrap:local
 composer dev
 ```
+
+`composer setup` already runs the local Tyanc bootstrap, so you do not need a separate `composer bootstrap:local` step.
 
 ## Production bootstrap
 

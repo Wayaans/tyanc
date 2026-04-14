@@ -1,11 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "nunomaduro/laravel-starter-kit-inertia-vue",
+    "name": "wayanary/tyanc",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Tyanc starter kit for Laravel.",
     "keywords": [
         "laravel",
-        "framework"
+        "tyanc",
+        "starter-kit",
+        "admin",
+        "rbac",
+        "inertia",
+        "vue"
     ],
     "license": "MIT",
     "require": {
@@ -61,6 +66,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
+            "@php artisan tyanc:bootstrap-local --no-interaction",
             "bun install",
             "bun run build"
         ],
@@ -89,7 +95,8 @@
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi",
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
+            "@php artisan migrate --graceful --ansi",
+            "@php artisan tyanc:bootstrap-local --no-interaction"
         ],
         "update:requirements": [
             "composer bump",
