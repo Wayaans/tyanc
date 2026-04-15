@@ -17,7 +17,6 @@ import FileUploadDropzone from '@/components/tyanc/files/FileUploadDropzone.vue'
 import MediaLibraryGrid from '@/components/tyanc/files/MediaLibraryGrid.vue';
 import MediaPreviewDialog from '@/components/tyanc/files/MediaPreviewDialog.vue';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
@@ -119,7 +118,9 @@ function openPreview(file: MediaFileRow) {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-5 p-4 md:gap-6">
             <!-- Platform header -->
-            <div class="flex items-start justify-between gap-4">
+            <div
+                class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            >
                 <div class="space-y-1">
                     <h1
                         class="text-xl font-semibold tracking-tight text-foreground"
@@ -135,38 +136,43 @@ function openPreview(file: MediaFileRow) {
                     </p>
                 </div>
 
-                <!-- View mode toggle -->
-                <div
-                    class="flex shrink-0 items-center rounded-lg border border-sidebar-border/70 bg-background p-0.5"
-                >
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="size-8 rounded-md"
-                        :class="
-                            viewMode === 'grid'
-                                ? 'bg-sidebar/60 text-foreground shadow-sm'
-                                : 'text-muted-foreground'
-                        "
-                        :aria-label="__('Grid view')"
-                        @click="viewMode = 'grid'"
+                <!-- Right: compact upload + view mode toggle -->
+                <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+                    <FileUploadDropzone compact />
+
+                    <!-- View mode toggle -->
+                    <div
+                        class="flex items-center rounded-lg border border-sidebar-border/70 bg-background p-0.5"
                     >
-                        <LayoutGrid class="size-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="size-8 rounded-md"
-                        :class="
-                            viewMode === 'list'
-                                ? 'bg-sidebar/60 text-foreground shadow-sm'
-                                : 'text-muted-foreground'
-                        "
-                        :aria-label="__('List view')"
-                        @click="viewMode = 'list'"
-                    >
-                        <List class="size-4" />
-                    </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-8 rounded-md"
+                            :class="
+                                viewMode === 'grid'
+                                    ? 'bg-sidebar/60 text-foreground shadow-sm'
+                                    : 'text-muted-foreground'
+                            "
+                            :aria-label="__('Grid view')"
+                            @click="viewMode = 'grid'"
+                        >
+                            <LayoutGrid class="size-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-8 rounded-md"
+                            :class="
+                                viewMode === 'list'
+                                    ? 'bg-sidebar/60 text-foreground shadow-sm'
+                                    : 'text-muted-foreground'
+                            "
+                            :aria-label="__('List view')"
+                            @click="viewMode = 'list'"
+                        >
+                            <List class="size-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -220,18 +226,6 @@ function openPreview(file: MediaFileRow) {
                     }}</span>
                 </div>
             </div>
-
-            <!-- Upload dropzone — scoped to Tyanc shared library -->
-            <div>
-                <p
-                    class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                >
-                    {{ __('Upload to Tyanc shared library') }}
-                </p>
-                <FileUploadDropzone />
-            </div>
-
-            <Separator />
 
             <!-- Explorer: sidebar + content -->
             <div class="flex flex-col gap-5 md:flex-row md:gap-6">

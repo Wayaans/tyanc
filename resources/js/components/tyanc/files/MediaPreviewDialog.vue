@@ -54,11 +54,16 @@ function sourceLabel(source: string): string {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="max-w-3xl gap-0 overflow-hidden p-0">
+        <DialogContent
+            :show-close-button="false"
+            class="max-w-3xl gap-0 overflow-hidden p-0"
+        >
             <DialogHeader
-                class="flex-row items-center justify-between border-b border-sidebar-border/70 p-4"
+                class="flex-row items-center justify-between gap-3 border-b border-sidebar-border/70 p-4"
             >
-                <DialogTitle class="truncate text-sm font-medium">
+                <DialogTitle
+                    class="min-w-0 flex-1 truncate text-sm font-medium"
+                >
                     {{ props.file?.name ?? __('Preview file') }}
                 </DialogTitle>
 
