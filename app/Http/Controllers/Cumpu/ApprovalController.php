@@ -201,7 +201,6 @@ final readonly class ApprovalController
             return [];
         }
 
-        /** @var ApprovalAssignment $assignment */
         $assignment = $currentStepAssignments->first();
         $step = $assignment->step;
         $requester = $approvalRequest->requester instanceof User

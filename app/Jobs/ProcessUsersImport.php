@@ -8,18 +8,18 @@ use App\Imports\UsersImport;
 use App\Models\ImportRun;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
+#[Timeout(120)]
+#[Tries(3)]
 final class ProcessUsersImport implements ShouldQueue
 {
     use Queueable;
-
-    public int $tries = 3;
-
-    public int $timeout = 120;
 
     public function __construct(public string $importRunId) {}
 

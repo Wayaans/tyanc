@@ -9,6 +9,7 @@ use App\Contracts\Approvals\DraftApprovalSubject;
 use App\Enums\ApprovalMode;
 use Carbon\CarbonInterface;
 use Database\Factories\ApprovalRequestFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -57,6 +58,35 @@ use Illuminate\Support\Carbon;
  * @property-read ApprovalRule|null $rule
  * @property-read Collection<int, ApprovalAssignment> $assignments
  */
+#[Fillable([
+    'rule_id',
+    'action',
+    'app_key',
+    'resource_key',
+    'action_key',
+    'mode',
+    'status',
+    'subject_type',
+    'subject_id',
+    'subject_revision',
+    'requested_by_id',
+    'reviewed_by_id',
+    'cancelled_by_id',
+    'consumed_by_id',
+    'request_note',
+    'review_note',
+    'payload',
+    'subject_snapshot',
+    'requested_at',
+    'reviewed_at',
+    'cancelled_at',
+    'expires_at',
+    'consumed_at',
+    'superseded_at',
+    'last_reassigned_at',
+    'last_reminded_at',
+    'escalated_at',
+])]
 final class ApprovalRequest extends Model
 {
     /** @use HasFactory<ApprovalRequestFactory> */
@@ -87,39 +117,6 @@ final class ApprovalRequest extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'rule_id',
-        'action',
-        'app_key',
-        'resource_key',
-        'action_key',
-        'mode',
-        'status',
-        'subject_type',
-        'subject_id',
-        'subject_revision',
-        'requested_by_id',
-        'reviewed_by_id',
-        'cancelled_by_id',
-        'consumed_by_id',
-        'request_note',
-        'review_note',
-        'payload',
-        'subject_snapshot',
-        'requested_at',
-        'reviewed_at',
-        'cancelled_at',
-        'expires_at',
-        'consumed_at',
-        'superseded_at',
-        'last_reassigned_at',
-        'last_reminded_at',
-        'escalated_at',
-    ];
 
     /**
      * @var array<string, mixed>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\ConversationFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -28,6 +29,11 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Message> $messages
  * @property-read Message|null $latestMessage
  */
+#[Fillable([
+    'subject',
+    'created_by_id',
+    'last_message_at',
+])]
 final class Conversation extends Model
 {
     /** @use HasFactory<ConversationFactory> */
@@ -44,15 +50,6 @@ final class Conversation extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'subject',
-        'created_by_id',
-        'last_message_at',
-    ];
 
     /**
      * @return BelongsTo<User, $this>

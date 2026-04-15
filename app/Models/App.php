@@ -7,12 +7,23 @@ namespace App\Models;
 use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\AppFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[Fillable([
+    'key',
+    'label',
+    'route_prefix',
+    'icon',
+    'permission_namespace',
+    'enabled',
+    'sort_order',
+    'is_system',
+])]
 final class App extends Model implements ApprovalSubject
 {
     /** @use HasFactory<AppFactory> */
@@ -30,20 +41,6 @@ final class App extends Model implements ApprovalSubject
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'key',
-        'label',
-        'route_prefix',
-        'icon',
-        'permission_namespace',
-        'enabled',
-        'sort_order',
-        'is_system',
-    ];
 
     /**
      * @var array<string, mixed>

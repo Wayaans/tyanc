@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\ApprovalMode;
 use Database\Factories\ApprovalRuleFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,6 +36,24 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, ApprovalRuleStep> $steps
  */
+#[Fillable([
+    'app_key',
+    'resource_key',
+    'action_key',
+    'permission_name',
+    'enabled',
+    'mode',
+    'managed_by_config',
+    'source_key',
+    'config_hash',
+    'retired_at',
+    'retired_reason',
+    'workflow_type',
+    'conditions',
+    'grant_validity_minutes',
+    'reminder_after_minutes',
+    'escalation_after_minutes',
+])]
 final class ApprovalRule extends Model
 {
     /** @use HasFactory<ApprovalRuleFactory> */
@@ -55,28 +74,6 @@ final class ApprovalRule extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'app_key',
-        'resource_key',
-        'action_key',
-        'permission_name',
-        'enabled',
-        'mode',
-        'managed_by_config',
-        'source_key',
-        'config_hash',
-        'retired_at',
-        'retired_reason',
-        'workflow_type',
-        'conditions',
-        'grant_validity_minutes',
-        'reminder_after_minutes',
-        'escalation_after_minutes',
-    ];
 
     /**
      * @var array<string, mixed>

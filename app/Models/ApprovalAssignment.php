@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\ApprovalAssignmentFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,17 @@ use Illuminate\Support\Carbon;
  * @property-read User|null $assignee
  * @property-read User|null $completedBy
  */
+#[Fillable([
+    'approval_request_id',
+    'approval_rule_step_id',
+    'step_order_snapshot',
+    'step_label_snapshot',
+    'role_name_snapshot',
+    'assigned_to_id',
+    'status',
+    'completed_by_id',
+    'completed_at',
+])]
 final class ApprovalAssignment extends Model
 {
     /** @use HasFactory<ApprovalAssignmentFactory> */
@@ -51,21 +63,6 @@ final class ApprovalAssignment extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'approval_request_id',
-        'approval_rule_step_id',
-        'step_order_snapshot',
-        'step_label_snapshot',
-        'role_name_snapshot',
-        'assigned_to_id',
-        'status',
-        'completed_by_id',
-        'completed_at',
-    ];
 
     /**
      * @var array<string, mixed>

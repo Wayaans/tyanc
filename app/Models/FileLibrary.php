@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\FileLibraryFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+#[Fillable([
+    'key',
+    'label',
+    'is_system',
+])]
 final class FileLibrary extends Model implements HasMedia
 {
     /** @use HasFactory<FileLibraryFactory> */
@@ -32,15 +38,6 @@ final class FileLibrary extends Model implements HasMedia
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'key',
-        'label',
-        'is_system',
-    ];
 
     /**
      * @var array<string, mixed>

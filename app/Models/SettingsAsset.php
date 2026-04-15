@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\SettingsAssetFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
+#[Fillable([
+    'key',
+])]
 final class SettingsAsset extends Model implements HasMedia
 {
     /** @use HasFactory<SettingsAssetFactory> */
@@ -25,13 +29,6 @@ final class SettingsAsset extends Model implements HasMedia
     public const string FAVICON_COLLECTION = 'favicon';
 
     public const string LOGIN_COVER_IMAGE_COLLECTION = 'login_cover_image';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'key',
-    ];
 
     public static function forKey(string $key): self
     {

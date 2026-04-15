@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\ImportRunFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,17 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read User|null $creator
  * @property-read Collection<int, ApprovalRequest> $approvalRequests
  */
+#[Fillable([
+    'type',
+    'status',
+    'file_name',
+    'processed_rows',
+    'meta',
+    'failure_message',
+    'created_by_id',
+    'started_at',
+    'finished_at',
+])]
 final class ImportRun extends Model implements ApprovalSubject, HasMedia
 {
     /** @use HasFactory<ImportRunFactory> */
@@ -64,21 +76,6 @@ final class ImportRun extends Model implements ApprovalSubject, HasMedia
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'type',
-        'status',
-        'file_name',
-        'processed_rows',
-        'meta',
-        'failure_message',
-        'created_by_id',
-        'started_at',
-        'finished_at',
-    ];
 
     /**
      * @var array<string, mixed>

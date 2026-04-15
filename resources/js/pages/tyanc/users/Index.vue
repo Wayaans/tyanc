@@ -8,7 +8,6 @@ import DataTable from '@/components/admin/DataTable.vue';
 import ApprovalDecisionDialog from '@/components/tyanc/approvals/ApprovalDecisionDialog.vue';
 import ApprovalTimeline from '@/components/tyanc/approvals/ApprovalTimeline.vue';
 import ExportMenu from '@/components/tyanc/exports/ExportMenu.vue';
-import ImportSheet from '@/components/tyanc/imports/ImportSheet.vue';
 import { createUserTableColumns } from '@/components/tyanc/users/UserTableColumns';
 import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
@@ -16,28 +15,18 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useTranslations } from '@/lib/translations';
 import { create, exportMethod, index } from '@/routes/tyanc/users';
 import { pdf } from '@/routes/tyanc/users/export';
-import type {
-    ApprovalRequestRow,
-    DataTablePayload,
-    ImportRunRow,
-    UserRow,
-} from '@/types';
-import type { ApprovalContext } from '@/types/cumpu';
+import type { ApprovalRequestRow, DataTablePayload, UserRow } from '@/types';
 
 const props = defineProps<{
     usersTable: DataTablePayload<UserRow>;
-    recentImports: ImportRunRow[];
     approvalRequests: ApprovalRequestRow[];
     abilities: {
-        import: boolean;
         export: boolean;
         reviewApprovals: boolean;
     };
     features: {
-        imports_enabled: boolean;
         exports_enabled: boolean;
     };
-    approvalContext?: ApprovalContext | null;
     status?: string | null;
 }>();
 
@@ -108,19 +97,6 @@ function openDecisionDialog(request: ApprovalRequestRow) {
                         :disabled="
                             !props.features.exports_enabled ||
                             !props.abilities.export
-                        "
-                    />
-
-                    <ImportSheet
-                        :recent-imports="props.recentImports"
-                        :disabled="
-                            !props.features.imports_enabled ||
-                            !props.abilities.import
-                        "
-                        :approval-state="
-                            props.approvalContext?.governed_actions?.[
-                                'import'
-                            ] ?? null
                         "
                     />
 

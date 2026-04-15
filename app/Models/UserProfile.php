@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\UserProfileFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,33 +34,29 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User $user
  */
+#[Fillable([
+    'first_name',
+    'last_name',
+    'phone_number',
+    'date_of_birth',
+    'gender',
+    'address_line_1',
+    'address_line_2',
+    'city',
+    'state',
+    'country',
+    'postal_code',
+    'company_name',
+    'job_title',
+    'bio',
+    'social_links',
+])]
 final class UserProfile extends Model
 {
     /** @use HasFactory<UserProfileFactory> */
     use HasFactory;
 
     use HasUuids;
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'first_name',
-        'last_name',
-        'phone_number',
-        'date_of_birth',
-        'gender',
-        'address_line_1',
-        'address_line_2',
-        'city',
-        'state',
-        'country',
-        'postal_code',
-        'company_name',
-        'job_title',
-        'bio',
-        'social_links',
-    ];
 
     /**
      * @return BelongsTo<User, $this>

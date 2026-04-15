@@ -89,7 +89,6 @@ final readonly class ListRoles
         }
 
         $permissionName = PermissionKey::tyanc('roles', 'update');
-        /** @var Role $sampleRole */
         $sampleRole = $roles->first();
         $rule = $this->rules->handle($actor, $permissionName, $sampleRole);
         $approvalEnabled = $rule instanceof ApprovalRule;
