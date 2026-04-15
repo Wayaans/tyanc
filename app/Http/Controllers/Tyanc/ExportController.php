@@ -46,6 +46,7 @@ final readonly class ExportController
             'users' => $users,
             'generatedAt' => now(),
         ])
+            ->driver('dompdf')
             ->format(Format::A4)
             ->name('users-report.pdf')
             ->download();
@@ -76,6 +77,7 @@ final readonly class ExportController
             'activities' => $activities,
             'generatedAt' => now(),
         ])
+            ->driver('dompdf')
             ->format(Format::A4)
             ->name('activity-summary.pdf')
             ->download();
