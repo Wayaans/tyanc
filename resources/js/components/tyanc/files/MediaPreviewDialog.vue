@@ -15,18 +15,18 @@ import type { MediaFileRow } from '@/types';
 
 const props = defineProps<{
     file: MediaFileRow | null;
+    canDownload: boolean;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
 
 const { __ } = useTranslations();
 
-const isImage = computed(
-    () => props.file?.mime_type.startsWith('image/') ?? false,
-);
+const isImage = computed(() => props.file?.is_image ?? false);
 const isVideo = computed(
     () => props.file?.mime_type.startsWith('video/') ?? false,
 );
+const isPdf = computed(() => props.file?.mime_type === 'application/pdf');
 
 const fileSizeFormatted = computed(() => props.file?.size_human ?? '—');
 
@@ -38,6 +38,18 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 const uploadedAt = computed(() =>
     props.file ? dateFormatter.format(new Date(props.file.created_at)) : '—',
 );
+
+function sourceLabel(source: string): string {
+    if (source === 'media_library') {
+        return __('Media Library');
+    }
+
+    if (source === 'public_disk') {
+        return __('Public Disk');
+    }
+
+    return source;
+}
 </script>
 
 <template>
@@ -66,7 +78,7 @@ const uploadedAt = computed(() =>
                     </Button>
 
                     <Button
-                        v-if="props.file"
+                        v-if="props.file && props.canDownload"
                         as="a"
                         :href="props.file.download_url"
                         download
@@ -91,6 +103,7 @@ const uploadedAt = computed(() =>
             </DialogHeader>
 
             <div v-if="props.file" class="flex flex-col md:flex-row">
+                <!-- Preview area -->
                 <div
                     class="flex min-h-64 items-center justify-center bg-muted/30 md:w-2/3"
                 >
@@ -108,6 +121,14 @@ const uploadedAt = computed(() =>
                         class="max-h-[480px] max-w-full"
                     />
 
+                    <iframe
+                        v-else-if="isPdf"
+                        :src="props.file.url"
+                        class="h-[480px] w-full border-0"
+                        :title="props.file.file_name"
+                        sandbox="allow-scripts allow-same-origin"
+                    />
+
                     <div
                         v-else
                         class="flex flex-col items-center gap-3 p-8 text-muted-foreground"
@@ -122,9 +143,22 @@ const uploadedAt = computed(() =>
                             </span>
                         </div>
                         <p class="text-sm">{{ __('No preview available') }}</p>
+                        <Button
+                            v-if="props.canDownload"
+                            as="a"
+                            :href="props.file.download_url"
+                            download
+                            variant="outline"
+                            size="sm"
+                            class="gap-2"
+                        >
+                            <Download class="size-3.5" />
+                            {{ __('Download to view') }}
+                        </Button>
                     </div>
                 </div>
 
+                <!-- Details panel -->
                 <div
                     class="flex flex-col gap-0 border-t border-sidebar-border/70 md:w-1/3 md:border-t-0 md:border-l"
                 >
@@ -172,12 +206,46 @@ const uploadedAt = computed(() =>
                                 </dd>
                             </div>
 
-                            <div v-if="props.file.collection_name">
+                            <div v-if="props.file.app_label">
                                 <dt class="text-xs text-muted-foreground">
-                                    {{ __('Collection') }}
+                                    {{ __('App') }}
+                                </dt>
+                                <dd class="mt-0.5">
+                                    <Badge
+                                        variant="secondary"
+                                        class="rounded-full text-xs"
+                                    >
+                                        {{ props.file.app_label }}
+                                    </Badge>
+                                </dd>
+                            </div>
+
+                            <div v-if="props.file.folder_label">
+                                <dt class="text-xs text-muted-foreground">
+                                    {{ __('Folder') }}
                                 </dt>
                                 <dd class="mt-0.5 text-xs text-foreground">
-                                    {{ props.file.collection_name }}
+                                    {{ props.file.folder_label }}
+                                </dd>
+                            </div>
+
+                            <div v-if="props.file.source">
+                                <dt class="text-xs text-muted-foreground">
+                                    {{ __('Source') }}
+                                </dt>
+                                <dd class="mt-0.5 text-xs text-foreground">
+                                    {{ sourceLabel(props.file.source) }}
+                                </dd>
+                            </div>
+
+                            <div v-if="props.file.storage_path">
+                                <dt class="text-xs text-muted-foreground">
+                                    {{ __('Storage path') }}
+                                </dt>
+                                <dd
+                                    class="mt-0.5 font-mono text-xs break-all text-muted-foreground"
+                                >
+                                    {{ props.file.storage_path }}
                                 </dd>
                             </div>
 
@@ -198,10 +266,21 @@ const uploadedAt = computed(() =>
                         <dl class="space-y-3">
                             <div>
                                 <dt class="text-xs text-muted-foreground">
-                                    {{ __('Created at') }}
+                                    {{ __('Uploaded at') }}
                                 </dt>
                                 <dd class="mt-0.5 text-xs text-foreground">
                                     {{ uploadedAt }}
+                                </dd>
+                            </div>
+
+                            <div v-if="props.file.disk">
+                                <dt class="text-xs text-muted-foreground">
+                                    {{ __('Storage disk') }}
+                                </dt>
+                                <dd
+                                    class="mt-0.5 font-mono text-xs text-muted-foreground"
+                                >
+                                    {{ props.file.disk }}
                                 </dd>
                             </div>
                         </dl>

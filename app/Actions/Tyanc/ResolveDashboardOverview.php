@@ -5,21 +5,24 @@ declare(strict_types=1);
 namespace App\Actions\Tyanc;
 
 use App\Actions\Authorization\PermissionResourceAccess;
-use App\Data\Tyanc\Files\MediaFileData;
+use App\Actions\Tyanc\Files\SyncManagedFiles;
+use App\Data\Tyanc\Files\ManagedFileData;
 use App\Enums\UserStatus;
 use App\Models\App;
-use App\Models\FileLibrary;
+use App\Models\ManagedFile;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 final readonly class ResolveDashboardOverview
 {
-    public function __construct(private PermissionResourceAccess $permissionAccess) {}
+    public function __construct(
+        private PermissionResourceAccess $permissionAccess,
+        private SyncManagedFiles $syncManagedFiles,
+    ) {}
 
     /**
      * @return array{
@@ -261,51 +264,43 @@ final readonly class ResolveDashboardOverview
      */
     private function files(): array
     {
-        $libraryId = FileLibrary::query()
-            ->where('key', FileLibrary::SharedKey)
-            ->value('id');
+        $this->syncManagedFiles->handle();
 
-        if (! is_string($libraryId) || $libraryId === '') {
-            return [
-                'total' => 0,
-                'total_size_bytes' => 0,
-                'total_size_human' => Number::fileSize(0),
-                'recent_uploads' => 0,
-                'images' => 0,
-                'documents' => 0,
-                'recent' => [],
-            ];
-        }
-
-        $baseQuery = Media::query()
-            ->where('model_type', FileLibrary::class)
-            ->where('model_id', $libraryId);
-
+        $baseQuery = ManagedFile::query();
         $total = (clone $baseQuery)->count();
-        $totalSize = (int) (clone $baseQuery)->sum('size');
+        $totalSize = (int) (clone $baseQuery)->sum('size_bytes');
+        $appLabels = array_replace(
+            collect((array) config('sidebar-menu.apps', []))
+                ->mapWithKeys(fn (array $app, string $key): array => [
+                    $key => (string) ($app['title'] ?? str($key)->title()->value()),
+                ])
+                ->all(),
+            App::query()
+                ->orderBy('sort_order')
+                ->orderBy('label')
+                ->pluck('label', 'key')
+                ->all(),
+            [ManagedFile::UnassignedAppKey => 'Unassigned'],
+        );
 
         return [
             'total' => $total,
             'total_size_bytes' => $totalSize,
             'total_size_human' => Number::fileSize($totalSize),
             'recent_uploads' => (clone $baseQuery)
-                ->where('created_at', '>=', now()->subDays(7))
+                ->where('uploaded_at', '>=', now()->subDays(7))
                 ->count(),
             'images' => (clone $baseQuery)
-                ->where('mime_type', 'like', 'image/%')
+                ->where('mime_group', 'image')
                 ->count(),
             'documents' => (clone $baseQuery)
-                ->where(function ($query): void {
-                    $query
-                        ->where('mime_type', 'like', 'application/%')
-                        ->orWhere('mime_type', 'like', 'text/%');
-                })
+                ->whereIn('mime_group', ['application', 'text'])
                 ->count(),
             'recent' => (clone $baseQuery)
-                ->latest('created_at')
+                ->latest('uploaded_at')
                 ->limit(5)
                 ->get()
-                ->map(fn (Media $media): array => MediaFileData::fromModel($media)->toArray())
+                ->map(fn (ManagedFile $file): array => ManagedFileData::fromModel($file, $appLabels)->toArray())
                 ->values()
                 ->all(),
         ];
@@ -437,7 +432,7 @@ final readonly class ResolveDashboardOverview
                 'title' => 'Files',
                 'value' => $files['total'],
                 'status' => $this->filesStatus($files),
-                'description' => 'Shared library assets and uploads',
+                'description' => 'Platform-wide files, uploads, and shared assets',
                 'metrics' => [
                     ['label' => 'Storage', 'value' => $files['total_size_human']],
                     ['label' => 'Recent uploads', 'value' => $files['recent_uploads']],

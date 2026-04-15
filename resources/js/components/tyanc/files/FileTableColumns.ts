@@ -1,5 +1,6 @@
 import { createColumnHelper, type ColumnDef } from '@tanstack/vue-table';
 import { h } from 'vue';
+import FileActionsDropdown from '@/components/tyanc/files/FileActionsDropdown.vue';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { __ } from '@/lib/translations';
@@ -19,6 +20,7 @@ function mimeTypeLabel(mime: string | null): string {
 export function createFileTableColumns(
     dateFormatter: Intl.DateTimeFormat,
     onPreview: (file: MediaFileRow) => void,
+    abilities: { canDownload: boolean; canDelete: boolean },
 ): ColumnDef<MediaFileRow>[] {
     return [
         columnHelper.display({
@@ -62,7 +64,7 @@ export function createFileTableColumns(
                             {
                                 class: 'size-10 shrink-0 rounded-lg overflow-hidden border border-sidebar-border/70 bg-muted flex items-center justify-center',
                             },
-                            row.original.preview_url
+                            row.original.is_image && row.original.preview_url
                                 ? h('img', {
                                       src: row.original.preview_url,
                                       alt: row.original.file_name,
@@ -112,6 +114,51 @@ export function createFileTableColumns(
             meta: { label: 'Type' },
         }),
 
+        columnHelper.display({
+            id: 'context',
+            header: __('Source'),
+            enableSorting: false,
+            cell: ({ row }) => {
+                const file = row.original;
+                const children = [];
+
+                if (file.app_label) {
+                    children.push(
+                        h(
+                            Badge,
+                            {
+                                variant: 'secondary',
+                                class: 'rounded-full text-xs',
+                            },
+                            { default: () => file.app_label },
+                        ),
+                    );
+                }
+
+                if (file.folder_label) {
+                    children.push(
+                        h(
+                            Badge,
+                            {
+                                variant: 'outline',
+                                class: 'rounded-full text-xs',
+                            },
+                            { default: () => file.folder_label },
+                        ),
+                    );
+                }
+
+                return children.length > 0
+                    ? h('div', { class: 'flex flex-wrap gap-1' }, children)
+                    : h(
+                          'span',
+                          { class: 'text-xs text-muted-foreground' },
+                          '—',
+                      );
+            },
+            meta: { label: 'Source' },
+        }),
+
         columnHelper.accessor('size_human', {
             header: __('File size'),
             enableSorting: true,
@@ -148,6 +195,25 @@ export function createFileTableColumns(
                     dateFormatter.format(new Date(String(getValue()))),
                 ),
             meta: { label: 'Uploaded' },
+        }),
+
+        columnHelper.display({
+            id: 'actions',
+            enableSorting: false,
+            enableHiding: false,
+            header: '',
+            cell: ({ row }) =>
+                h(
+                    'div',
+                    { class: 'flex justify-end' },
+                    h(FileActionsDropdown, {
+                        file: row.original,
+                        canDownload: abilities.canDownload,
+                        canDelete: abilities.canDelete,
+                        onPreview: () => onPreview(row.original),
+                    }),
+                ),
+            meta: { label: 'Actions' },
         }),
     ] as ColumnDef<MediaFileRow>[];
 }

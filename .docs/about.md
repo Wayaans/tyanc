@@ -4,6 +4,8 @@ Tyanc is an installable admin foundation for real applications.
 
 It gives you the shared platform layer first, so later apps such as ERP or Tasks can plug into one control plane instead of rebuilding users, roles, permissions, settings, approvals, files, messaging, and navigation from scratch.
 
+Tyanc Files now acts as the platform-wide file control plane for managed files that live on the shared public storage layer. It groups files by app and folder, serves inline preview and download access through Tyanc routes, and keeps shared-library media and supported public-disk files in one managed file registry and explorer.
+
 In Tyanc today:
 
 - `tyanc` is the governance app
@@ -93,7 +95,7 @@ In Tyanc today:
 
 | Feature | What it is for | Status | Notes |
 | --- | --- | --- | --- |
-| Shared file library | Upload, browse, filter, and delete shared files | ✅ Complete | Download uses media URLs |
+| Platform file control plane | Upload, browse, filter, preview, download, and safely delete supported files across Tyanc and future apps | ✅ Complete | Uses a managed file registry over `storage/app/public`, groups files by app and folder, and serves inline preview/download routes through Tyanc |
 | Internal messaging | Start conversations and send internal messages | ✅ Complete | Includes archive and delete actions |
 | Real-time messaging foundation | Power live message delivery | ✅ Complete | Uses Reverb/Echo foundation |
 | Notifications center | Show unread notifications and mark them read | ✅ Complete | Shared across Tyanc surfaces |

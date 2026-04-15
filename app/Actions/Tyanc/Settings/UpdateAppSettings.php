@@ -38,7 +38,7 @@ final readonly class UpdateAppSettings
             'remove_login_cover_image' => ['sometimes', 'boolean'],
         ])->validate();
 
-        return DB::transaction(function () use ($validated): AppSettings {
+        return DB::transaction(function () use ($validated, $user): AppSettings {
             $settings = resolve(AppSettings::class);
             $assetStore = SettingsAsset::forKey(SettingsAsset::GLOBAL_BRANDING_KEY);
 
@@ -46,6 +46,7 @@ final readonly class UpdateAppSettings
             $settings->company_legal_name = $this->nullableString($validated['company_legal_name'] ?? null);
 
             $this->syncAsset(
+                actor: $user,
                 assetStore: $assetStore,
                 settings: $settings,
                 field: 'app_logo',
@@ -55,6 +56,7 @@ final readonly class UpdateAppSettings
             );
 
             $this->syncAsset(
+                actor: $user,
                 assetStore: $assetStore,
                 settings: $settings,
                 field: 'favicon',
@@ -64,6 +66,7 @@ final readonly class UpdateAppSettings
             );
 
             $this->syncAsset(
+                actor: $user,
                 assetStore: $assetStore,
                 settings: $settings,
                 field: 'login_cover_image',
@@ -90,6 +93,7 @@ final readonly class UpdateAppSettings
     }
 
     private function syncAsset(
+        User $actor,
         SettingsAsset $assetStore,
         AppSettings $settings,
         string $field,
@@ -100,6 +104,19 @@ final readonly class UpdateAppSettings
         if ($file instanceof UploadedFile) {
             $media = $assetStore
                 ->addMedia($file)
+                ->withCustomProperties([
+                    'app_key' => 'tyanc',
+                    'resource_key' => 'settings',
+                    'folder_path' => match ($collection) {
+                        SettingsAsset::APP_LOGO_COLLECTION => 'tyanc/settings/branding/app-logo',
+                        SettingsAsset::FAVICON_COLLECTION => 'tyanc/settings/branding/favicon',
+                        SettingsAsset::LOGIN_COVER_IMAGE_COLLECTION => 'tyanc/settings/branding/login-cover',
+                        default => 'tyanc/settings/assets',
+                    },
+                    'subject_label' => 'App settings',
+                    'uploaded_by_id' => (string) $actor->id,
+                    'uploaded_by_name' => $actor->name,
+                ])
                 ->toMediaCollection($collection);
 
             $settings->{$field} = $media->uuid;
