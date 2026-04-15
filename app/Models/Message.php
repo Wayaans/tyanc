@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\MessageFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Touches;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +23,14 @@ use Illuminate\Support\Carbon;
  * @property-read Conversation $conversation
  * @property-read User $sender
  */
+#[Fillable([
+    'conversation_id',
+    'sender_id',
+    'body',
+])]
+#[Touches([
+    'conversation',
+])]
 final class Message extends Model
 {
     /** @use HasFactory<MessageFactory> */
@@ -37,22 +47,6 @@ final class Message extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'conversation_id',
-        'sender_id',
-        'body',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $touches = [
-        'conversation',
-    ];
 
     /**
      * @return BelongsTo<Conversation, $this>

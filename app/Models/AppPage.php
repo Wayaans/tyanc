@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\AppPageFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,18 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read App $app
  */
+#[Fillable([
+    'app_id',
+    'key',
+    'label',
+    'route_name',
+    'path',
+    'permission_name',
+    'sort_order',
+    'enabled',
+    'is_navigation',
+    'is_system',
+])]
 final class AppPage extends Model
 {
     /** @use HasFactory<AppPageFactory> */
@@ -43,22 +56,6 @@ final class AppPage extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'app_id',
-        'key',
-        'label',
-        'route_name',
-        'path',
-        'permission_name',
-        'sort_order',
-        'enabled',
-        'is_navigation',
-        'is_system',
-    ];
 
     /**
      * @var array<string, mixed>

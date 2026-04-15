@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\ApprovalRuleStepFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,12 @@ use Illuminate\Support\Carbon;
  * @property-read Role $role
  * @property-read Collection<int, ApprovalAssignment> $assignments
  */
+#[Fillable([
+    'approval_rule_id',
+    'role_id',
+    'step_order',
+    'label',
+])]
 final class ApprovalRuleStep extends Model
 {
     /** @use HasFactory<ApprovalRuleStepFactory> */
@@ -41,16 +48,6 @@ final class ApprovalRuleStep extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'approval_rule_id',
-        'role_id',
-        'step_order',
-        'label',
-    ];
 
     /**
      * @return BelongsTo<ApprovalRule, $this>

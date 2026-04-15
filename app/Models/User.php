@@ -9,6 +9,8 @@ use App\Enums\UserStatus;
 use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,6 +48,31 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, Role> $roles
  * @property-read Collection<int, Permission> $permissions
  */
+#[Fillable([
+    'name',
+    'username',
+    'email',
+    'password',
+    'avatar',
+    'status',
+    'timezone',
+    'locale',
+    'is_reserved',
+    'reserved_key',
+    'email_verified_at',
+    'two_factor_secret',
+    'two_factor_recovery_codes',
+    'two_factor_confirmed_at',
+    'last_login_at',
+    'last_login_ip',
+    'remember_token',
+])]
+#[Hidden([
+    'password',
+    'remember_token',
+    'two_factor_secret',
+    'two_factor_recovery_codes',
+])]
 final class User extends Authenticatable implements ApprovalSubject, HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
@@ -57,39 +84,6 @@ final class User extends Authenticatable implements ApprovalSubject, HasLocalePr
     use Notifiable;
     use SoftDeletes;
     use TwoFactorAuthenticatable;
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'username',
-        'email',
-        'password',
-        'avatar',
-        'status',
-        'timezone',
-        'locale',
-        'is_reserved',
-        'reserved_key',
-        'email_verified_at',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-        'two_factor_confirmed_at',
-        'last_login_at',
-        'last_login_ip',
-        'remember_token',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-    ];
 
     /**
      * @return HasOne<UserPreference, $this>

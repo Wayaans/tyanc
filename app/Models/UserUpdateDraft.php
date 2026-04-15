@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Contracts\Approvals\DraftApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
 use Database\Factories\UserUpdateDraftFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,15 @@ use Illuminate\Support\Carbon;
  * @property-read User $creator
  * @property-read User|null $committedBy
  */
+#[Fillable([
+    'user_id',
+    'created_by_id',
+    'committed_by_id',
+    'revision',
+    'payload',
+    'changed_fields',
+    'committed_at',
+])]
 final class UserUpdateDraft extends Model implements DraftApprovalSubject
 {
     /** @use HasFactory<UserUpdateDraftFactory> */
@@ -45,19 +55,6 @@ final class UserUpdateDraft extends Model implements DraftApprovalSubject
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'user_id',
-        'created_by_id',
-        'committed_by_id',
-        'revision',
-        'payload',
-        'changed_fields',
-        'committed_at',
-    ];
 
     /**
      * @return BelongsTo<User, $this>

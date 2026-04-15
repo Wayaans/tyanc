@@ -12,18 +12,18 @@ use App\Notifications\ApprovalReminderNotification;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
+use Illuminate\Queue\Attributes\UniqueFor;
 use Illuminate\Support\Collection;
 use Throwable;
 
+#[Timeout(60)]
+#[Tries(3)]
+#[UniqueFor(600)]
 final class SendApprovalReminder implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
-
-    public int $tries = 3;
-
-    public int $timeout = 60;
-
-    public int $uniqueFor = 600;
 
     public function __construct(public string $approvalRequestId) {}
 

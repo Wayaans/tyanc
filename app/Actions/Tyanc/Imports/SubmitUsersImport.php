@@ -67,12 +67,10 @@ final readonly class SubmitUsersImport
             ],
         );
 
-        /** @var ImportRun|null $importRun */
         $importRun = $submission['result'] instanceof ImportRun
             ? $submission['result']
             : null;
 
-        /** @var ApprovalRequest|null $approvalRequest */
         $approvalRequest = $submission['approval'] instanceof ApprovalRequest
             ? $submission['approval']
             : null;

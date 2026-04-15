@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Contracts\Approvals\ApprovalSubject;
 use App\Models\Concerns\InteractsWithApprovals;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -15,21 +16,17 @@ use Spatie\Permission\Models\Role as SpatieRole;
  * @property string $name
  * @property string $guard_name
  */
+#[Fillable([
+    'name',
+    'guard_name',
+    'level',
+])]
 final class Role extends SpatieRole implements ApprovalSubject
 {
     /** @use HasFactory<Factory<static>> */
     use HasFactory;
 
     use InteractsWithApprovals;
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'guard_name',
-        'level',
-    ];
 
     public function approvalAppKey(): string
     {
