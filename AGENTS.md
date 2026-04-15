@@ -18,7 +18,8 @@
 - Create new actions with `php artisan make:action "{name}" --no-interaction`
 - Wrap complex operations in `DB::transaction()` within actions when multiple models are involved.
 - Some actions won't require dependencies via `__construct` and they can use just the `handle()` method.
-- After every implementation, run `composer lint` and `composer test:types` 
+- Always run `composer lint` to rector and pint your code follow coding standards and best practices, and run `composer test:types` to ensure your code is type-safe and free of type errors. This is crucial for maintaining code quality and preventing bugs.
+- Do not revert files that change after running `composer lint` or `composer test:types`, instead fix the issues in the code to ensure it meets the project's standards.
 - SOLID Principles and clean code skills
 - Use reviewer for any request to review, audit, critique, assess, check, validate, or do a final pass on work — including UI/UX, frontend, accessibility, and design-system work.
 - Use designer for creating, changing, polishing, or implementing UI/UX/frontend code.
@@ -27,6 +28,7 @@
 - ALWAYS run reviewer subagent every complete implementation except light implementations
 
 <!-- Example action class -->
+
 ```php
 <?php
 
@@ -154,13 +156,14 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+    - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
 # PHP
 
 - Always use curly braces for control structures, even for single-line bodies.
+- Use PHP 8 attributes for metadata instead of docblock annotations when possible: `#[Attribute]` instead of `@Annotation`.
 - Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
 - Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
 - Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
