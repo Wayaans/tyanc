@@ -6,9 +6,8 @@ defineProps<{
 </script>
 
 <template>
-    <!-- Error takes priority over hint when both are present. -->
     <div
-        v-if="error || hint"
+        v-if="error || hint || $slots.default"
         data-slot="form-field-support"
         :data-state="error ? 'error' : 'hint'"
         aria-live="polite"
@@ -22,5 +21,8 @@ defineProps<{
         <p v-else-if="hint" class="text-xs leading-4 text-muted-foreground">
             {{ hint }}
         </p>
+        <div v-else class="text-xs leading-4 text-muted-foreground">
+            <slot />
+        </div>
     </div>
 </template>
