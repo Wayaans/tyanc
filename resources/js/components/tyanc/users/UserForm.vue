@@ -1,26 +1,31 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, Info, Upload } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import FormFieldSupport from '@/components/FormFieldSupport.vue';
-import InputError from '@/components/InputError.vue';
-import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ChevronDown, ChevronUp, Info, Upload } from "lucide-vue-next";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import FormFieldSupport from "@/components/FormFieldSupport.vue";
+import InputError from "@/components/InputError.vue";
+import TimezoneCombobox from "@/components/TimezoneCombobox.vue";
+import {
+    applyAvatarRemoval,
+    applySelectedAvatar,
+    mergeFormState,
+} from "@/components/tyanc/users/avatarFormState";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { getInitials } from '@/composables/useInitials';
-import { useTranslations } from '@/lib/translations';
-import type { PermissionOption, RoleOption, SelectOption } from '@/types';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { getInitials } from "@/composables/useInitials";
+import { useTranslations } from "@/lib/translations";
+import type { PermissionOption, RoleOption, SelectOption } from "@/types";
 
 export type UserEditorFields = {
     name: string;
@@ -58,30 +63,34 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-    'update:modelValue': [value: UserEditorFields];
+    "update:modelValue": [value: UserEditorFields];
 }>();
 
 const { __ } = useTranslations();
+
+function patchModelValue(patch: Partial<UserEditorFields>) {
+    emit("update:modelValue", mergeFormState(props.modelValue, patch));
+}
 
 function update<K extends keyof UserEditorFields>(
     key: K,
     value: UserEditorFields[K],
 ) {
-    emit('update:modelValue', { ...props.modelValue, [key]: value });
+    patchModelValue({ [key]: value } as Pick<UserEditorFields, K>);
 }
 
 function updateRole(role: string, checked: boolean) {
     const next = checked
         ? [...props.modelValue.roles, role]
         : props.modelValue.roles.filter((r) => r !== role);
-    update('roles', next);
+    update("roles", next);
 }
 
 function updatePermission(permission: string, checked: boolean) {
     const next = checked
         ? [...props.modelValue.permissions, permission]
         : props.modelValue.permissions.filter((p) => p !== permission);
-    update('permissions', next);
+    update("permissions", next);
 }
 
 const avatarInputRef = ref<HTMLInputElement | null>(null);
@@ -90,14 +99,25 @@ function openAvatarPicker() {
     avatarInputRef.value?.click();
 }
 
+function resetAvatarInput() {
+    if (avatarInputRef.value !== null) {
+        avatarInputRef.value.value = "";
+    }
+}
+
 function handleAvatarChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
 
-    update('avatar', file);
+    emit("update:modelValue", applySelectedAvatar(props.modelValue, file));
+    resetAvatarInput();
+}
 
-    if (file !== null) {
-        update('remove_avatar', false);
+function handleRemoveAvatarChange(checked: boolean) {
+    if (checked) {
+        resetAvatarInput();
     }
+
+    emit("update:modelValue", applyAvatarRemoval(props.modelValue, checked));
 }
 
 const avatarFileName = computed(() => {
@@ -106,6 +126,10 @@ const avatarFileName = computed(() => {
     }
     return null;
 });
+
+const avatarError = computed(
+    () => props.errors.avatar ?? props.errors.remove_avatar,
+);
 
 const avatarObjectUrl = ref<string | null>(null);
 
@@ -209,7 +233,7 @@ const permissionsError = computed<string | undefined>(() => {
 watch(
     permissionsError,
     (error) => {
-        if (typeof error === 'string' && error !== '') {
+        if (typeof error === "string" && error !== "") {
             showDirectPermissions.value = true;
         }
     },
@@ -220,15 +244,15 @@ watch(
 <template>
     <div class="space-y-4">
         <h3 class="text-sm font-semibold text-foreground">
-            {{ __('Account') }}
+            {{ __("Account") }}
         </h3>
 
         <div class="grid gap-4 sm:grid-cols-[140px_minmax(0,1fr)]">
             <!-- Avatar column -->
             <div class="space-y-3">
-                <Label>{{ __('Avatar') }}</Label>
+                <Label>{{ __("Avatar") }}</Label>
                 <div
-                    class="flex flex-col items-center gap-3 rounded-2xl border border-sidebar-border/70 bg-sidebar/20 p-4"
+                    class="flex flex-col items-center gap-4 rounded-2xl border border-sidebar-border/70 bg-sidebar/20 p-4"
                 >
                     <Avatar class="size-20">
                         <AvatarImage
@@ -238,34 +262,34 @@ watch(
                         />
                         <AvatarFallback>
                             {{
-                                getInitials(props.modelValue.name || __('User'))
+                                getInitials(props.modelValue.name || __("User"))
                             }}
                         </AvatarFallback>
                     </Avatar>
-                    <!-- Hidden native file input -->
-                    <input
-                        ref="avatarInputRef"
-                        type="file"
-                        accept="image/*"
-                        class="hidden"
-                        @change="handleAvatarChange"
-                    />
-
-                    <!-- Custom upload trigger -->
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        class="w-full"
+                        class="w-full max-w-40"
                         @click="openAvatarPicker"
                     >
                         <Upload class="size-3.5" />
-                        {{
-                            avatarPreview
-                                ? __('Change photo')
-                                : __('Upload photo')
-                        }}
+                        {{ avatarPreview ? __("Change") : __("Upload") }}
                     </Button>
+                    <input
+                        id="uf-avatar-input"
+                        ref="avatarInputRef"
+                        type="file"
+                        name="avatar"
+                        accept="image/*"
+                        class="sr-only"
+                        data-testid="avatar-file-input"
+                        tabindex="-1"
+                        :aria-label="
+                            avatarPreview ? __('Change') : __('Upload')
+                        "
+                        @change="handleAvatarChange"
+                    />
 
                     <!-- Selected filename / fallback -->
                     <p
@@ -283,24 +307,24 @@ watch(
                             id="uf-remove-avatar"
                             :checked="props.modelValue.remove_avatar"
                             @update:checked="
-                                update('remove_avatar', Boolean($event))
+                                handleRemoveAvatarChange(Boolean($event))
                             "
                         />
                         <Label
                             for="uf-remove-avatar"
                             class="cursor-pointer text-xs text-muted-foreground"
                         >
-                            {{ __('Remove avatar') }}
+                            {{ __("Remove avatar") }}
                         </Label>
                     </div>
                 </div>
-                <InputError :message="props.errors.avatar" />
+                <InputError :message="avatarError" />
             </div>
 
             <!-- Right-side fields -->
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="uf-name">{{ __('Full name') }}</Label>
+                    <Label for="uf-name">{{ __("Full name") }}</Label>
                     <Input
                         id="uf-name"
                         type="text"
@@ -313,7 +337,7 @@ watch(
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="uf-username">{{ __('Username') }}</Label>
+                    <Label for="uf-username">{{ __("Username") }}</Label>
                     <Input
                         id="uf-username"
                         type="text"
@@ -326,7 +350,7 @@ watch(
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="uf-email">{{ __('Email address') }}</Label>
+                    <Label for="uf-email">{{ __("Email address") }}</Label>
                     <Input
                         id="uf-email"
                         type="email"
@@ -339,7 +363,7 @@ watch(
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="uf-status">{{ __('Status') }}</Label>
+                    <Label for="uf-status">{{ __("Status") }}</Label>
                     <Select
                         :model-value="props.modelValue.status"
                         @update:model-value="update('status', String($event))"
@@ -361,7 +385,7 @@ watch(
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="uf-locale">{{ __('Language') }}</Label>
+                    <Label for="uf-locale">{{ __("Language") }}</Label>
                     <Select
                         :model-value="props.modelValue.locale"
                         @update:model-value="update('locale', String($event))"
@@ -383,7 +407,7 @@ watch(
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="uf-timezone">{{ __('Timezone') }}</Label>
+                    <Label for="uf-timezone">{{ __("Timezone") }}</Label>
                     <TimezoneCombobox
                         id="uf-timezone"
                         :model-value="props.modelValue.timezone"
@@ -401,7 +425,7 @@ watch(
             class="grid items-start gap-4 sm:grid-cols-2"
         >
             <div class="grid gap-2">
-                <Label for="uf-password">{{ __('Password') }}</Label>
+                <Label for="uf-password">{{ __("Password") }}</Label>
                 <Input
                     id="uf-password"
                     type="password"
@@ -422,7 +446,7 @@ watch(
 
             <div class="grid gap-2">
                 <Label for="uf-password-confirm">
-                    {{ __('Confirm password') }}
+                    {{ __("Confirm password") }}
                 </Label>
                 <Input
                     id="uf-password-confirm"
@@ -446,12 +470,12 @@ watch(
         <div class="flex items-start justify-between gap-2">
             <div class="space-y-0.5">
                 <h3 class="text-sm font-semibold text-foreground">
-                    {{ __('Roles') }}
+                    {{ __("Roles") }}
                 </h3>
                 <p class="text-xs text-muted-foreground">
                     {{
                         __(
-                            'Access is primarily granted through roles. Assign the right role rather than individual permissions.',
+                            "Access is primarily granted through roles. Assign the right role rather than individual permissions.",
                         )
                     }}
                 </p>
@@ -492,7 +516,7 @@ watch(
                             variant="outline"
                             class="rounded-full px-1.5 py-0 text-xs"
                         >
-                            {{ __('Reserved') }}
+                            {{ __("Reserved") }}
                         </Badge>
                     </div>
                     <div
@@ -500,7 +524,7 @@ watch(
                     >
                         <span>
                             {{
-                                __('Level :level', {
+                                __("Level :level", {
                                     level: String(role.level),
                                 })
                             }}
@@ -508,7 +532,7 @@ watch(
                         <span>·</span>
                         <span>
                             {{
-                                __(':n permission(s)', {
+                                __(":n permission(s)", {
                                     n: String(role.permission_count),
                                 })
                             }}
@@ -530,7 +554,7 @@ watch(
                 <Info class="size-3 shrink-0" />
                 <span class="font-medium">
                     {{
-                        __('Effective access: :n permission(s) total', {
+                        __("Effective access: :n permission(s) total", {
                             n: String(effectivePermissions.length),
                         })
                     }}
@@ -548,7 +572,7 @@ watch(
                     v-if="effectivePermissionsOverflow > 0"
                     class="rounded bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground"
                 >
-                    +{{ effectivePermissionsOverflow }} {{ __('more') }}
+                    +{{ effectivePermissionsOverflow }} {{ __("more") }}
                 </span>
             </div>
         </div>
@@ -567,7 +591,7 @@ watch(
                 <h3
                     class="flex items-center gap-2 text-sm font-semibold text-foreground"
                 >
-                    {{ __('Direct permissions') }}
+                    {{ __("Direct permissions") }}
                     <Badge
                         v-if="props.modelValue.permissions.length > 0"
                         variant="secondary"
@@ -579,7 +603,7 @@ watch(
                 <p class="text-xs text-muted-foreground">
                     {{
                         __(
-                            'Exception-only. Prefer roles for regular access control.',
+                            "Exception-only. Prefer roles for regular access control.",
                         )
                     }}
                 </p>
@@ -597,7 +621,7 @@ watch(
             >
                 {{
                     __(
-                        'Direct permissions bypass role hierarchy. Only use these for exceptional one-off grants.',
+                        "Direct permissions bypass role hierarchy. Only use these for exceptional one-off grants.",
                     )
                 }}
             </div>

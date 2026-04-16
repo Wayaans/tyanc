@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\ManagedFile;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -70,7 +71,8 @@ it('stores an uploaded avatar when updating the account', function (): void {
 
     $user->refresh();
 
-    expect($user->avatar)->not->toBeNull();
+    expect($user->avatar)->not->toBeNull()
+        ->and(ManagedFile::query()->where('relative_path', $user->avatar)->where('folder_path', 'tyanc/users/avatars')->exists())->toBeTrue();
     Storage::disk('public')->assertExists((string) $user->avatar);
 
     $this->actingAs($user)

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 import approvals from './approvals'
 import approvalRules from './approval-rules'
 /**
@@ -44,6 +44,43 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: dashboard.url(options),
     method: 'head',
 })
+
+/**
+* @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
+* @see app/Http/Controllers/Cumpu/DashboardController.php:24
+* @route '/cumpu/dashboard'
+*/
+const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: dashboard.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
+* @see app/Http/Controllers/Cumpu/DashboardController.php:24
+* @route '/cumpu/dashboard'
+*/
+dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: dashboard.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Cumpu\DashboardController::dashboard
+* @see app/Http/Controllers/Cumpu/DashboardController.php:24
+* @route '/cumpu/dashboard'
+*/
+dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: dashboard.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+dashboard.form = dashboardForm
 
 const cumpu = {
     dashboard: Object.assign(dashboard, dashboard),

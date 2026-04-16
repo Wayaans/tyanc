@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\ManagedFile;
 use App\Models\Permission;
 use App\Models\SettingsAsset;
 use App\Models\User;
@@ -11,11 +12,14 @@ use App\Settings\AppSettings;
 use App\Settings\SecuritySettings;
 use App\Settings\UserDefaultsSettings;
 use App\Support\Permissions\PermissionKey;
+use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 function settingsManager(): User
 {
+    test()->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
 
     $permission = Permission::query()->firstOrCreate([
@@ -71,7 +75,10 @@ it('updates application settings and stores brand assets with media library', fu
         ->and($settings->login_cover_image)->not->toBeNull()
         ->and($assetStore->getFirstMedia(SettingsAsset::APP_LOGO_COLLECTION))->not->toBeNull()
         ->and($assetStore->getFirstMedia(SettingsAsset::FAVICON_COLLECTION))->not->toBeNull()
-        ->and($assetStore->getFirstMedia(SettingsAsset::LOGIN_COVER_IMAGE_COLLECTION))->not->toBeNull();
+        ->and($assetStore->getFirstMedia(SettingsAsset::LOGIN_COVER_IMAGE_COLLECTION))->not->toBeNull()
+        ->and(ManagedFile::query()->where('collection_name', SettingsAsset::APP_LOGO_COLLECTION)->where('folder_path', 'tyanc/settings/branding/app-logo')->exists())->toBeTrue()
+        ->and(ManagedFile::query()->where('collection_name', SettingsAsset::FAVICON_COLLECTION)->where('folder_path', 'tyanc/settings/branding/favicon')->exists())->toBeTrue()
+        ->and(ManagedFile::query()->where('collection_name', SettingsAsset::LOGIN_COVER_IMAGE_COLLECTION)->where('folder_path', 'tyanc/settings/branding/login-cover')->exists())->toBeTrue();
 });
 
 it('renders and updates appearance settings', function (): void {
