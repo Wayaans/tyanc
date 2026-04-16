@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { Camera } from 'lucide-vue-next';
-import { onUnmounted, ref } from 'vue';
-import FormFieldSupport from '@/components/FormFieldSupport.vue';
+import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
 import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,32 +30,6 @@ const { __ } = useTranslations();
 
 const selectedLocale = ref<string>(props.locales[0] ?? 'en');
 const selectedTimezone = ref<string>('UTC');
-
-// Avatar
-const avatarPreview = ref<string | null>(null);
-const avatarInputRef = ref<HTMLInputElement | null>(null);
-
-function openAvatarPicker() {
-    avatarInputRef.value?.click();
-}
-
-function revokeAvatarPreview() {
-    if (avatarPreview.value !== null) {
-        URL.revokeObjectURL(avatarPreview.value);
-    }
-}
-
-function handleAvatarChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-        revokeAvatarPreview();
-        avatarPreview.value = URL.createObjectURL(file);
-    }
-}
-
-onUnmounted(() => {
-    revokeAvatarPreview();
-});
 </script>
 
 <template>
@@ -75,72 +46,20 @@ onUnmounted(() => {
             class="flex flex-col gap-6"
         >
             <div class="grid gap-5">
-                <!-- Avatar upload -->
-                <div class="flex flex-col items-center gap-2">
-                    <div class="relative">
-                        <Avatar class="size-16">
-                            <AvatarImage
-                                v-if="avatarPreview"
-                                :src="avatarPreview"
-                                alt="Avatar preview"
-                            />
-                            <AvatarFallback
-                                class="text-xs text-muted-foreground"
-                            >
-                                {{ __('Photo') }}
-                            </AvatarFallback>
-                        </Avatar>
-                        <button
-                            type="button"
-                            class="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm transition hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                            @click="openAvatarPicker"
-                            aria-label="Upload profile photo"
-                        >
-                            <Camera class="size-3" />
-                        </button>
-                    </div>
-                    <input
-                        ref="avatarInputRef"
-                        type="file"
-                        name="avatar"
-                        accept="image/*"
-                        class="hidden"
-                        @change="handleAvatarChange"
+                <!-- Full name -->
+                <div class="grid gap-2">
+                    <Label for="name">{{ __('Full name') }}</Label>
+                    <Input
+                        id="name"
+                        type="text"
+                        name="name"
+                        required
+                        :tabindex="1"
+                        autocomplete="name"
+                        :placeholder="__('Jane Smith')"
+                        autofocus
                     />
-                    <FormFieldSupport
-                        hint="Profile photo · JPG, PNG or WebP · Max 2 MB"
-                        :error="errors.avatar"
-                    />
-                </div>
-
-                <!-- Name row -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="grid gap-2">
-                        <Label for="first_name">{{ __('First name') }}</Label>
-                        <Input
-                            id="first_name"
-                            type="text"
-                            name="first_name"
-                            :tabindex="1"
-                            autocomplete="given-name"
-                            :placeholder="__('Jane')"
-                            autofocus
-                        />
-                        <InputError :message="errors.first_name" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="last_name">{{ __('Last name') }}</Label>
-                        <Input
-                            id="last_name"
-                            type="text"
-                            name="last_name"
-                            :tabindex="2"
-                            autocomplete="family-name"
-                            :placeholder="__('Smith')"
-                        />
-                        <InputError :message="errors.last_name" />
-                    </div>
+                    <InputError :message="errors.name" />
                 </div>
 
                 <!-- Username -->
@@ -155,7 +74,7 @@ onUnmounted(() => {
                         id="username"
                         type="text"
                         name="username"
-                        :tabindex="3"
+                        :tabindex="2"
                         autocomplete="username"
                         placeholder="janesmith"
                     />
@@ -170,7 +89,7 @@ onUnmounted(() => {
                         type="email"
                         name="email"
                         required
-                        :tabindex="4"
+                        :tabindex="3"
                         autocomplete="email"
                         placeholder="jane@example.com"
                     />
@@ -184,7 +103,7 @@ onUnmounted(() => {
                         id="password"
                         name="password"
                         required
-                        :tabindex="5"
+                        :tabindex="4"
                         autocomplete="new-password"
                         :placeholder="__('Choose a strong password')"
                     />
@@ -200,7 +119,7 @@ onUnmounted(() => {
                         id="password_confirmation"
                         name="password_confirmation"
                         required
-                        :tabindex="6"
+                        :tabindex="5"
                         autocomplete="new-password"
                         :placeholder="__('Repeat your password')"
                     />
@@ -215,7 +134,7 @@ onUnmounted(() => {
                             <SelectTrigger
                                 id="locale"
                                 class="w-full"
-                                :tabindex="7"
+                                :tabindex="6"
                             >
                                 <SelectValue
                                     :placeholder="__('Select language')"
@@ -254,7 +173,7 @@ onUnmounted(() => {
                 <Button
                     type="submit"
                     class="mt-2 w-full"
-                    :tabindex="9"
+                    :tabindex="7"
                     :disabled="processing"
                     data-test="register-user-button"
                 >
@@ -268,7 +187,7 @@ onUnmounted(() => {
                 <TextLink
                     :href="login()"
                     class="underline underline-offset-4"
-                    :tabindex="10"
+                    :tabindex="8"
                 >
                     {{ __('Log in') }}
                 </TextLink>

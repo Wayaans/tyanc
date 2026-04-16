@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 
@@ -23,8 +24,7 @@ it('may register a new user', function (): void {
 
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [
-            'first_name' => 'Test',
-            'last_name' => 'User',
+            'name' => 'Test User',
             'email' => 'test@example.com',
             'locale' => 'en',
             'timezone' => 'UTC',
@@ -61,6 +61,34 @@ it('requires email', function (): void {
         ->assertSessionHasErrors('email');
 });
 
+it('requires name', function (): void {
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'email' => 'test@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors('name');
+});
+
+it('rejects legacy registration fields', function (): void {
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'avatar' => UploadedFile::fake()->image('avatar.png'),
+        ]);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors(['avatar', 'first_name', 'last_name']);
+});
+
 it('requires valid email', function (): void {
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [
@@ -94,6 +122,7 @@ it('validates username uniqueness when provided', function (): void {
 
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [
+            'name' => 'Another User',
             'username' => 'existing-user',
             'email' => 'another@example.com',
             'password' => 'password1234',
@@ -106,8 +135,7 @@ it('validates username uniqueness when provided', function (): void {
 
 it('returns dto json when registering with a json request', function (): void {
     $response = $this->postJson(route('register.store'), [
-        'first_name' => 'Json',
-        'last_name' => 'User',
+        'name' => 'Json User',
         'email' => 'json@example.com',
         'password' => 'password1234',
         'password_confirmation' => 'password1234',
