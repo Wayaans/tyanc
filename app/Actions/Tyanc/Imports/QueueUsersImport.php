@@ -34,6 +34,14 @@ final readonly class QueueUsersImport
                 $importRun
                     ->addMedia($file)
                     ->usingFileName($fileName)
+                    ->withCustomProperties([
+                        'app_key' => 'tyanc',
+                        'resource_key' => 'users',
+                        'folder_path' => 'tyanc/users/imports',
+                        'subject_label' => 'Users import',
+                        'uploaded_by_id' => (string) $actor->id,
+                        'uploaded_by_name' => $actor->name,
+                    ])
                     ->toMediaCollection(ImportRun::SourceFileCollection);
             } else {
                 $absolutePath = Storage::disk('local')->path($file);
@@ -45,6 +53,14 @@ final readonly class QueueUsersImport
                 $importRun
                     ->addMedia($absolutePath)
                     ->usingFileName($fileName)
+                    ->withCustomProperties([
+                        'app_key' => 'tyanc',
+                        'resource_key' => 'users',
+                        'folder_path' => 'tyanc/users/imports',
+                        'subject_label' => 'Users import',
+                        'uploaded_by_id' => (string) $actor->id,
+                        'uploaded_by_name' => $actor->name,
+                    ])
                     ->toMediaCollection(ImportRun::SourceFileCollection);
 
                 Storage::disk('local')->delete($file);

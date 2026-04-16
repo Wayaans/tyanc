@@ -4,6 +4,11 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import InputError from '@/components/InputError.vue';
 import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
+import {
+    applyAvatarRemoval,
+    applySelectedAvatar,
+    mergeFormState,
+} from '@/components/tyanc/users/avatarFormState';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,11 +68,15 @@ const emit = defineEmits<{
 
 const { __ } = useTranslations();
 
+function patchModelValue(patch: Partial<UserEditorFields>) {
+    emit('update:modelValue', mergeFormState(props.modelValue, patch));
+}
+
 function update<K extends keyof UserEditorFields>(
     key: K,
     value: UserEditorFields[K],
 ) {
-    emit('update:modelValue', { ...props.modelValue, [key]: value });
+    patchModelValue({ [key]: value } as Pick<UserEditorFields, K>);
 }
 
 function updateRole(role: string, checked: boolean) {
@@ -90,14 +99,25 @@ function openAvatarPicker() {
     avatarInputRef.value?.click();
 }
 
+function resetAvatarInput() {
+    if (avatarInputRef.value !== null) {
+        avatarInputRef.value.value = '';
+    }
+}
+
 function handleAvatarChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
 
-    update('avatar', file);
+    emit('update:modelValue', applySelectedAvatar(props.modelValue, file));
+    resetAvatarInput();
+}
 
-    if (file !== null) {
-        update('remove_avatar', false);
+function handleRemoveAvatarChange(checked: boolean) {
+    if (checked) {
+        resetAvatarInput();
     }
+
+    emit('update:modelValue', applyAvatarRemoval(props.modelValue, checked));
 }
 
 const avatarFileName = computed(() => {
@@ -106,6 +126,10 @@ const avatarFileName = computed(() => {
     }
     return null;
 });
+
+const avatarError = computed(
+    () => props.errors.avatar ?? props.errors.remove_avatar,
+);
 
 const avatarObjectUrl = ref<string | null>(null);
 
@@ -228,7 +252,7 @@ watch(
             <div class="space-y-3">
                 <Label>{{ __('Avatar') }}</Label>
                 <div
-                    class="flex flex-col items-center gap-3 rounded-2xl border border-sidebar-border/70 bg-sidebar/20 p-4"
+                    class="flex flex-col items-center gap-4 rounded-2xl border border-sidebar-border/70 bg-sidebar/20 p-4"
                 >
                     <Avatar class="size-20">
                         <AvatarImage
@@ -242,30 +266,30 @@ watch(
                             }}
                         </AvatarFallback>
                     </Avatar>
-                    <!-- Hidden native file input -->
-                    <input
-                        ref="avatarInputRef"
-                        type="file"
-                        accept="image/*"
-                        class="hidden"
-                        @change="handleAvatarChange"
-                    />
-
-                    <!-- Custom upload trigger -->
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        class="w-full"
+                        class="w-full max-w-40"
                         @click="openAvatarPicker"
                     >
                         <Upload class="size-3.5" />
-                        {{
-                            avatarPreview
-                                ? __('Change photo')
-                                : __('Upload photo')
-                        }}
+                        {{ avatarPreview ? __('Change') : __('Upload') }}
                     </Button>
+                    <input
+                        id="uf-avatar-input"
+                        ref="avatarInputRef"
+                        type="file"
+                        name="avatar"
+                        accept="image/*"
+                        class="sr-only"
+                        data-testid="avatar-file-input"
+                        tabindex="-1"
+                        :aria-label="
+                            avatarPreview ? __('Change') : __('Upload')
+                        "
+                        @change="handleAvatarChange"
+                    />
 
                     <!-- Selected filename / fallback -->
                     <p
@@ -283,7 +307,7 @@ watch(
                             id="uf-remove-avatar"
                             :checked="props.modelValue.remove_avatar"
                             @update:checked="
-                                update('remove_avatar', Boolean($event))
+                                handleRemoveAvatarChange(Boolean($event))
                             "
                         />
                         <Label
@@ -294,7 +318,7 @@ watch(
                         </Label>
                     </div>
                 </div>
-                <InputError :message="props.errors.avatar" />
+                <InputError :message="avatarError" />
             </div>
 
             <!-- Right-side fields -->

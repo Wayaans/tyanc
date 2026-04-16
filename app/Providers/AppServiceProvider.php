@@ -9,6 +9,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Observers\AppObserver;
+use App\Observers\ManagedFileMediaObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\RoleObserver;
 use App\Observers\UserObserver;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +46,7 @@ final class AppServiceProvider extends ServiceProvider
     private function bootObservers(): void
     {
         App::observe(AppObserver::class);
+        Media::observe(ManagedFileMediaObserver::class);
         Permission::observe(PermissionObserver::class);
         Role::observe(RoleObserver::class);
         User::observe(UserObserver::class);

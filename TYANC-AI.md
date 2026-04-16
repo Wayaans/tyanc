@@ -56,6 +56,7 @@ Examples:
 - access matrix
 - global app settings
 - approval infrastructure
+- platform-wide file management and file activity
 - platform-wide activity log
 
 ### Put it in `cumpu` when the feature is about approval operations
@@ -425,6 +426,19 @@ That means:
 If you add a page, keep its permission and registry metadata in sync.
 If you add a governed action, keep its permission source and approval-rule eligibility in sync.
 
+## File management model
+
+Tyanc Files is the platform-wide file control plane.
+
+- The Tyanc files surface under `/tyanc/files` governs managed files across Tyanc and future apps when they live on the shared public storage layer.
+- Physical storage stays on the `public` disk at `storage/app/public`, exposed through the `public/storage` symlink.
+- Logical governance lives in the managed file registry, not in raw folder scans alone. Use the `managed_files` table and Tyanc file actions as the source for explorer state, app grouping, folder grouping, inline preview, download, and safe deletion.
+- Spatie Media Library remains the preferred contract for new managed uploads. Store metadata such as `app_key`, `resource_key`, `folder_path`, `subject_label`, `uploaded_by_id`, and `uploaded_by_name` so the registry can classify the file correctly.
+- The Tyanc shared library still uses `FileLibrary`, but the Tyanc Files explorer is broader than that one library. It also indexes supported public-disk files such as user avatars and future app uploads.
+- Use Tyanc stream and download routes for governed access and auditing. Do not treat raw `/storage/...` links as the control-plane path when permissions, download tracking, or consistent UX matter.
+- Only allow Tyanc-side deletion when ownership is explicit and supported. Extend ownership resolution first before exposing delete actions for new file types.
+- When extending file support, update the registry sync and ownership resolution instead of inventing a second file catalogue.
+
 ## Data flow rules
 
 Follow the current Laravel and Inertia architecture.
@@ -520,6 +534,7 @@ For implementation work:
 - if `config/sidebar-menu.php` changed, resync app registry pages with `php artisan tyanc:apps-sync --no-interaction`
 - if PHP files changed, format with Pint
 - if frontend route usage changed, keep Wayfinder-generated helpers aligned and run `php artisan wayfinder:generate --no-interaction` when needed
+- if file metadata, file routes, or file ownership resolution changed, keep the managed file registry sync and Tyanc file explorer behavior aligned
 - keep translations and UI labels consistent
 
 ## Do not do these things
@@ -531,6 +546,9 @@ For implementation work:
 - Do not place app files in unrelated folders just because they are convenient.
 - Do not use `demo` as a shortcut for unfinished real features.
 - Do not create approval rules for fake resources when the real governed action belongs to an existing resource.
+- Do not treat raw `public/storage` scans as the business source of truth for managed files.
+- Do not add new upload flows that should appear in Tyanc Files without attaching enough metadata for registry classification.
+- Do not expose broad delete actions for unowned or weakly owned public-disk files.
 - Do not build new approval work around replaying stored mutation payloads by default.
 - Do not create a new architectural pattern when the project already has one.
 

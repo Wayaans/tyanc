@@ -86,7 +86,9 @@ Route::controller(FileController::class)
     ->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
-        Route::delete('{media}', 'destroy')->name('destroy');
+        Route::get('{managedFile}/stream', 'show')->name('show');
+        Route::get('{managedFile}/download', 'download')->name('download');
+        Route::delete('{managedFile}', 'destroy')->name('destroy');
     });
 
 Route::controller(ConversationController::class)

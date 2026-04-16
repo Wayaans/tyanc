@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Actions\Tyanc\Files\SyncManagedFiles;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalRule;
 use App\Models\FileLibrary;
 use App\Models\ImportRun;
+use App\Models\ManagedFile;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Permissions\PermissionKey;
+use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\Models\Activity;
@@ -24,6 +27,8 @@ function documentPermission(string $name): Permission
 
 function documentManager(array $permissions): User
 {
+    test()->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
     $user->givePermissionTo(array_map(documentPermission(...), $permissions));
 
@@ -31,6 +36,8 @@ function documentManager(array $permissions): User
 }
 
 it('renders the tyanc files page for authorized managers', function (): void {
+    Storage::fake('public');
+
     $manager = documentManager([
         PermissionKey::tyanc('files', 'viewany'),
     ]);
@@ -62,9 +69,11 @@ it('uploads image and non-image files to the shared tyanc library', function ():
         ->assertJsonCount(2, 'files')
         ->assertJsonPath('files.0.uploaded_by_name', $manager->name);
 
-    expect($response->json('files.0.url'))->toStartWith('/storage/')
+    expect($response->json('files.0.url'))->toStartWith('/tyanc/files/')
+        ->and($response->json('files.0.download_url'))->toStartWith('/tyanc/files/')
         ->and($response->json('files.0.preview_url'))->toStartWith('/storage/')
-        ->and($response->json('files.1.url'))->toStartWith('/storage/');
+        ->and($response->json('files.1.url'))->toStartWith('/tyanc/files/')
+        ->and($response->json('files.1.folder_path'))->toBe('tyanc/shared');
 
     $library = FileLibrary::shared();
     $mediaItems = $library->getMedia(FileLibrary::FilesCollection);
@@ -91,8 +100,14 @@ it('deletes files from the shared tyanc library', function (): void {
         ])
         ->toMediaCollection(FileLibrary::FilesCollection);
 
+    resolve(SyncManagedFiles::class)->handle();
+
+    $managedFile = ManagedFile::query()->firstWhere('media_id', $media->id);
+
+    expect($managedFile)->toBeInstanceOf(ManagedFile::class);
+
     $this->actingAs($manager)
-        ->deleteJson(route('tyanc.files.destroy', $media))
+        ->deleteJson(route('tyanc.files.destroy', $managedFile))
         ->assertNoContent();
 
     expect($library->fresh()->getMedia(FileLibrary::FilesCollection))->toHaveCount(0)
@@ -100,6 +115,8 @@ it('deletes files from the shared tyanc library', function (): void {
 });
 
 it('forbids file management without the correct permission', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
 
     $this->actingAs($user)

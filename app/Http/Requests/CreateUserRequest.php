@@ -19,7 +19,7 @@ final class CreateUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'nullable',
                 'string',
@@ -42,12 +42,12 @@ final class CreateUserRequest extends FormRequest
                 'confirmed',
                 Password::defaults(),
             ],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'avatar' => ['prohibited'],
             'status' => ['nullable', Rule::in([UserStatus::Active->value])],
             'locale' => ['nullable', Rule::in(array_keys((array) config('tyanc.supported_locales', [])))],
             'timezone' => ['nullable', 'timezone'],
-            'first_name' => ['nullable', 'string', 'max:255'],
-            'last_name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['prohibited'],
+            'last_name' => ['prohibited'],
             'phone_number' => ['nullable', 'string', 'max:30'],
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
             'gender' => ['nullable', Rule::in(['male', 'female'])],

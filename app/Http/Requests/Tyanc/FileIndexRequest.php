@@ -31,10 +31,10 @@ final class FileIndexRequest extends FormRequest
     {
         return DataTableQueryData::fromRequest(
             request: $this,
-            allowedSorts: ['name', 'file_name', 'mime_type', 'size', 'created_at'],
-            allowedFilters: ['search', 'mime_group'],
+            allowedSorts: ['name', 'file_name', 'app_key', 'folder_path', 'mime_type', 'size', 'created_at'],
+            allowedFilters: ['search', 'app_key', 'folder_path', 'mime_group', 'source'],
             defaultSort: ['-created_at'],
-            allowedColumns: ['name', 'mime_type', 'size_human', 'uploaded_by_name', 'created_at'],
+            allowedColumns: ['file_name', 'mime_type', 'context', 'size_human', 'uploaded_by_name', 'created_at'],
         );
     }
 }

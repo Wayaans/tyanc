@@ -3,17 +3,21 @@
 declare(strict_types=1);
 
 use App\Enums\UserStatus;
+use App\Models\ManagedFile;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Support\Permissions\PermissionKey;
+use Database\Seeders\AppRegistrySeeder;
 use Database\Seeders\LocalDevelopmentSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 function userManager(): User
 {
+    test()->seed(AppRegistrySeeder::class);
+
     $user = User::factory()->create();
 
     $permission = Permission::query()->firstOrCreate([
@@ -190,7 +194,7 @@ it('lets the baseline admin assign lower-level roles during user management', fu
         ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue();
 });
 
-it('creates managed users with profile, avatar, roles, and permissions', function (): void {
+it('creates managed users with avatar, roles, and permissions', function (): void {
     Storage::fake('public');
 
     $manager = userManager();
@@ -210,6 +214,7 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
 
     $this->actingAs($manager)
         ->postJson(route('tyanc.users.store'), [
+            'name' => 'Managed User',
             'username' => 'managed-user',
             'email' => 'managed@example.com',
             'password' => 'password1234',
@@ -220,19 +225,12 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
             'timezone' => 'Asia/Makassar',
             'roles' => [$role->name],
             'permissions' => [$directPermission->name],
-            'first_name' => 'Managed',
-            'last_name' => 'User',
-            'city' => 'Makassar',
-            'social_links' => [
-                'github' => 'https://github.com/managed-user',
-            ],
         ])
         ->assertCreated()
         ->assertJsonPath('user.username', 'managed-user')
         ->assertJsonPath('user.locale', 'id')
         ->assertJsonPath('user.roles.0', 'Support')
-        ->assertJsonPath('user.permissions.0', PermissionKey::tyanc('settings', 'manage'))
-        ->assertJsonPath('user.city', 'Makassar');
+        ->assertJsonPath('user.permissions.0', PermissionKey::tyanc('settings', 'manage'));
 
     $managedUser = User::query()->where('email', 'managed@example.com')->first();
 
@@ -240,10 +238,7 @@ it('creates managed users with profile, avatar, roles, and permissions', functio
         ->and($managedUser?->avatar)->not->toBeNull()
         ->and($managedUser?->hasRole('Support'))->toBeTrue()
         ->and($managedUser?->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue()
-        ->and($managedUser?->profile?->city)->toBe('Makassar')
-        ->and($managedUser?->profile?->social_links)->toBe([
-            'github' => 'https://github.com/managed-user',
-        ]);
+        ->and(ManagedFile::query()->where('relative_path', $managedUser?->avatar)->where('folder_path', 'tyanc/users/avatars')->exists())->toBeTrue();
 });
 
 it('updates managed users and syncs their access', function (): void {
@@ -363,7 +358,8 @@ it('supports method-spoofed multipart user updates for the Inertia edit form flo
         ->and($managedUser->username)->toBe('method-spoof-updated')
         ->and($managedUser->email)->toBe('method-spoof-after@example.com')
         ->and($managedUser->hasRole('Operator'))->toBeTrue()
-        ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue();
+        ->and($managedUser->hasDirectPermission(PermissionKey::tyanc('settings', 'manage')))->toBeTrue()
+        ->and(ManagedFile::query()->where('relative_path', $managedUser->avatar)->where('folder_path', 'tyanc/users/avatars')->exists())->toBeTrue();
 });
 
 it('suspends managed users', function (): void {

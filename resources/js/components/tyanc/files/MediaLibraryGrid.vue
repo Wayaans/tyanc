@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { FileX, MoreHorizontal, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { FileX } from 'lucide-vue-next';
+import FileActionsDropdown from '@/components/tyanc/files/FileActionsDropdown.vue';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useTranslations } from '@/lib/translations';
-import { destroy } from '@/routes/tyanc/files';
 import type { MediaFileRow } from '@/types';
 
 const props = defineProps<{
     files: MediaFileRow[];
+    canDownload: boolean;
+    canDelete: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -23,8 +16,6 @@ const emit = defineEmits<{
 }>();
 
 const { __ } = useTranslations();
-
-const confirmingDeleteId = ref<number | null>(null);
 
 function mimeTypeShort(mime: string | null): string {
     if (!mime) {
@@ -34,25 +25,16 @@ function mimeTypeShort(mime: string | null): string {
     return (mime.split('/')[1] ?? mime).toUpperCase();
 }
 
-function handleDelete(fileId: number) {
-    if (confirmingDeleteId.value !== fileId) {
-        confirmingDeleteId.value = fileId;
-
-        return;
+function sourceLabel(source: string): string {
+    if (source === 'media_library') {
+        return __('Media');
     }
 
-    router.delete(destroy.url({ media: fileId }), {
-        preserveScroll: true,
-        onFinish: () => {
-            confirmingDeleteId.value = null;
-        },
-    });
-}
-
-function onMenuClose(open: boolean, fileId: number) {
-    if (!open && confirmingDeleteId.value === fileId) {
-        confirmingDeleteId.value = null;
+    if (source === 'public_disk') {
+        return __('Public');
     }
+
+    return source;
 }
 </script>
 
@@ -71,7 +53,7 @@ function onMenuClose(open: boolean, fileId: number) {
             {{ __('No files found.') }}
         </p>
         <p class="text-xs text-muted-foreground">
-            {{ __('Upload your first file to start the shared library.') }}
+            {{ __('No files are available in this view yet.') }}
         </p>
     </div>
 
@@ -95,7 +77,7 @@ function onMenuClose(open: boolean, fileId: number) {
                     class="flex aspect-square items-center justify-center bg-muted/40"
                 >
                     <img
-                        v-if="file.preview_url"
+                        v-if="file.is_image && file.preview_url"
                         :src="file.preview_url"
                         :alt="file.file_name"
                         class="size-full object-cover transition-transform group-hover:scale-105"
@@ -120,55 +102,63 @@ function onMenuClose(open: boolean, fileId: number) {
                     >
                         {{ file.name }}
                     </p>
-                    <p class="text-xs text-muted-foreground tabular-nums">
-                        {{ file.size_human }}
-                    </p>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-1">
+                        <span
+                            class="text-xs text-muted-foreground tabular-nums"
+                        >
+                            {{ file.size_human }}
+                        </span>
+                        <span
+                            v-if="file.app_label"
+                            class="text-xs text-muted-foreground"
+                        >
+                            ·
+                        </span>
+                        <span
+                            v-if="file.app_label"
+                            class="truncate text-xs text-muted-foreground"
+                        >
+                            {{ file.app_label }}
+                        </span>
+                    </div>
                 </div>
 
-                <DropdownMenu
-                    @update:open="(open) => onMenuClose(open, file.id)"
-                >
-                    <DropdownMenuTrigger as-child>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            class="size-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                            :aria-label="__('File actions')"
-                        >
-                            <MoreHorizontal class="size-3.5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="end" class="w-44">
-                        <DropdownMenuItem
-                            :class="[
-                                'gap-2 focus:bg-destructive/10',
-                                confirmingDeleteId === file.id
-                                    ? 'text-destructive focus:text-destructive'
-                                    : 'text-destructive/80 focus:text-destructive',
-                            ]"
-                            @click.stop="handleDelete(file.id)"
-                        >
-                            <Trash2 class="size-3.5 shrink-0" />
-                            <span class="truncate text-xs">
-                                {{
-                                    confirmingDeleteId === file.id
-                                        ? __('Click again to confirm deletion')
-                                        : __('Delete file')
-                                }}
-                            </span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <FileActionsDropdown
+                    :file="file"
+                    :can-download="props.canDownload"
+                    :can-delete="props.canDelete"
+                    :on-preview="() => emit('preview', file)"
+                    class="opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                />
             </div>
 
-            <!-- Type badge -->
-            <div class="absolute top-2 left-2">
+            <!-- Badges -->
+            <div class="absolute top-2 left-2 flex flex-col gap-1">
                 <Badge
                     variant="outline"
                     class="rounded-full bg-background/80 font-mono text-xs backdrop-blur-sm"
                 >
                     {{ mimeTypeShort(file.mime_type) }}
+                </Badge>
+                <Badge
+                    v-if="file.source"
+                    variant="secondary"
+                    class="rounded-full text-xs backdrop-blur-sm"
+                >
+                    {{ sourceLabel(file.source) }}
+                </Badge>
+            </div>
+
+            <!-- Folder label -->
+            <div
+                v-if="file.folder_label"
+                class="absolute right-2 bottom-10 max-w-[60%]"
+            >
+                <Badge
+                    variant="outline"
+                    class="truncate rounded-full bg-background/80 text-xs backdrop-blur-sm"
+                >
+                    {{ file.folder_label }}
                 </Badge>
             </div>
         </div>

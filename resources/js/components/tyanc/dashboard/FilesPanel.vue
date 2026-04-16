@@ -52,7 +52,7 @@ const fileIcon = (mimeGroup: string) => {
                     <p class="pt-1 text-sm text-muted-foreground">
                         {{
                             __(
-                                'Shared assets, documents, and exports from the Tyanc workspace.',
+                                'Platform-wide files, uploads, and shared assets.',
                             )
                         }}
                     </p>
@@ -141,7 +141,7 @@ const fileIcon = (mimeGroup: string) => {
                 v-if="files.recent.length === 0"
                 class="rounded-2xl border border-sidebar-border/60 bg-sidebar/20 px-4 py-6 text-sm text-muted-foreground"
             >
-                {{ __('No shared files uploaded yet.') }}
+                {{ __('No platform files uploaded yet.') }}
             </div>
 
             <component

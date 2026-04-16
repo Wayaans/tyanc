@@ -52,8 +52,21 @@ export function __(
 ): string {
     let translated = i18nState.translations[key] ?? key;
 
-    for (const [token, value] of Object.entries(replacements)) {
-        translated = translated.replace(new RegExp(`:${token}`, 'g'), value);
+    const keys = Object.keys(replacements);
+
+    if (keys.length > 0) {
+        const pattern = keys
+            .sort((left, right) => right.length - left.length)
+            .map(
+                (token) =>
+                    `:${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+            )
+            .join('|');
+
+        translated = translated.replace(
+            new RegExp(pattern, 'g'),
+            (match) => replacements[match.slice(1)] ?? match,
+        );
     }
 
     return translated;
