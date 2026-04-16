@@ -57,10 +57,7 @@ export function __(
     if (keys.length > 0) {
         const pattern = keys
             .sort((left, right) => right.length - left.length)
-            .map(
-                (token) =>
-                    `:${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-            )
+            .map((token) => `:${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
             .join('|');
 
         translated = translated.replace(

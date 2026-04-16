@@ -182,22 +182,9 @@ const resolvedSpacingLabel = computed(
                         <div class="grid gap-4 sm:grid-cols-2">
                             <!-- Appearance -->
                             <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="appearance">{{
-                                        __('Theme')
-                                    }}</Label>
-                                    <button
-                                        v-if="
-                                            selectedAppearance !==
-                                            SYSTEM_DEFAULT
-                                        "
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('appearance')"
-                                    >
-                                        {{ __('Use system default') }}
-                                    </button>
-                                </div>
+                                <Label for="appearance">{{
+                                    __('Theme')
+                                }}</Label>
                                 <Select v-model="selectedAppearance">
                                     <SelectTrigger
                                         id="appearance"
@@ -230,27 +217,22 @@ const resolvedSpacingLabel = computed(
                                             : undefined
                                     "
                                     :error="errors.appearance"
-                                />
+                                >
+                                    <button
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('appearance')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </FormFieldSupport>
                             </div>
 
                             <!-- Sidebar variant -->
                             <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="sidebar_variant">{{
-                                        __('Sidebar style')
-                                    }}</Label>
-                                    <button
-                                        v-if="
-                                            selectedSidebarVariant !==
-                                            SYSTEM_DEFAULT
-                                        "
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('sidebar_variant')"
-                                    >
-                                        {{ __('Use system default') }}
-                                    </button>
-                                </div>
+                                <Label for="sidebar_variant">{{
+                                    __('Sidebar style')
+                                }}</Label>
                                 <Select v-model="selectedSidebarVariant">
                                     <SelectTrigger
                                         id="sidebar_variant"
@@ -287,27 +269,22 @@ const resolvedSpacingLabel = computed(
                                             : undefined
                                     "
                                     :error="errors.sidebar_variant"
-                                />
+                                >
+                                    <button
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('sidebar_variant')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </FormFieldSupport>
                             </div>
 
                             <!-- Spacing density -->
                             <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="spacing_density">{{
-                                        __('Spacing density')
-                                    }}</Label>
-                                    <button
-                                        v-if="
-                                            selectedSpacingDensity !==
-                                            SYSTEM_DEFAULT
-                                        "
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('spacing_density')"
-                                    >
-                                        {{ __('Use system default') }}
-                                    </button>
-                                </div>
+                                <Label for="spacing_density">{{
+                                    __('Spacing density')
+                                }}</Label>
                                 <Select v-model="selectedSpacingDensity">
                                     <SelectTrigger
                                         id="spacing_density"
@@ -344,7 +321,15 @@ const resolvedSpacingLabel = computed(
                                             : undefined
                                     "
                                     :error="errors.spacing_density"
-                                />
+                                >
+                                    <button
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('spacing_density')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </FormFieldSupport>
                             </div>
                         </div>
                     </div>
@@ -366,19 +351,9 @@ const resolvedSpacingLabel = computed(
                         <div class="grid gap-4 sm:grid-cols-2">
                             <!-- Locale -->
                             <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="pref_locale">{{
-                                        __('Language')
-                                    }}</Label>
-                                    <button
-                                        v-if="selectedLocale !== SYSTEM_DEFAULT"
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('locale')"
-                                    >
-                                        {{ __('Use system default') }}
-                                    </button>
-                                </div>
+                                <Label for="pref_locale">{{
+                                    __('Language')
+                                }}</Label>
                                 <Select v-model="selectedLocale">
                                     <SelectTrigger
                                         id="pref_locale"
@@ -410,30 +385,26 @@ const resolvedSpacingLabel = computed(
                                             ? `${__('Using system default')}: ${props.preferences.resolved_locale}`
                                             : undefined
                                     "
-                                />
+                                    :error="errors.locale"
+                                >
+                                    <button
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('locale')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </FormFieldSupport>
                             </div>
 
                             <!-- Timezone -->
                             <div class="grid gap-2">
-                                <div class="flex items-center justify-between">
-                                    <Label for="pref_timezone">{{
-                                        __('Timezone')
-                                    }}</Label>
-                                    <button
-                                        v-if="
-                                            selectedTimezone !== SYSTEM_DEFAULT
-                                        "
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                        @click="clearField('timezone')"
-                                    >
-                                        {{ __('Use system default') }}
-                                    </button>
-                                </div>
+                                <Label for="pref_timezone">{{
+                                    __('Timezone')
+                                }}</Label>
                                 <TimezoneCombobox
                                     id="pref_timezone"
                                     v-model="selectedTimezone"
-                                    name="timezone"
                                     :timezones="props.timezones"
                                 />
                                 <input
@@ -448,7 +419,16 @@ const resolvedSpacingLabel = computed(
                                             ? `${__('Using system default')}: ${props.preferences.resolved_timezone}`
                                             : undefined
                                     "
-                                />
+                                    :error="errors.timezone"
+                                >
+                                    <button
+                                        type="button"
+                                        class="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                        @click="clearField('timezone')"
+                                    >
+                                        {{ __('Use system default') }}
+                                    </button>
+                                </FormFieldSupport>
                             </div>
                         </div>
                     </div>
