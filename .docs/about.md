@@ -111,10 +111,10 @@ In Tyanc today:
 | Feature | What it is for | Status | Notes |
 | --- | --- | --- | --- |
 | Application settings | Manage app name, company legal name, logo, favicon, and login cover | ✅ Complete | `/tyanc/settings/application` |
-| Appearance settings | Manage colors, border radius, density, font family, and sidebar variant | ✅ Complete | `/tyanc/settings/appearance` |
+| Appearance settings | Manage the platform UI contract, including primary and secondary colors, font family, border radius, spacing rhythm, density, and sidebar variant | ✅ Complete | `/tyanc/settings/appearance`; frontend work must follow these settings instead of introducing a separate visual style |
 | Security settings | Manage 2FA policy and session timeout | ✅ Complete | `/tyanc/settings/security` |
 | User defaults settings | Set platform-wide default locale, timezone, and appearance baseline | ✅ Complete | `/tyanc/settings/user-defaults` |
-| Runtime branding | Apply settings to shell and auth pages without code edits | ✅ Complete | Shared through Inertia props |
+| Runtime branding | Apply settings to shell and auth pages without code edits | ✅ Complete | Shared through Inertia props and intended to keep UI consistent across Tyanc surfaces |
 
 ### Localization and typed platform foundations
 
@@ -125,6 +125,19 @@ In Tyanc today:
 | Laravel-native translation delivery | Keep translations on the backend as the source of truth | ✅ Complete | Shared into Inertia props |
 | Typed data payloads | Keep server-to-frontend payloads explicit and stable | ✅ Complete | Uses data objects across the app |
 | Wayfinder-ready routing | Use typed route helpers on the frontend | ✅ Complete | Important when routes change |
+
+## UI consistency contract
+
+Tyanc has a platform-level appearance system. UI and frontend work must respect it.
+
+- Treat `/tyanc/settings/appearance` as the source of truth for visual presentation.
+- Follow configured primary and secondary colors, font family, border radius, spacing rhythm, density, and sidebar variant.
+- Reuse shared shadcn-vue components and existing Tyanc patterns before creating new variants.
+- Keep new pages visually native to Tyanc. Consistency matters more than novelty.
+- Use the shared DataTable pattern for list pages.
+- Put row-level DataTable actions inside the standard actions dropdown, not as a row of inline buttons.
+- Keep bulk actions and page actions in the toolbar or page header.
+- See `TYANC-AI.md` for the stronger implementation contract used when building Tyanc UI.
 
 ## Built-in Cumpu features inside Tyanc
 

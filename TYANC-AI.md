@@ -465,10 +465,15 @@ Use data objects as the typed boundary.
 
 - Use Inertia pages under `resources/js/pages/...`.
 - Use shared shadcn-vue components. Do not use plain raw HTML form fields when a shared component exists.
-- Use the existing DataTable stack for list pages.
+- Treat `/tyanc/settings/appearance` as the runtime UI contract. When building or changing UI, you must follow the saved appearance settings for primary and secondary colors, font family, border radius, spacing, density, sidebar variant, and related shell styling instead of hardcoding a new visual system.
+- Prefer existing design tokens, CSS variables, shared utilities, and shared components over page-specific colors, spacing scales, or radius values.
+- Use the existing DataTable stack for list pages. Keep table density, spacing, typography, filters, toolbar layout, pagination, and row interaction patterns consistent with the current shared tables.
+- Row-level DataTable actions must go inside the existing actions dropdown pattern. Do not scatter multiple inline action buttons across rows unless the existing shared pattern already requires a single primary action.
+- Put bulk actions or page-level actions in the table toolbar, not inside every row.
 - Use `@/routes/...` and `@/actions/...` helpers. Do not hardcode URLs when Wayfinder helpers exist.
 - Keep app-specific components under the app folder.
 - For governed actions, use the existing approval-state and approval-reason dialog patterns instead of inventing another request flow.
+- Prioritize consistency over novelty. New frontend work should look native to Tyanc, not like a separate product layered on top of it.
 
 ## Menu and navigation rules
 
@@ -509,6 +514,8 @@ Examples:
 - security settings
 - user defaults
 
+Appearance settings are not decorative only. They are the source of truth for platform-wide frontend presentation. Respect them whenever you build or revise UI so pages, forms, dialogs, tables, shells, and navigation stay visually consistent across Tyanc and future apps.
+
 Do not put platform settings under root `/settings/*`.
 Do not put personal account settings under `/tyanc/settings/*`.
 
@@ -543,6 +550,8 @@ For implementation work:
 - Do not invent a second permissions model outside Spatie Laravel Permission.
 - Do not hardcode permission naming outside the `<app>.<resource>.<action>` contract.
 - Do not hardcode frontend URLs when generated route helpers exist.
+- Do not hardcode page-specific colors, fonts, spacing, or radius values that ignore Tyanc appearance settings.
+- Do not invent a second table style or row-action pattern when the shared DataTable and dropdown-action pattern already covers the use case.
 - Do not place app files in unrelated folders just because they are convenient.
 - Do not use `demo` as a shortcut for unfinished real features.
 - Do not create approval rules for fake resources when the real governed action belongs to an existing resource.
