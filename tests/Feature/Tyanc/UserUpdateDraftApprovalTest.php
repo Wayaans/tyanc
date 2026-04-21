@@ -117,6 +117,82 @@ function userDraftPayload(Role $role, array $overrides = []): array
     ];
 }
 
+it('flashes shared toasts for web-based draft save, submit, and commit flows', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+    setUserDraftApprovalConfig();
+
+    $managerRole = userDraftRole('Draft Managers', 50);
+    $reviewerRole = userDraftRole('Draft Reviewers', 80);
+    $targetRole = userDraftRole('Draft Managed User', 10);
+
+    $requester = userDraftUser([
+        PermissionKey::tyanc('users', 'manage'),
+        PermissionKey::cumpu('my_requests', 'viewany'),
+    ], $managerRole);
+
+    $reviewer = userDraftUser([
+        PermissionKey::tyanc('users', 'update'),
+        PermissionKey::cumpu('approvals', 'viewany'),
+        PermissionKey::cumpu('approvals', 'approve'),
+    ], $reviewerRole);
+
+    $managedUser = User::factory()->create([
+        'name' => 'Original User',
+        'username' => 'original-user',
+        'email' => 'original-user@example.com',
+        'status' => UserStatus::Active,
+        'locale' => 'en',
+        'timezone' => 'UTC',
+    ]);
+    $managedUser->assignRole($targetRole);
+
+    userDraftRule($reviewerRole);
+
+    $this->actingAs($requester)
+        ->from(route('tyanc.users.edit', $managedUser))
+        ->patch(route('tyanc.users.update', $managedUser), userDraftPayload($targetRole))
+        ->assertRedirect(route('tyanc.users.edit', $managedUser))
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'Draft saved. Submit it for approval when you are ready.');
+
+    $this->actingAs($requester)
+        ->get(route('tyanc.users.edit', $managedUser))
+        ->assertInertia(fn ($page) => $page
+            ->component('tyanc/users/Edit')
+            ->where('flash.toast.variant', 'success')
+            ->where('flash.toast.message', 'Draft saved. Submit it for approval when you are ready.'));
+
+    $this->actingAs($requester)
+        ->from(route('tyanc.users.edit', $managedUser))
+        ->patch(route('tyanc.users.drafts.submit', $managedUser), [
+            'request_note' => 'Please approve this saved draft.',
+        ])
+        ->assertRedirect(route('tyanc.users.edit', $managedUser))
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'Draft submitted for approval.');
+
+    $approvalRequest = ApprovalRequest::query()->latest('requested_at')->firstOrFail();
+
+    $this->actingAs($reviewer)
+        ->patchJson(route('cumpu.approvals.approve', $approvalRequest), [
+            'review_note' => 'Approved draft.',
+        ])
+        ->assertOk();
+
+    $this->actingAs($requester)
+        ->patch(route('tyanc.users.drafts.commit', $managedUser))
+        ->assertRedirect(route('tyanc.users.show', $managedUser))
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'Approved draft committed.');
+
+    $this->actingAs($requester)
+        ->get(route('tyanc.users.show', $managedUser))
+        ->assertInertia(fn ($page) => $page
+            ->component('tyanc/users/Show')
+            ->where('flash.toast.variant', 'success')
+            ->where('flash.toast.message', 'Approved draft committed.'));
+});
+
 it('saves, submits, approves, and commits a user update draft', function (): void {
     $this->seed(AppRegistrySeeder::class);
     setUserDraftApprovalConfig();

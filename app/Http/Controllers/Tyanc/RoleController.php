@@ -20,6 +20,7 @@ use App\Http\Requests\Tyanc\UpdateRoleRequest;
 use App\Models\ApprovalRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -55,7 +56,6 @@ final readonly class RoleController
                 actionKeys: ['create', 'update', 'delete'],
             ),
             'permissionOptions' => $permissionOptions->handle(),
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -94,7 +94,9 @@ final readonly class RoleController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the update after it is approved.'),
+            )->toArray());
         }
 
         /** @var Role $updatedRole */

@@ -12,6 +12,7 @@ use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Settings\SecuritySettings;
+use App\Support\Notifications\FlashToast;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,6 @@ final readonly class SecuritySettingsController
                 actionKeys: ['update'],
                 governedActionKeys: ['update'],
             ),
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -73,7 +73,9 @@ final readonly class SecuritySettingsController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the update after it is approved.'),
+            )->toArray());
         }
 
         /** @var SecuritySettings $settings */

@@ -16,6 +16,7 @@ use App\Data\Tyanc\Apps\AppData;
 use App\Models\App;
 use App\Models\ApprovalRequest;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use App\Support\Tables\AppliesTableQuery;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
@@ -104,7 +105,6 @@ final readonly class AppController
                 actionKeys: ['update', 'toggle', 'delete'],
                 governedActionKeys: ['update'],
             ),
-            'status' => $request->session()->get('status'),
         ]);
     }
 
@@ -137,7 +137,9 @@ final readonly class AppController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the update after it is approved.'),
+            )->toArray());
         }
 
         /** @var App $updatedApp */
