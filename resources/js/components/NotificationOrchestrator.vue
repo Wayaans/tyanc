@@ -4,8 +4,11 @@ import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useNotificationStore } from "@/composables/useNotificationStore";
 import { getEcho } from "@/lib/echo";
 import { notify } from "@/lib/notify";
+import { useTranslations } from "@/lib/translations";
+import { index as messagesIndex } from "@/routes/tyanc/messages";
 import type {
   FlashProps,
+  MessageSentEventPayload,
   NotificationBroadcastPayload,
   NotificationItem,
   NotificationsPayload,
@@ -13,6 +16,7 @@ import type {
 } from "@/types";
 
 const page = usePage();
+const { __ } = useTranslations();
 const {
   hasDisplayedFlashToast,
   rememberFlashToast,
@@ -34,6 +38,7 @@ let stopWatchingFlashToast: (() => void) | null = null;
 let stopWatchingNotifications: (() => void) | null = null;
 let stopWatchingAuthUser: (() => void) | null = null;
 let activeNotificationChannel: string | null = null;
+let activeMessageChannel: string | null = null;
 
 function showLiveNotificationToast(notification: NotificationItem): void {
   switch (notification.kind) {
@@ -67,6 +72,35 @@ function leaveActiveNotificationChannel(): void {
   activeNotificationChannel = null;
 }
 
+function leaveActiveMessageChannel(): void {
+  if (!activeMessageChannel) {
+    return;
+  }
+
+  getEcho()?.leave(activeMessageChannel);
+  activeMessageChannel = null;
+}
+
+function showLiveMessageToast(payload: MessageSentEventPayload): void {
+  notify.info(__("New message"), {
+    description:
+      payload.conversation.last_sender_name &&
+      payload.conversation.last_message_preview
+        ? `${payload.conversation.last_sender_name}: ${payload.conversation.last_message_preview}`
+        : (payload.conversation.last_message_preview ?? payload.message.body),
+    action: {
+      label: __("Open conversation"),
+      onClick: () => {
+        notify.visit(
+          messagesIndex.url({
+            query: { conversation: payload.conversation.id },
+          })
+        );
+      },
+    },
+  });
+}
+
 onMounted(() => {
   stopWatchingNotifications = watch(
     serverNotifications,
@@ -93,6 +127,7 @@ onMounted(() => {
     authUserId,
     (userId) => {
       leaveActiveNotificationChannel();
+      leaveActiveMessageChannel();
 
       if (!userId) {
         return;
@@ -105,9 +140,10 @@ onMounted(() => {
       }
 
       activeNotificationChannel = `App.Models.User.${userId}`;
+      activeMessageChannel = `tyanc.users.${userId}.messages`;
 
       echo
-        .private(`App.Models.User.${authUserId.value}`)
+        .private(`App.Models.User.${userId}`)
         .notification((payload: NotificationBroadcastPayload) => {
           const insertedNotification = pushLiveNotification(payload);
 
@@ -116,6 +152,16 @@ onMounted(() => {
           }
 
           showLiveNotificationToast(insertedNotification);
+        });
+
+      echo
+        .private(`tyanc.users.${userId}.messages`)
+        .listen(".message.sent", (payload: MessageSentEventPayload) => {
+          if (payload.message.sender_id === userId) {
+            return;
+          }
+
+          showLiveMessageToast(payload);
         });
     },
     { immediate: true }
@@ -127,6 +173,7 @@ onUnmounted(() => {
   stopWatchingNotifications?.();
   stopWatchingAuthUser?.();
   leaveActiveNotificationChannel();
+  leaveActiveMessageChannel();
 });
 </script>
 

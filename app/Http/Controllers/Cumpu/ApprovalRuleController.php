@@ -15,6 +15,7 @@ use App\Http\Requests\Cumpu\UpdateManagedApprovalRuleRequest;
 use App\Models\ApprovalRule;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use App\Support\Permissions\PermissionKey;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +50,6 @@ final readonly class ApprovalRuleController
             'abilities' => [
                 'manage' => resolve(PermissionResourceAccess::class)->handle($user, PermissionKey::cumpu('approval_rules', 'manage')),
             ],
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -73,7 +73,8 @@ final readonly class ApprovalRuleController
             ]);
         }
 
-        return to_route('cumpu.approval-rules.index')->with('status', __('Approval capabilities synced.'));
+        return to_route('cumpu.approval-rules.index')
+            ->with('toast', FlashToast::success(__('Approval capabilities synced.'))->toArray());
     }
 
     public function update(
