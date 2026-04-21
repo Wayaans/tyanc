@@ -124,5 +124,5 @@
     "resources/js/**/*.tsx",
     "resources/js/**/*.vue"
   ],
-  "exclude": [".agents/*", "node_modules", "vendor"]
+  "exclude": [".agents/**/*", "**/.agents/**", "node_modules", "vendor"]
 }
