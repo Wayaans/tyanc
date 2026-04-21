@@ -11,18 +11,11 @@ use Illuminate\Notifications\Notification;
 
 final class NewApprovalRequestedNotification extends Notification
 {
+    use BroadcastsDurableNotifications;
     use FormatsApprovalNotificationPayload;
     use Queueable;
 
     public function __construct(private readonly ?ApprovalRequest $approvalRequest = null) {}
-
-    /**
-     * @return list<string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * @return array<string, string|null>
