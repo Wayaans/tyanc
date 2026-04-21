@@ -2,6 +2,7 @@ import type {
     AccessibleApp,
     AppId,
     BrandProps,
+    FlashProps,
     MessagesShellPayload,
     NotificationsPayload,
     SidebarNavigationData,
@@ -44,6 +45,7 @@ declare module '@inertiajs/core' {
             availableLocales: string[];
             /** Flat JSON translation map for the current locale. */
             translations: Record<string, string>;
+            flash: FlashProps;
             /** Notification summary shared on every authenticated page. */
             notifications: NotificationsPayload | null;
             userPreferences: UserPreferencesProps;

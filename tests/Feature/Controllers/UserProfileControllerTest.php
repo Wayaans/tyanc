@@ -24,7 +24,7 @@ it('renders account settings page', function (): void {
             ->has('locales')
             ->has('statuses')
             ->has('timezones')
-            ->has('status')
+            ->where('flash.toast', null)
             ->where('mustVerifyEmail', false)
             ->where('canManageStatus', false));
 });
@@ -44,11 +44,19 @@ it('may update account information', function (): void {
             'email' => 'new@example.com',
         ]);
 
-    $response->assertRedirectToRoute('settings.account.edit');
+    $response->assertRedirectToRoute('settings.account.edit')
+        ->assertSessionHas('toast', fn (array $toast): bool => $toast['variant'] === 'success'
+            && $toast['message'] === 'Account settings updated.');
 
     expect($user->fresh()->name)->toBe('New Name')
         ->and($user->fresh()->username)->toBe('new-name')
         ->and($user->fresh()->email)->toBe('new@example.com');
+
+    $this->actingAs($user)
+        ->get(route('settings.account.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('flash.toast.variant', 'success')
+            ->where('flash.toast.message', 'Account settings updated.'));
 });
 
 it('stores an uploaded avatar when updating the account', function (): void {
@@ -189,7 +197,6 @@ it('returns dto json for the account edit payload', function (): void {
         ->assertJsonPath('user.id', $user->id)
         ->assertJsonPath('user.username', $user->username)
         ->assertJsonStructure([
-            'status',
             'mustVerifyEmail',
             'canManageStatus',
             'locales',

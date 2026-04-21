@@ -7,6 +7,16 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Laravel\Fortify\Features;
+
+beforeEach(function (): void {
+    config([
+        'fortify.features' => [
+            Features::registration(),
+            Features::resetPasswords(),
+        ],
+    ]);
+});
 
 it('renders reset password page', function (): void {
     $response = $this->fromRoute('home')
@@ -37,11 +47,45 @@ it('may reset password', function (): void {
         ]);
 
     $response->assertRedirectToRoute('login')
-        ->assertSessionHas('status');
+        ->assertSessionHas('toast', fn (array $toast): bool => $toast['variant'] === 'success'
+            && $toast['message'] === 'Your password has been reset.');
 
     expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
 
     Event::assertDispatched(PasswordReset::class);
+
+    $this->get(route('login'))
+        ->assertInertia(fn ($page) => $page
+            ->component('session/Create')
+            ->where('flash.toast.variant', 'success')
+            ->where('flash.toast.message', 'Your password has been reset.'));
+});
+
+it('does not reset passwords while the feature is disabled', function (): void {
+    config([
+        'fortify.features' => [Features::registration()],
+    ]);
+
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+        'password' => Hash::make('old-password'),
+    ]);
+
+    $token = Password::createToken($user);
+
+    $response = $this->fromRoute('password.reset', ['token' => $token])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'token' => $token,
+        ]);
+
+    $response->assertRedirect(route('password.reset', ['token' => $token]))
+        ->assertSessionHas('toast', fn (array $toast): bool => $toast['variant'] === 'warning'
+            && $toast['message'] === 'Password reset is unavailable.');
+
+    expect(Hash::check('old-password', $user->fresh()->password))->toBeTrue();
 });
 
 it('fails with invalid token', function (): void {
@@ -146,9 +190,18 @@ it('may update password', function (): void {
             'password_confirmation' => 'new-password',
         ]);
 
-    $response->assertRedirectToRoute('password.edit');
+    $response->assertRedirectToRoute('password.edit')
+        ->assertSessionHas('toast', fn (array $toast): bool => $toast['variant'] === 'success'
+            && $toast['message'] === 'Password updated.');
 
     expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
+
+    $this->actingAs($user)
+        ->get(route('password.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->component('user-password/Edit')
+            ->where('flash.toast.variant', 'success')
+            ->where('flash.toast.message', 'Password updated.'));
 });
 
 it('requires current password to update', function (): void {

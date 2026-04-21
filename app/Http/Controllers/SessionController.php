@@ -17,12 +17,11 @@ use Laravel\Fortify\Features;
 
 final readonly class SessionController
 {
-    public function create(Request $request): Response
+    public function create(): Response
     {
         return Inertia::render('session/Create', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()) && Route::has('password.request'),
             'canRegister' => Features::enabled(Features::registration()) && Route::has('register'),
-            'status' => $request->session()->get('status'),
         ]);
     }
 

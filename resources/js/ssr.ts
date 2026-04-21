@@ -4,6 +4,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createSSRApp, Fragment, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
+import NotificationOrchestrator from '@/components/NotificationOrchestrator.vue';
 import Sonner from '@/components/ui/sonner/Sonner.vue';
 import { registerTranslations } from '@/lib/translations';
 
@@ -22,7 +23,12 @@ createServer(
                 ),
             setup: ({ App, props, plugin }) => {
                 const vueApp = createSSRApp({
-                    render: () => h(Fragment, [h(App, props), h(Sonner)]),
+                    render: () =>
+                        h(Fragment, [
+                            h(App, props),
+                            h(Sonner),
+                            h(NotificationOrchestrator),
+                        ]),
                 });
                 registerTranslations(
                     vueApp,

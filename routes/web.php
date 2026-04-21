@@ -67,11 +67,13 @@ Route::middleware('guest')->group(function (): void {
     Route::get('reset-password/{token}', [UserPasswordController::class, 'create'])
         ->name('password.reset');
     Route::post('reset-password', [UserPasswordController::class, 'store'])
+        ->middleware('fortify.feature:reset-passwords')
         ->name('password.store');
 
     Route::get('forgot-password', [UserEmailResetNotificationController::class, 'create'])
         ->name('password.request');
     Route::post('forgot-password', [UserEmailResetNotificationController::class, 'store'])
+        ->middleware('fortify.feature:reset-passwords')
         ->name('password.email');
 
     Route::get('login', [SessionController::class, 'create'])
@@ -84,11 +86,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('verify-email', [UserEmailVerificationNotificationController::class, 'create'])
         ->name('verification.notice');
     Route::post('email/verification-notification', [UserEmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware(['throttle:6,1', 'fortify.feature:email-verification'])
         ->name('verification.send');
 
     Route::get('verify-email/{id}/{hash}', [UserEmailVerificationController::class, 'update'])
-        ->middleware(['signed', 'throttle:6,1'])
+        ->middleware(['fortify.feature:email-verification', 'signed', 'throttle:6,1'])
         ->name('verification.verify');
 
     Route::post('logout', [SessionController::class, 'destroy'])

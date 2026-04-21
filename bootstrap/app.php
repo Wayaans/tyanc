@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\AuthorizeAppPageAccess;
+use App\Http\Middleware\EnsureFortifyFeatureEnabled;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
@@ -24,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->alias([
+            'fortify.feature' => EnsureFortifyFeatureEnabled::class,
+        ]);
 
         $middleware->web(append: [
             SetLocale::class,

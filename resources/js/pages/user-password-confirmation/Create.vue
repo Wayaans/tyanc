@@ -3,7 +3,7 @@ import { Form, Head } from '@inertiajs/vue3';
 import { Lock } from 'lucide-vue-next';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import SectionState from '@/components/state/SectionState.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -66,19 +66,15 @@ const { __ } = useTranslations();
         </template>
 
         <template v-else>
-            <Alert>
-                <Lock class="size-4" />
-                <AlertTitle>{{
-                    __('Password confirmation is disabled')
-                }}</AlertTitle>
-                <AlertDescription>
-                    {{
-                        __(
-                            'Password confirmation is not available on this application. Contact your administrator for more information.',
-                        )
-                    }}
-                </AlertDescription>
-            </Alert>
+            <SectionState
+                :icon="Lock"
+                :title="__('Password confirmation is disabled')"
+                :description="
+                    __(
+                        'Password confirmation is not available on this application. Contact your administrator for more information.',
+                    )
+                "
+            />
         </template>
     </AuthLayout>
 </template>

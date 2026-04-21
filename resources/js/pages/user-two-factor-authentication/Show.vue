@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { Ban, ShieldOff } from 'lucide-vue-next';
+import { ShieldOff } from 'lucide-vue-next';
 import { onUnmounted, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
+import SectionState from '@/components/state/SectionState.vue';
 import TwoFactorRecoveryCodes from '@/components/TwoFactorRecoveryCodes.vue';
 import TwoFactorSetupModal from '@/components/TwoFactorSetupModal.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useAppNavigation } from '@/composables/useAppNavigation';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
@@ -57,19 +57,15 @@ onUnmounted(() => {
                     "
                 />
 
-                <Alert>
-                    <ShieldOff class="size-4" />
-                    <AlertTitle>{{
-                        __('Two-factor authentication is disabled')
-                    }}</AlertTitle>
-                    <AlertDescription>
-                        {{
-                            __(
-                                'Two-factor authentication (2FA) is not available on this application. When enabled, you would be prompted for a secure code during sign-in. Contact your administrator for more information.',
-                            )
-                        }}
-                    </AlertDescription>
-                </Alert>
+                <SectionState
+                    :icon="ShieldOff"
+                    :title="__('Two-factor authentication is disabled')"
+                    :description="
+                        __(
+                            'Two-factor authentication (2FA) is not available on this application. When enabled, you would be prompted for a secure code during sign-in. Contact your administrator for more information.',
+                        )
+                    "
+                />
             </div>
 
             <!-- Active management -->

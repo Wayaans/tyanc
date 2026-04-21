@@ -10,6 +10,7 @@ use App\Enums\UserStatus;
 use App\Http\Requests\UpdateAccountSettingsRequest;
 use App\Models\Permission;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -25,7 +26,6 @@ final readonly class AccountSettingsController
     public function edit(Request $request, #[CurrentUser] User $user): Response|JsonResponse
     {
         $payload = [
-            'status' => $request->session()->get('status'),
             'mustVerifyEmail' => Features::enabled(Features::emailVerification()),
             'canManageStatus' => $this->canManageStatus($user),
             'locales' => array_keys((array) config('tyanc.supported_locales', [])),
@@ -57,7 +57,8 @@ final readonly class AccountSettingsController
             return response()->json(UserData::fromModel($updatedUser));
         }
 
-        return to_route('settings.account.edit');
+        return to_route('settings.account.edit')
+            ->with('toast', FlashToast::success(__('Account settings updated.'))->toArray());
     }
 
     private function canManageStatus(User $user): bool

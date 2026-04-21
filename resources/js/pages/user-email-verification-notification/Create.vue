@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { Ban, MailCheck } from 'lucide-vue-next';
+import SectionState from '@/components/state/SectionState.vue';
 import TextLink from '@/components/TextLink.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
@@ -11,7 +11,6 @@ import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 
 defineProps<{
-    status?: string;
     enabled?: boolean;
 }>();
 
@@ -31,40 +30,25 @@ const { __ } = useTranslations();
 
         <!-- Feature disabled notice -->
         <template v-if="enabled === false">
-            <Alert>
-                <Ban class="size-4" />
-                <AlertTitle>{{
-                    __('Email verification unavailable')
-                }}</AlertTitle>
-                <AlertDescription>
-                    {{
-                        __(
-                            'Email verification is not required on this application. You can continue without verifying your email address.',
-                        )
-                    }}
-                </AlertDescription>
-            </Alert>
-
-            <div class="mt-6 text-center">
-                <TextLink :href="logout()" as="button" class="text-sm">
-                    {{ __('Sign out') }}
-                </TextLink>
-            </div>
+            <SectionState
+                :icon="Ban"
+                :title="__('Email verification unavailable')"
+                :description="
+                    __(
+                        'Email verification is not required on this application. You can continue without verifying your email address.',
+                    )
+                "
+            >
+                <template #actions>
+                    <TextLink :href="logout()" as="button" class="text-sm">
+                        {{ __('Sign out') }}
+                    </TextLink>
+                </template>
+            </SectionState>
         </template>
 
         <!-- Active state -->
         <template v-else>
-            <div
-                v-if="status === 'verification-link-sent'"
-                class="mb-4 rounded-md bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400"
-            >
-                {{
-                    __(
-                        'A new verification link has been sent to your email address.',
-                    )
-                }}
-            </div>
-
             <Form
                 v-bind="send.form()"
                 class="space-y-6 text-center"

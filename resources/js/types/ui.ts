@@ -1,5 +1,6 @@
 export type Appearance = 'light' | 'dark' | 'system';
 export type ResolvedAppearance = 'light' | 'dark';
+export type ToastVariant = 'success' | 'info' | 'warning' | 'error';
 
 export type AppVariant = 'header' | 'sidebar';
 
@@ -36,4 +37,15 @@ export type UserPreferencesProps = {
     resolved_sidebar_variant: string;
     resolved_spacing_density: string;
     resolved_spacing_density_value: number;
+};
+
+export type ToastPayload = {
+    id: string;
+    variant: ToastVariant;
+    message: string;
+    description: string | null;
+};
+
+export type FlashProps = {
+    toast: ToastPayload | null;
 };
