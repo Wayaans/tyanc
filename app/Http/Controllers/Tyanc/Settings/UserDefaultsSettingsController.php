@@ -12,6 +12,7 @@ use App\Data\Tyanc\Approvals\ApprovalRequestData;
 use App\Models\ApprovalRequest;
 use App\Models\User;
 use App\Settings\UserDefaultsSettings;
+use App\Support\Notifications\FlashToast;
 use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -48,7 +49,6 @@ final readonly class UserDefaultsSettingsController
             'appearances' => $this->mapSimpleOptions((array) config('tyanc.appearance_options', [])),
             'locales' => $this->locales(),
             'timezones' => DateTimeZone::listIdentifiers(),
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -79,7 +79,9 @@ final readonly class UserDefaultsSettingsController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the update after it is approved.'),
+            )->toArray());
         }
 
         /** @var UserDefaultsSettings $settings */

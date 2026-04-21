@@ -30,6 +30,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserUpdateDraft;
+use App\Support\Notifications\FlashToast;
 use App\Support\Permissions\PermissionKey;
 use DateTimeZone;
 use Illuminate\Container\Attributes\CurrentUser;
@@ -70,7 +71,6 @@ final readonly class UserController
                 'imports_enabled' => (bool) config('tyanc.features.imports_enabled', false),
                 'exports_enabled' => (bool) config('tyanc.features.exports_enabled', false),
             ],
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -120,7 +120,6 @@ final readonly class UserController
                 'suspend' => Gate::forUser($actor)->allows('suspend', $user),
                 'delete' => ! $user->isDeleteProtected() && Gate::forUser($actor)->allows('delete', $user),
             ],
-            'status' => $request->session()->get('status'),
         ];
 
         if ($request->wantsJson()) {
@@ -164,7 +163,6 @@ final readonly class UserController
             'userUpdateDraft' => $currentDraft instanceof UserUpdateDraft
                 ? UserUpdateDraftData::fromModel($currentDraft)
                 : null,
-            'status' => $request->session()->get('status'),
             ...$this->formOptions(),
         ];
 
@@ -201,7 +199,9 @@ final readonly class UserController
                 ]);
             }
 
-            return back()->with('status', __('Draft saved. Submit it for approval when you are ready.'));
+            return back()->with('toast', FlashToast::success(
+                __('Draft saved. Submit it for approval when you are ready.'),
+            )->toArray());
         }
 
         if ($submission['approval'] instanceof ApprovalRequest) {
@@ -212,7 +212,9 @@ final readonly class UserController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the update after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the update after it is approved.'),
+            )->toArray());
         }
 
         /** @var User $managedUser */
@@ -250,7 +252,9 @@ final readonly class UserController
             ], 202);
         }
 
-        return back()->with('status', __('Draft submitted for approval.'));
+        return back()->with('toast', FlashToast::success(
+            __('Draft submitted for approval.'),
+        )->toArray());
     }
 
     public function commitDraft(
@@ -270,7 +274,9 @@ final readonly class UserController
             ]);
         }
 
-        return to_route('tyanc.users.show', $managedUser)->with('status', __('Approved draft committed.'));
+        return to_route('tyanc.users.show', $managedUser)->with('toast', FlashToast::success(
+            __('Approved draft committed.'),
+        )->toArray());
     }
 
     public function suspend(Request $request, #[CurrentUser] User $actor, User $user, SuspendUser $action): RedirectResponse|JsonResponse
@@ -319,7 +325,9 @@ final readonly class UserController
                 ], 202);
             }
 
-            return back()->with('status', __('Approval request submitted. Retry the deletion after it is approved.'));
+            return back()->with('toast', FlashToast::success(
+                __('Approval request submitted. Retry the deletion after it is approved.'),
+            )->toArray());
         }
 
         if ($request->wantsJson()) {

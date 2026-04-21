@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d7e302f245867c1523fc0459522c01a4",
+    "content-hash": "0c06a0b6cd20fa8c07807569617cd565",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -12271,16 +12271,16 @@
         },
         {
             "name": "nunomaduro/pao",
-            "version": "0.x-dev",
+            "version": "v1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nunomaduro/pao.git",
-                "reference": "7cf03f3823e15e7da8b5279830b2ce9f58bf6fff"
+                "reference": "4695ac8f26bc7c9e4d77b3f2897bd1798ffbb20f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nunomaduro/pao/zipball/7cf03f3823e15e7da8b5279830b2ce9f58bf6fff",
-                "reference": "7cf03f3823e15e7da8b5279830b2ce9f58bf6fff",
+                "url": "https://api.github.com/repos/nunomaduro/pao/zipball/4695ac8f26bc7c9e4d77b3f2897bd1798ffbb20f",
+                "reference": "4695ac8f26bc7c9e4d77b3f2897bd1798ffbb20f",
                 "shasum": ""
             },
             "require": {
@@ -12299,12 +12299,11 @@
                 "orchestra/testbench": "^10.11.0 || ^11.1.0",
                 "pestphp/pest": "^4.5.0 || ^5.0.0",
                 "pestphp/pest-plugin-type-coverage": "^4.0.3 || ^5.0.0",
-                "phpstan/phpstan": "^2.1.47",
-                "rector/rector": "^2.4.1",
+                "phpstan/phpstan": "^2.1.50",
+                "rector/rector": "^2.4.2",
                 "symfony/process": "^7.4.5 || ^8.1.0",
                 "symfony/var-dumper": "^7.4.6 || ^8.0.8"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "pest": {
@@ -12350,7 +12349,7 @@
             ],
             "support": {
                 "issues": "https://github.com/nunomaduro/pao/issues",
-                "source": "https://github.com/nunomaduro/pao/tree/0.x"
+                "source": "https://github.com/nunomaduro/pao/tree/v1.0.2"
             },
             "funding": [
                 {
@@ -12366,7 +12365,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-04-14T13:06:11+00:00"
+            "time": "2026-04-18T03:14:30+00:00"
         },
         {
             "name": "nunomaduro/pokio",
@@ -16372,7 +16371,6 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "nunomaduro/pao": 20,
         "roave/security-advisories": 20
     },
     "prefer-stable": true,
