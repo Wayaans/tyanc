@@ -18,18 +18,34 @@ it('subscribes to live user notifications and routes arrivals through the shared
         ->toContain('created_at: string | null;')
         ->and($store)
         ->toContain('function replaceFromServer(payload: NotificationsPayload | null): void')
-        ->toContain('function pushLiveNotification(')
-        ->toContain('notification: NotificationBroadcastPayload,')
-        ->toContain('): NotificationItem | null {')
+        ->toContain('function pushLiveNotification( notification: NotificationBroadcastPayload, ): NotificationItem | null {')
         ->toContain('function markAsRead(notificationId: string): void')
         ->toContain('function markAllAsRead(): void')
         ->and($orchestrator)
         ->toContain('const authUserId = computed(() => page.props.auth.user?.id ?? null);')
-        ->toContain('echo.private(`App.Models.User.${authUserId.value}`)')
+        ->toContain('.private(`App.Models.User.${userId}`)')
         ->toContain('.notification(')
         ->toContain('(payload: NotificationBroadcastPayload) => {')
         ->toContain('const insertedNotification = pushLiveNotification(payload);')
         ->toContain('showLiveNotificationToast(insertedNotification);');
+});
+
+it('shows live message toasts through the shared orchestrator without merging messages into notifications store', function (): void {
+    $orchestrator = normalizedLiveNotificationsSource('js/components/NotificationOrchestrator.vue');
+    $notify = normalizedLiveNotificationsSource('js/lib/notify.ts');
+
+    expect($notify)
+        ->toContain('type NotifyAction = {')
+        ->toContain('action?: NotifyAction;')
+        ->toContain('action: options.action,')
+        ->and($orchestrator)
+        ->toContain('.private(`tyanc.users.${userId}.messages`)')
+        ->toContain(".listen( '.message.sent', (payload: MessageSentEventPayload) => {")
+        ->toContain("notify.info(__('New message'), {")
+        ->toContain("label: __('Open conversation'),")
+        ->toContain('onClick: () => {')
+        ->toContain('notify.visit(')
+        ->not->toContain('pushLiveNotification(payload.message');
 });
 
 it('keeps dropdown unread state in sync with optimistic store updates and server reconciliation', function (): void {

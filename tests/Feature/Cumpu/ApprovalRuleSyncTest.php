@@ -25,6 +25,52 @@ function approvalRuleSyncUser(array $permissions): User
     return $user;
 }
 
+it('flashes shared toast after syncing approval capabilities from the web flow', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    $reviewerRole = Role::query()->create([
+        'name' => 'Web Sync Reviewers',
+        'guard_name' => 'web',
+        'level' => 80,
+    ]);
+
+    config()->set('approval-sot.apps', [
+        'tyanc' => [
+            'resources' => [
+                'users' => [
+                    'actions' => [
+                        'delete' => [
+                            'mode' => 'grant',
+                            'managed' => true,
+                            'toggleable' => true,
+                            'default_enabled' => false,
+                            'workflow_type' => 'single',
+                            'steps' => [
+                                ['role' => $reviewerRole->name, 'label' => 'Delete review'],
+                            ],
+                            'grant_validity_minutes' => 120,
+                            'reminder_after_minutes' => 30,
+                            'escalation_after_minutes' => 60,
+                            'conditions' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $user = approvalRuleSyncUser([
+        PermissionKey::cumpu('approval_rules', 'viewany'),
+        PermissionKey::cumpu('approval_rules', 'manage'),
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('cumpu.approval-rules.sync'))
+        ->assertRedirectToRoute('cumpu.approval-rules.index')
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'Approval capabilities synced.');
+});
+
 it('syncs approval capabilities and toggles managed rules from the screen endpoints', function (): void {
     $this->seed(AppRegistrySeeder::class);
 
