@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notification;
 
 final class UserStatusChangedNotification extends Notification
 {
+    use BroadcastsDurableNotifications;
     use Queueable;
 
     public function __construct(
@@ -17,14 +18,6 @@ final class UserStatusChangedNotification extends Notification
         private readonly string $previousStatus,
         private readonly string $currentStatus,
     ) {}
-
-    /**
-     * @return list<string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * @return array<string, string|null>
