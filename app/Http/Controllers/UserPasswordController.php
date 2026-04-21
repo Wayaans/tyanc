@@ -9,6 +9,7 @@ use App\Actions\UpdateUserPassword;
 use App\Http\Requests\CreateUserPasswordRequest;
 use App\Http\Requests\UpdateUserPasswordRequest;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,10 @@ final readonly class UserPasswordController
 
     public function store(CreateUserPasswordRequest $request, CreateUserPassword $action): RedirectResponse
     {
+        if (! Features::enabled(Features::resetPasswords())) {
+            return back()->with('toast', FlashToast::warning(__('Password reset is unavailable.'))->toArray());
+        }
+
         /** @var array<string, mixed> $credentials */
         $credentials = $request->only('email', 'password', 'password_confirmation', 'token');
 
@@ -43,7 +48,8 @@ final readonly class UserPasswordController
             'email' => [__(is_string($status) ? $status : '')],
         ]));
 
-        return to_route('login')->with('status', __('passwords.reset'));
+        return to_route('login')
+            ->with('toast', FlashToast::success(__('passwords.reset'))->toArray());
     }
 
     public function edit(): Response
@@ -55,6 +61,6 @@ final readonly class UserPasswordController
     {
         $action->handle($user, $request->string('password')->value());
 
-        return back();
+        return back()->with('toast', FlashToast::success(__('Password updated.'))->toArray());
     }
 }

@@ -2,6 +2,7 @@ import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h, Fragment } from 'vue';
+import NotificationOrchestrator from '@/components/NotificationOrchestrator.vue';
 import Sonner from '@/components/ui/sonner/Sonner.vue';
 import 'vue-sonner/style.css';
 import '../css/app.css';
@@ -31,7 +32,12 @@ void createInertiaApp({
         }
 
         const vueApp = createApp({
-            render: () => h(Fragment, [h(App, props), h(Sonner)]),
+            render: () =>
+                h(Fragment, [
+                    h(App, props),
+                    h(Sonner),
+                    h(NotificationOrchestrator),
+                ]),
         });
 
         registerTranslations(

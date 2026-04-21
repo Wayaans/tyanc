@@ -72,6 +72,9 @@ final class HandleInertiaRequests extends Middleware
             'locale' => $locale,
             'availableLocales' => $this->availableLocales(),
             'translations' => $this->translations->handle($routeName, $locale),
+            'flash' => [
+                'toast' => $request->hasSession() ? $request->session()->get('toast') : null,
+            ],
             'userPreferences' => $runtimeSettings['preferences'],
             'auth' => [
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,

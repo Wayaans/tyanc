@@ -15,7 +15,6 @@ import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
 defineProps<{
-    status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
 }>();
@@ -29,13 +28,6 @@ const { __ } = useTranslations();
         :description="__('Sign in to your account to continue')"
     >
         <Head :title="__('Log in')" />
-
-        <div
-            v-if="status"
-            class="mb-4 rounded-md bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400"
-        >
-            {{ status }}
-        </div>
 
         <Form
             v-bind="store.form()"

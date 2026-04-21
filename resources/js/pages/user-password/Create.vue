@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { Ban } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import SectionState from '@/components/state/SectionState.vue';
 import TextLink from '@/components/TextLink.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,33 +23,44 @@ const props = defineProps<{
 
 const { __ } = useTranslations();
 
+const layoutTitle = computed(() =>
+    props.enabled === false
+        ? __('Password reset unavailable')
+        : __('Reset your password'),
+);
+const layoutDescription = computed(() =>
+    props.enabled === false
+        ? __(
+              'Password reset is not enabled on this application. Please contact support if you need help accessing your account.',
+          )
+        : __('Enter and confirm your new password below'),
+);
+
 const inputEmail = ref(props.email);
 </script>
 
 <template>
-    <AuthLayout
-        :title="__('Reset your password')"
-        :description="__('Enter and confirm your new password below')"
-    >
+    <AuthLayout :title="layoutTitle" :description="layoutDescription">
         <Head :title="__('Reset password')" />
 
         <!-- Feature disabled notice -->
         <template v-if="enabled === false">
-            <Alert>
-                <Ban class="size-4" />
-                <AlertTitle>{{ __('Password reset unavailable') }}</AlertTitle>
-                <AlertDescription>
-                    {{
-                        __(
-                            'Password reset is not enabled on this application. Please contact support if you need help accessing your account.',
-                        )
-                    }}
-                </AlertDescription>
-            </Alert>
-
-            <div class="mt-6 text-center text-sm text-muted-foreground">
-                <TextLink :href="login()">{{ __('Back to sign in') }}</TextLink>
-            </div>
+            <SectionState
+                :icon="Ban"
+                variant="warning"
+                :title="__('Password reset unavailable')"
+                :description="
+                    __(
+                        'Password reset is not enabled on this application. Please contact support if you need help accessing your account.',
+                    )
+                "
+            >
+                <template #actions>
+                    <TextLink :href="login()">{{
+                        __('Back to sign in')
+                    }}</TextLink>
+                </template>
+            </SectionState>
         </template>
 
         <!-- Active state -->

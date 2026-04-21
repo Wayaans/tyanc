@@ -55,14 +55,14 @@ it('shows email verification as disabled on the verification notice page', funct
             ->where('enabled', false));
 });
 
-it('shows password confirmation as disabled by default', function (): void {
+it('keeps password confirmation available even when two factor is disabled', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('password.confirm'))
         ->assertInertia(fn ($page) => $page
             ->component('user-password-confirmation/Create')
-            ->where('enabled', false));
+            ->where('enabled', true));
 });
 
 it('marks two factor management as disabled by default', function (): void {

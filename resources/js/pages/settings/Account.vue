@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { Camera, ShieldAlert } from 'lucide-vue-next';
-import { computed, onUnmounted, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import AccountSettingsController from '@/actions/App/Http/Controllers/AccountSettingsController';
 import DeleteUser from '@/components/DeleteUser.vue';
 import FormFieldSupport from '@/components/FormFieldSupport.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import BannerState from '@/components/state/BannerState.vue';
 import TimezoneCombobox from '@/components/TimezoneCombobox.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,6 @@ import { send } from '@/routes/verification';
 
 type Props = {
     mustVerifyEmail: boolean;
-    status?: string;
     canManageStatus: boolean;
     locales: string[];
     timezones: string[];
@@ -73,11 +73,6 @@ function handleAvatarChange(event: Event) {
 function handleSuccess() {
     revokeAvatarPreview();
     avatarPreview.value = null;
-
-    router.reload({
-        only: ['auth', 'theme', 'userPreferences'],
-        preserveScroll: true,
-    });
 }
 
 onUnmounted(() => {
@@ -92,6 +87,15 @@ const currentAvatarSrc = computed(
 const selectedLocale = ref<string>(user.value.locale ?? '');
 const selectedTimezone = ref<string>(user.value.timezone ?? '');
 const selectedStatus = ref<string>(user.value.status ?? '');
+
+watch(
+    () => [user.value.locale, user.value.timezone, user.value.status] as const,
+    ([locale, timezone, status]) => {
+        selectedLocale.value = locale ?? '';
+        selectedTimezone.value = timezone ?? '';
+        selectedStatus.value = status ?? '';
+    },
+);
 </script>
 
 <template>
@@ -102,26 +106,23 @@ const selectedStatus = ref<string>(user.value.status ?? '');
 
         <SettingsLayout>
             <!-- Reserved-user notice -->
-            <div
+            <BannerState
                 v-if="user.is_reserved"
-                class="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
-            >
-                <ShieldAlert class="mt-0.5 size-4 shrink-0" />
-                <p>
-                    {{
-                        __(
-                            'This is a reserved system account. Some settings may be restricted.',
-                        )
-                    }}
-                </p>
-            </div>
+                :icon="ShieldAlert"
+                variant="warning"
+                :description="
+                    __(
+                        'This is a reserved system account. Some settings may be restricted.',
+                    )
+                "
+            />
 
             <Form
                 v-bind="AccountSettingsController.update.form()"
                 :options="{ preserveScroll: true }"
                 class="space-y-10"
                 @success="handleSuccess"
-                v-slot="{ errors, processing, recentlySuccessful }"
+                v-slot="{ errors, processing }"
             >
                 <!-- ── Avatar ──────────────────────────────────────── -->
                 <div class="space-y-4">
@@ -249,16 +250,6 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                                     {{ __('Resend verification email.') }}
                                 </Link>
                             </p>
-                            <div
-                                v-if="status === 'verification-link-sent'"
-                                class="mt-2 text-sm font-medium text-green-600"
-                            >
-                                {{
-                                    __(
-                                        'A new verification link has been sent to your email address.',
-                                    )
-                                }}
-                            </div>
                         </div>
 
                         <!-- Locale + Timezone -->
@@ -361,20 +352,6 @@ const selectedStatus = ref<string>(user.value.status ?? '');
                     >
                         {{ __('Save changes') }}
                     </Button>
-
-                    <Transition
-                        enter-active-class="transition ease-in-out"
-                        enter-from-class="opacity-0"
-                        leave-active-class="transition ease-in-out"
-                        leave-to-class="opacity-0"
-                    >
-                        <p
-                            v-show="recentlySuccessful"
-                            class="text-sm text-neutral-600"
-                        >
-                            {{ __('Saved.') }}
-                        </p>
-                    </Transition>
                 </div>
             </Form>
 
@@ -382,12 +359,11 @@ const selectedStatus = ref<string>(user.value.status ?? '');
 
             <!-- ── Delete account ─────────────────────────────── -->
             <DeleteUser v-if="!user.is_reserved" />
-            <div
+            <BannerState
                 v-else
-                class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
-            >
-                {{ __('Reserved accounts cannot be deleted.') }}
-            </div>
+                variant="warning"
+                :description="__('Reserved accounts cannot be deleted.')"
+            />
         </SettingsLayout>
     </AppLayout>
 </template>

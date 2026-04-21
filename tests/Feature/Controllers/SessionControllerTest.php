@@ -16,7 +16,7 @@ it('renders login page', function (): void {
             ->component('session/Create')
             ->where('canResetPassword', false)
             ->where('canRegister', true)
-            ->has('status'));
+            ->where('flash.toast', null));
 });
 
 it('may create a session and record telemetry', function (): void {

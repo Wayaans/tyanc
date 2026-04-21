@@ -3,7 +3,7 @@ import { Form, Head } from '@inertiajs/vue3';
 import { ShieldOff } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import SectionState from '@/components/state/SectionState.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,7 +16,9 @@ import { useTranslations } from '@/lib/translations';
 import { store } from '@/routes/login';
 import type { TwoFactorConfigContent } from '@/types';
 
-withDefaults(defineProps<{ enabled?: boolean }>(), { enabled: true });
+const props = withDefaults(defineProps<{ enabled?: boolean }>(), {
+    enabled: true,
+});
 
 const { __ } = useTranslations();
 
@@ -49,16 +51,30 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 };
 
 const code = ref<string>('');
+
+const layoutContent = computed<TwoFactorConfigContent>(() => {
+    if (!props.enabled) {
+        return {
+            title: __('Two-factor authentication is disabled'),
+            description: __(
+                'Two-factor authentication (2FA) is not available on this application. Contact your administrator for more information.',
+            ),
+            buttonText: '',
+        };
+    }
+
+    return authConfigContent.value;
+});
 </script>
 
 <template>
     <AuthLayout
-        :title="authConfigContent.title"
-        :description="authConfigContent.description"
+        :title="layoutContent.title"
+        :description="layoutContent.description"
     >
         <Head :title="__('Two-factor authentication')" />
 
-        <template v-if="enabled">
+        <template v-if="props.enabled">
             <div class="space-y-6">
                 <template v-if="!showRecoveryInput">
                     <Form
@@ -149,19 +165,15 @@ const code = ref<string>('');
         </template>
 
         <template v-else>
-            <Alert>
-                <ShieldOff class="size-4" />
-                <AlertTitle>{{
-                    __('Two-factor authentication is disabled')
-                }}</AlertTitle>
-                <AlertDescription>
-                    {{
-                        __(
-                            'Two-factor authentication (2FA) is not available on this application. Contact your administrator for more information.',
-                        )
-                    }}
-                </AlertDescription>
-            </Alert>
+            <SectionState
+                :icon="ShieldOff"
+                :title="__('Two-factor authentication is disabled')"
+                :description="
+                    __(
+                        'Two-factor authentication (2FA) is not available on this application. Contact your administrator for more information.',
+                    )
+                "
+            />
         </template>
     </AuthLayout>
 </template>

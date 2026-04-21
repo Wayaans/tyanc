@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateUserEmailVerificationNotification;
 use App\Models\User;
+use App\Support\Notifications\FlashToast;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,6 @@ final readonly class UserEmailVerificationNotificationController
         return $user->hasVerifiedEmail()
             ? redirect()->intended(route('dashboard', absolute: false))
             : Inertia::render('user-email-verification-notification/Create', [
-                'status' => $request->session()->get('status'),
                 'enabled' => Features::enabled(Features::emailVerification()),
             ]);
     }
@@ -31,8 +31,14 @@ final readonly class UserEmailVerificationNotificationController
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
+        if (! Features::enabled(Features::emailVerification())) {
+            return back()->with('toast', FlashToast::warning(__('Email verification is unavailable.'))->toArray());
+        }
+
         $action->handle($user);
 
-        return back()->with('status', 'verification-link-sent');
+        return back()->with('toast', FlashToast::success(
+            __('A new verification link has been sent to your email address.'),
+        )->toArray());
     }
 }
