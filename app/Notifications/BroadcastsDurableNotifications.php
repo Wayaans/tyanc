@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Settings\NotificationSettings;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
 trait BroadcastsDurableNotifications
@@ -13,7 +14,13 @@ trait BroadcastsDurableNotifications
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        $channels = ['database'];
+
+        if (resolve(NotificationSettings::class)->reverb_enabled) {
+            $channels[] = 'broadcast';
+        }
+
+        return $channels;
     }
 
     public function toBroadcast(object $notifiable): BroadcastMessage

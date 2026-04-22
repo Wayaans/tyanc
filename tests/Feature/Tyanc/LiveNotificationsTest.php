@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Notifications\NewApprovalRequestedNotification;
 use App\Notifications\UserStatusChangedNotification;
+use App\Settings\NotificationSettings;
 use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
@@ -80,4 +81,28 @@ it('stores system notifications for inbox reads and broadcasts them live to the 
             && is_string(data_get($payload, 'id'))
             && data_get($payload, 'type') === UserStatusChangedNotification::class;
     });
+});
+
+it('stores durable notifications without broadcasting when reverb notifications are disabled', function (): void {
+    $this->seed(AppRegistrySeeder::class);
+
+    Event::fake([BroadcastNotificationCreated::class]);
+
+    $settings = resolve(NotificationSettings::class);
+    $settings->reverb_enabled = false;
+    $settings->save();
+
+    $user = liveNotificationUser();
+
+    $user->notify(new NewApprovalRequestedNotification());
+
+    $this->actingAs($user)
+        ->getJson(route('tyanc.notifications.index'))
+        ->assertOk()
+        ->assertJsonPath('unread_count', 1)
+        ->assertJsonPath('recent.0.kind', 'approval-request')
+        ->assertJsonPath('recent.0.title', 'New approval requested')
+        ->assertJsonPath('recent.0.read', false);
+
+    Event::assertNotDispatched(BroadcastNotificationCreated::class);
 });

@@ -16,6 +16,7 @@ use App\Http\Controllers\Tyanc\PermissionController;
 use App\Http\Controllers\Tyanc\RoleController;
 use App\Http\Controllers\Tyanc\Settings\AppearanceSettingsController;
 use App\Http\Controllers\Tyanc\Settings\AppSettingsController;
+use App\Http\Controllers\Tyanc\Settings\NotificationSettingsController;
 use App\Http\Controllers\Tyanc\Settings\SecuritySettingsController;
 use App\Http\Controllers\Tyanc\Settings\UserDefaultsSettingsController;
 use App\Http\Controllers\Tyanc\UserController;
@@ -140,6 +141,10 @@ Route::prefix('settings')->name('tyanc.settings.')->group(function (): void {
 
     Route::get('appearance', [AppearanceSettingsController::class, 'edit'])->name('appearance.edit');
     Route::patch('appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');
+
+    Route::get('notifications', [NotificationSettingsController::class, 'edit'])->name('notifications.edit');
+    Route::patch('notifications', [NotificationSettingsController::class, 'update'])->name('notifications.update');
+    Route::post('notifications/test', [NotificationSettingsController::class, 'test'])->name('notifications.test');
 
     Route::get('security', [SecuritySettingsController::class, 'edit'])->name('security.edit');
     Route::patch('security', [SecuritySettingsController::class, 'update'])->name('security.update');

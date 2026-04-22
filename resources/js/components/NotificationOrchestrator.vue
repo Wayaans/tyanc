@@ -3,7 +3,7 @@ import { usePage } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useNotificationStore } from "@/composables/useNotificationStore";
 import { getEcho } from "@/lib/echo";
-import { notify } from "@/lib/notify";
+import { notify, reverbNotificationsEnabled } from "@/lib/notify";
 import { useTranslations } from "@/lib/translations";
 import { index as messagesIndex } from "@/routes/tyanc/messages";
 import type {
@@ -25,6 +25,11 @@ const {
 } = useNotificationStore();
 
 const authUserId = computed(() => page.props.auth.user?.id ?? null);
+const reverbNotificationsEnabledOnPage = computed<boolean>(
+  () =>
+    reverbNotificationsEnabled() &&
+    page.props.notificationSettings.reverb_enabled
+);
 const flashToast = computed<ToastPayload | null>(() => {
   const flash = (page.props.flash as FlashProps | undefined) ?? null;
 
@@ -124,8 +129,8 @@ onMounted(() => {
   );
 
   stopWatchingAuthUser = watch(
-    authUserId,
-    (userId) => {
+    [authUserId, reverbNotificationsEnabledOnPage],
+    ([userId, reverbEnabled]) => {
       leaveActiveNotificationChannel();
       leaveActiveMessageChannel();
 
@@ -139,20 +144,23 @@ onMounted(() => {
         return;
       }
 
-      activeNotificationChannel = `App.Models.User.${userId}`;
       activeMessageChannel = `tyanc.users.${userId}.messages`;
 
-      echo
-        .private(`App.Models.User.${userId}`)
-        .notification((payload: NotificationBroadcastPayload) => {
-          const insertedNotification = pushLiveNotification(payload);
+      if (reverbEnabled) {
+        activeNotificationChannel = `App.Models.User.${userId}`;
 
-          if (insertedNotification === null) {
-            return;
-          }
+        echo
+          .private(`App.Models.User.${userId}`)
+          .notification((payload: NotificationBroadcastPayload) => {
+            const insertedNotification = pushLiveNotification(payload);
 
-          showLiveNotificationToast(insertedNotification);
-        });
+            if (insertedNotification === null) {
+              return;
+            }
+
+            showLiveNotificationToast(insertedNotification);
+          });
+      }
 
       echo
         .private(`tyanc.users.${userId}.messages`)

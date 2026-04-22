@@ -7,13 +7,18 @@ use App\Models\Permission;
 use App\Models\SettingsAsset;
 use App\Models\User;
 use App\Models\UserPreference;
+use App\Notifications\NotificationChannelTestNotification;
 use App\Settings\AppearanceSettings;
 use App\Settings\AppSettings;
+use App\Settings\NotificationSettings;
 use App\Settings\SecuritySettings;
 use App\Settings\UserDefaultsSettings;
 use App\Support\Permissions\PermissionKey;
 use Database\Seeders\AppRegistrySeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
 function settingsManager(): User
@@ -111,6 +116,90 @@ it('renders and updates appearance settings', function (): void {
         ->and($settings->spacing_density)->toBe('comfortable')
         ->and($settings->font_family)->toBe('instrument-sans')
         ->and($settings->sidebar_variant)->toBe('floating');
+});
+
+it('renders and updates notification settings', function (): void {
+    $user = settingsManager();
+
+    $this->actingAs($user)
+        ->get(route('tyanc.settings.notifications.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->component('tyanc/settings/Notifications')
+            ->where('settings.sonner_enabled', true)
+            ->where('settings.email_enabled', true)
+            ->where('settings.reverb_enabled', true));
+
+    $this->actingAs($user)
+        ->patchJson(route('tyanc.settings.notifications.update'), [
+            'sonner_enabled' => false,
+            'email_enabled' => true,
+            'reverb_enabled' => false,
+        ])
+        ->assertOk()
+        ->assertJsonPath('settings.sonner_enabled', false)
+        ->assertJsonPath('settings.email_enabled', true)
+        ->assertJsonPath('settings.reverb_enabled', false);
+
+    $settings = resolve(NotificationSettings::class);
+
+    expect($settings->sonner_enabled)->toBeFalse()
+        ->and($settings->email_enabled)->toBeTrue()
+        ->and($settings->reverb_enabled)->toBeFalse();
+});
+
+it('sends test sonner and email notifications from notification settings', function (): void {
+    Notification::fake();
+
+    $user = settingsManager();
+
+    $this->actingAs($user)
+        ->post(route('tyanc.settings.notifications.test'), [
+            'channel' => 'sonner',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'info'
+            && ($toast['message'] ?? null) === 'Sonner test notification');
+
+    $this->actingAs($user)
+        ->post(route('tyanc.settings.notifications.test'), [
+            'channel' => 'email',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'info'
+            && ($toast['message'] ?? null) === 'Test email sent.');
+
+    Notification::assertSentTo(
+        $user,
+        NotificationChannelTestNotification::class,
+        fn (NotificationChannelTestNotification $notification, array $channels): bool => in_array('mail', $channels, true),
+    );
+});
+
+it('sends live reverb test notifications from notification settings', function (): void {
+    Event::fake([BroadcastNotificationCreated::class]);
+
+    $user = settingsManager();
+
+    $this->actingAs($user)
+        ->post(route('tyanc.settings.notifications.test'), [
+            'channel' => 'reverb',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'info'
+            && ($toast['message'] ?? null) === 'Test live notification sent.');
+
+    expect($user->fresh()->notifications()->where('type', NotificationChannelTestNotification::class)->exists())->toBeTrue();
+
+    Event::assertDispatched(BroadcastNotificationCreated::class, function (BroadcastNotificationCreated $event) use ($user): bool {
+        $channels = $event->broadcastOn();
+        $payload = $event->broadcastWith();
+
+        return $event->notification instanceof NotificationChannelTestNotification
+            && count($channels) === 1
+            && data_get($channels, '0.name') === sprintf('private-App.Models.User.%s', $user->id)
+            && data_get($payload, 'kind') === 'notification-test'
+            && data_get($payload, 'title') === 'Reverb notification test';
+    });
 });
 
 it('renders and updates security settings', function (): void {
@@ -235,6 +324,14 @@ it('updates only the user appearance preference without overwriting other prefer
         ->and($preference->appearance)->toBe('dark')
         ->and($preference->sidebar_variant)->toBe('floating')
         ->and($preference->spacing_density)->toBe('compact');
+});
+
+it('redirects get requests for the appearance sync endpoint back to preferences', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/settings/preferences/appearance')
+        ->assertRedirect('/settings/preferences');
 });
 
 it('clears user preference overrides when all values are unset', function (): void {

@@ -1,6 +1,10 @@
 import { router } from "@inertiajs/vue3";
 import { toast } from "vue-sonner";
-import type { ToastPayload, ToastVariant } from "@/types";
+import type {
+  NotificationSettingsProps,
+  ToastPayload,
+  ToastVariant,
+} from "@/types";
 
 type NotifyAction = {
   label: string;
@@ -19,11 +23,37 @@ const variantDurations: Record<ToastVariant, number> = {
   error: 6000,
 };
 
+const defaultNotificationSettings = (): NotificationSettingsProps => ({
+  sonner_enabled: true,
+  email_enabled: true,
+  reverb_enabled: true,
+});
+
+let notificationSettings = defaultNotificationSettings();
+
+export function syncNotificationSettingsFromPageProps(
+  settings?: NotificationSettingsProps
+): void {
+  notificationSettings = settings ?? defaultNotificationSettings();
+}
+
+export function sonnerNotificationsEnabled(): boolean {
+  return notificationSettings.sonner_enabled;
+}
+
+export function reverbNotificationsEnabled(): boolean {
+  return notificationSettings.reverb_enabled;
+}
+
 function notifyByVariant(
   variant: ToastVariant,
   message: string,
   options: NotifyOptions = {}
 ) {
+  if (!sonnerNotificationsEnabled()) {
+    return null;
+  }
+
   const description = options.description ?? undefined;
   const duration = variantDurations[variant];
   const toastOptions = {

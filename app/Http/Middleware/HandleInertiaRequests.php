@@ -12,9 +12,11 @@ use App\Actions\Tyanc\Messaging\CountUnreadMessages;
 use App\Actions\Tyanc\Messaging\ListRecentConversations;
 use App\Data\Auth\UserData;
 use App\Data\Notifications\NotificationData;
+use App\Data\Settings\NotificationSettingsData;
 use App\Models\App;
 use App\Models\User;
 use App\Notifications\NewMessageNotification;
+use App\Settings\NotificationSettings;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
@@ -75,6 +77,7 @@ final class HandleInertiaRequests extends Middleware
             'flash' => [
                 'toast' => $request->hasSession() ? $request->session()->get('toast') : null,
             ],
+            'notificationSettings' => NotificationSettingsData::fromSettings(resolve(NotificationSettings::class)),
             'userPreferences' => $runtimeSettings['preferences'],
             'auth' => [
                 'user' => $authenticatedUser ? UserData::fromModel($authenticatedUser) : null,

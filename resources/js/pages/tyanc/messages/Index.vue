@@ -10,6 +10,7 @@ import { useAppNavigation } from "@/composables/useAppNavigation";
 import { useMessagesPolling } from "@/composables/useMessagesPolling";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { conversationChannelName, currentSocketId, getEcho } from "@/lib/echo";
+import { jsonRequestHeaders } from "@/lib/http";
 import { notify } from "@/lib/notify";
 import { useTranslations } from "@/lib/translations";
 import {
@@ -156,26 +157,10 @@ const hasSelectedConversation = computed(
     selectedConversationId.value !== null && selectedConversation.value !== null
 );
 
-function csrfToken(): string {
-  if (typeof document === "undefined") {
-    return "";
-  }
-
-  return (
-    document
-      .querySelector('meta[name="csrf-token"]')
-      ?.getAttribute("content") ?? ""
-  );
-}
-
 function requestHeaders(): HeadersInit {
-  return {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-    "X-CSRF-TOKEN": csrfToken(),
-    "X-Requested-With": "XMLHttpRequest",
-    ...(currentSocketId() ? { "X-Socket-ID": currentSocketId() ?? "" } : {}),
-  };
+  return jsonRequestHeaders(
+    currentSocketId() ? { "X-Socket-ID": currentSocketId() ?? "" } : {}
+  );
 }
 
 function buildWorkspaceUrl(opts?: {

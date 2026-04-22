@@ -1,8 +1,27 @@
-# Project Identity
+<!-- ramean-subagents:start -->
 
-- Read `TYANC-AI.md` first for a concise overview of what Tyanc is before planning or implementing new work.
-- Before planning or implementing any import feature, read `.docs/imports_rule.md` and treat it as the source of truth for import architecture, templates, validation, approval flow, execution safety, and testing.
-- Tyanc is an installable admin foundation. The `tyanc` app is the central control plane for users, roles, permissions, app access, page access, and system settings across future apps such as ERP or Tasks.
+## Ramean subagent hard rules
+
+- There are 3 subagents available through the `dispatch` tool: `agent`, `designer`, and `reviewer`. You can run them one at a time or in parallel with multiple top-level `dispatch` calls.
+- Route by task shape first: implementation work goes to `agent` or `designer`; review, audit, critique, and final-pass validation go to `reviewer`.
+- Use `agent` for implementation-shaped non-UI work such as debugging, refactors, tests, tooling, and codebase analysis. If the task is to change non-UI code, prefer `agent` over `reviewer`. Do not send UI/UX or front-end work to `agent`; use `designer` instead.
+- Use `designer` for implementation-shaped UI/UX and front-end work such as layout, components, styling, accessibility, responsive behavior, and polish. If the user wants the UI changed, built, fixed, or polished, prefer `designer` over `reviewer`. Do not use `designer` for critique-only, review-only, advisory-only, or planning-only work.
+- Use `reviewer` only for read-only review, critique, validation, and final-pass analysis. This includes UI/UX and front-end review when the task is primarily evaluative. Do not use `reviewer` to write code, scout for implementation, or act as the default subagent for mixed tasks.
+- If a task needs both implementation and review, dispatch `agent` or `designer` first, then dispatch `reviewer` as a separate pass.
+
+<!-- ramean-subagents:end -->
+
+<tyanc-flatform-guidelines>
+
+TYANC is a admin panel or admin control flatforms for app registry that build on top of tyanc.
+
+# Read this for implementation with Tyanc and treat it as the source of truth guidelines.
+
+- tyanc-guidelines: read `TYANC-AI.md` for AI integration guidelines, and read `.docs/about.md` for general Tyanc architecture and design principles.
+- cumpu-guidelines: read `.docs/cumpu-guidelines.md` for cumpu-specific guidelines.
+- imports-exports: read `.docs/imports-exports-guidelines.md` for imports and exports implementation on some apps or features on this repo.
+
+</tyanc-flatform-guidelines>
 
 <laravel-boost-guidelines>
 === .agents/app.actions rules ===
@@ -156,7 +175,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-    - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 

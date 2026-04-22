@@ -183,7 +183,9 @@ final readonly class UserController
             ], 201);
         }
 
-        return to_route('tyanc.users.show', $managedUser);
+        return to_route('tyanc.users.show', $managedUser)->with('toast', FlashToast::success(
+            __('User created.'),
+        )->toArray());
     }
 
     public function update(UpdateUserRequest $request, #[CurrentUser] User $actor, User $user, UpdateUser $action): RedirectResponse|JsonResponse
@@ -226,7 +228,9 @@ final readonly class UserController
             ]);
         }
 
-        return to_route('tyanc.users.show', $managedUser);
+        return to_route('tyanc.users.show', $managedUser)->with('toast', FlashToast::success(
+            __('User updated.'),
+        )->toArray());
     }
 
     public function submitDraft(

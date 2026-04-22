@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('settings/preferences', [UserPreferencesController::class, 'edit'])->name('settings.preferences.edit');
     Route::patch('settings/preferences', [UserPreferencesController::class, 'update'])->name('settings.preferences.update');
+    Route::redirect('settings/preferences/appearance', '/settings/preferences');
     Route::patch('settings/preferences/appearance', [UserPreferencesController::class, 'updateAppearance'])->name('settings.preferences.appearance.update');
 
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])

@@ -241,6 +241,37 @@ it('creates managed users with avatar, roles, and permissions', function (): voi
         ->and(ManagedFile::query()->where('relative_path', $managedUser?->avatar)->where('folder_path', 'tyanc/users/avatars')->exists())->toBeTrue();
 });
 
+it('flashes shared toasts for web-based user create and update flows', function (): void {
+    $manager = userManager();
+
+    $this->actingAs($manager)
+        ->post(route('tyanc.users.store'), [
+            'name' => 'Toast User',
+            'username' => 'toast-user',
+            'email' => 'toast-user@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+            'status' => UserStatus::Active->value,
+            'locale' => 'en',
+            'timezone' => 'UTC',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'User created.');
+
+    $managedUser = User::query()->where('email', 'toast-user@example.com')->firstOrFail();
+
+    $this->actingAs($manager)
+        ->patch(route('tyanc.users.update', $managedUser), [
+            'name' => 'Toast User Updated',
+            'username' => 'toast-user-updated',
+            'email' => 'toast-user-updated@example.com',
+        ])
+        ->assertRedirect(route('tyanc.users.show', $managedUser))
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'User updated.');
+});
+
 it('updates managed users and syncs their access', function (): void {
     $manager = userManager();
 
@@ -350,7 +381,9 @@ it('supports method-spoofed multipart user updates for the Inertia edit form flo
             'roles' => [$newRole->name],
             'permissions' => [$newPermission->name],
         ])
-        ->assertRedirect(route('tyanc.users.show', $managedUser));
+        ->assertRedirect(route('tyanc.users.show', $managedUser))
+        ->assertSessionHas('toast', fn (array $toast): bool => ($toast['variant'] ?? null) === 'success'
+            && ($toast['message'] ?? null) === 'User updated.');
 
     $managedUser->refresh()->load('roles', 'permissions');
 

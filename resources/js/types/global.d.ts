@@ -1,69 +1,71 @@
 import type {
-    AccessibleApp,
-    AppId,
-    BrandProps,
-    FlashProps,
-    MessagesShellPayload,
-    NotificationsPayload,
-    SidebarNavigationData,
-    ThemeProps,
-    UserPreferencesProps,
-} from '@/types';
-import type { Auth } from '@/types/auth';
+  AccessibleApp,
+  AppId,
+  BrandProps,
+  FlashProps,
+  MessagesShellPayload,
+  NotificationSettingsProps,
+  NotificationsPayload,
+  SidebarNavigationData,
+  ThemeProps,
+  UserPreferencesProps,
+} from "@/types";
+import type { Auth } from "@/types/auth";
 
 type TranslateFn = (
-    key: string,
-    replacements?: Record<string, string>,
+  key: string,
+  replacements?: Record<string, string>
 ) => string;
 
 // Extend ImportMeta interface for Vite...
-declare module 'vite/client' {
-    interface ImportMetaEnv {
-        readonly VITE_APP_NAME: string;
-        [key: string]: string | boolean | undefined;
-    }
+declare module "vite/client" {
+  interface ImportMetaEnv {
+    readonly VITE_APP_NAME: string;
+    [key: string]: string | boolean | undefined;
+  }
 
-    interface ImportMeta {
-        readonly env: ImportMetaEnv;
-        readonly glob: <T>(pattern: string) => Record<string, () => Promise<T>>;
-    }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+    readonly glob: <T>(pattern: string) => Record<string, () => Promise<T>>;
+  }
 }
 
-declare module '@inertiajs/core' {
-    export interface InertiaConfig {
-        sharedPageProps: {
-            name: string;
-            auth: Auth;
-            sidebarOpen: boolean;
-            currentApp: AppId;
-            sidebarNavigation: SidebarNavigationData;
-            theme: ThemeProps;
-            brand: BrandProps;
-            /** Current active locale code (e.g. "en", "fr"). */
-            locale: string;
-            /** All locales the application supports. */
-            availableLocales: string[];
-            /** Flat JSON translation map for the current locale. */
-            translations: Record<string, string>;
-            flash: FlashProps;
-            /** Notification summary shared on every authenticated page. */
-            notifications: NotificationsPayload | null;
-            userPreferences: UserPreferencesProps;
-            messages: MessagesShellPayload;
-            messagesUnreadCount: number;
-            /** All apps the current user can access, registry-driven. */
-            accessibleApps: AccessibleApp[];
-            [key: string]: unknown;
-        };
-    }
+declare module "@inertiajs/core" {
+  export interface InertiaConfig {
+    sharedPageProps: {
+      name: string;
+      auth: Auth;
+      sidebarOpen: boolean;
+      currentApp: AppId;
+      sidebarNavigation: SidebarNavigationData;
+      theme: ThemeProps;
+      brand: BrandProps;
+      /** Current active locale code (e.g. "en", "fr"). */
+      locale: string;
+      /** All locales the application supports. */
+      availableLocales: string[];
+      /** Flat JSON translation map for the current locale. */
+      translations: Record<string, string>;
+      flash: FlashProps;
+      notificationSettings: NotificationSettingsProps;
+      /** Notification summary shared on every authenticated page. */
+      notifications: NotificationsPayload | null;
+      userPreferences: UserPreferencesProps;
+      messages: MessagesShellPayload;
+      messagesUnreadCount: number;
+      /** All apps the current user can access, registry-driven. */
+      accessibleApps: AccessibleApp[];
+      [key: string]: unknown;
+    };
+  }
 }
 
-declare module 'vue' {
-    interface ComponentCustomProperties {
-        $inertia: typeof Router;
-        $page: Page;
-        $headManager: ReturnType<typeof createHeadManager>;
-        /** Translate a key with optional :placeholder replacement. */
-        $__: TranslateFn;
-    }
+declare module "vue" {
+  interface ComponentCustomProperties {
+    $inertia: typeof Router;
+    $page: Page;
+    $headManager: ReturnType<typeof createHeadManager>;
+    /** Translate a key with optional :placeholder replacement. */
+    $__: TranslateFn;
+  }
 }
